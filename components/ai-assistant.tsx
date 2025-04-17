@@ -23,7 +23,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm your Pizza Liêm Khiết assistant. How can I help you today?",
+      content: "Hello! I'm your Golden Crust assistant. How can I help you today?",
       sender: "ai",
       timestamp: new Date(),
     },
@@ -94,7 +94,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
             <Bot className="h-4 w-4" />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-gray-900">Pizza Liêm Khiết Assistant</h3>
+            <h3 className="text-sm font-medium text-gray-900">Golden Crust Assistant</h3>
             <p className="text-xs text-gray-500">Ask me anything</p>
           </div>
         </div>
