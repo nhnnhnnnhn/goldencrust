@@ -17,6 +17,7 @@ const menuItemSchema = new mongoose.Schema({
         slug: 'title',
         unique: true
     },
+    tags: [String],
     deleted: { 
         type: Boolean,
         default: false
