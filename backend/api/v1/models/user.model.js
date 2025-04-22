@@ -10,6 +10,15 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        avatar: String,
+        status: {
+            type: String,
+            enum: ['active', 'inactive', 'suspended'],
+            default: 'active'
+        },
+        lastLogin: Date,
+        address: String,
+        phone: String,
         deleted: {
             type: Boolean,
             default: false
