@@ -1,6 +1,7 @@
 const express = require('express');
 const database = require('./config/database');
 require('dotenv').config();
+const cookieParser = require('cookie-parser');
 const routes = require('./api/v1/routes/index.route');
 
 const app = express();
@@ -10,7 +11,7 @@ database.connect();
 
 app.use(express.json());
 
-
+app.use(cookieParser());
 routes(app);
 
 app.listen(port, () => {

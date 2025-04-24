@@ -30,7 +30,7 @@ const sendOtp = async (email, action) => {
     });
 
     try{
-        await transport.sendEmail({
+        await transport.sendMail({
             from: process.env.GMAIL_USER,
             to: email,
             subject: 'Your OTP Code',
@@ -38,6 +38,7 @@ const sendOtp = async (email, action) => {
         });
     } catch (error) {
         await Otp.deleteOne({ _id: otp._id });
+        console.error('Error sending email:', error);
         return { status: false, message: 'Failed to send OTP' };
     }
 
@@ -58,7 +59,22 @@ const verifyOtp = async (email, code, action) => {
     return { status: true, message: 'OTP verified successfully' };
 };
 
+const sendEmail = async (email, subject, text) => {
+    try {
+        await transport.sendMail({
+            from: process.env.GMAIL_USER,
+            to: email,
+            subject,
+            text,
+        });
+        return { status: true, message: 'Email sent successfully' };
+    } catch (error) {
+        return { status: false, message: 'Failed to send email' };
+    }
+};
+
 module.exports = {
     sendOtp,
     verifyOtp,
+    sendEmail,
 };

@@ -5,16 +5,20 @@ const userSchema = new mongoose.Schema(
         fullName: String,
         email: String,
         password: String,
-        role: String,
+        role: {
+            type: String,
+            enum: ['admin', 'employee', 'user'],
+            default: 'user'
+        },
         isVerified: {
             type: Boolean,
             default: false
         },
         avatar: String,
-        status: {
-            type: String,
-            enum: ['active', 'inactive', 'suspended'],
-            default: 'active'
+        isActive: Boolean,
+        isSuspended: {
+            type: Boolean,
+            default: false
         },
         lastLogin: Date,
         address: String,

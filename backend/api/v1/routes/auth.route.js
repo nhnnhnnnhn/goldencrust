@@ -1,25 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
-const { body } = require('express-validator');
 
 // Login route
-router.post('/login', [
-  body('email').isEmail().withMessage('Invalid email address'),
-  body('password').notEmpty().withMessage('Password is required')
-], authController.login);
+router.post('/login', authController.loginUser);
 
 // Register route
-router.post('/register', [
-  body('name').notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Invalid email address'),
-  body('password').notEmpty().withMessage('Password is required')
-], authController.register);
+router.post('/register', authController.registerUser);
 
-// Refresh token route
-router.post('/refresh-token', authController.refreshToken);
+// Verify OTP route
+router.post('/verify-otp', authController.verifyOtpRegister);
 
 // Logout route
-router.post('/logout', authController.logout);
+router.post('/logout', authController.logoutUser);
+
+// Change password route
+router.post('/change-password', authController.changePassword);
+
+// Forgot password route
+router.post('/forgot-password', authController.forgotPassword);
+
+// Reset password route
+router.post('/reset-password', authController.resetPassword);
+
+// Verify OTP for forgot password route
+router.post('/verify-otp-forgot-password', authController.verifyOtpForgotPassword);
 
 module.exports = router;
