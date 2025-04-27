@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 const Otp = require('../../../helpers/email');
 const controllerHandler = require('../../../helpers/controllerHandler');
-
+const Token = require('../models/token.model');
 
 // Login user
 module.exports.loginUser = controllerHandler(async (req, res) => {

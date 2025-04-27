@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const tableSchema = new mongoose.Schema({
     restaurantId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'restaurant'
+        ref: 'Restaurant'  // Sửa thành Restaurant để khớp với model
     },
     tableNumber: {
         type: String,

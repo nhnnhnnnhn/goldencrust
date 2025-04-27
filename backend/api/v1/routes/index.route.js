@@ -1,19 +1,23 @@
 const userRoute = require('./user.route');
 const authRoute = require('./auth.route');
+const restaurantRoute = require('./restaurant.route');
 const menuItemRoute = require('./menuItem.route');
 const reservationRoute = require('./reservation.route');
-const tableRoute = require('./table.route');
 const reservedTableRoute = require('./reservedTable.route');
+const tableRoute = require('./table.route');
 
 const authMiddleware = require('../middlewares/auth.middleware');
 
 module.exports = (app) => {
     const version = '/api/v1';
 
-    app.use(version + '/users', authMiddleware, userRoute);
     app.use(version + '/auth', authRoute);
-    app.use(version + '/menu-items', menuItemRoute);
-    app.use(version + '/reservations', reservationRoute);
-    app.use(version + '/tables', tableRoute);
-    app.use(version + '/reserved-tables', reservedTableRoute);
+    
+    // Protected routes
+    app.use(version + '/users', authMiddleware, userRoute);
+    app.use(version + '/restaurants', authMiddleware, restaurantRoute);
+    app.use(version + '/menu-items', authMiddleware, menuItemRoute);
+    app.use(version + '/reservations', authMiddleware, reservationRoute);
+    app.use(version + '/reserved-tables', authMiddleware, reservedTableRoute);
+    app.use(version + '/tables', authMiddleware, tableRoute);
 };
