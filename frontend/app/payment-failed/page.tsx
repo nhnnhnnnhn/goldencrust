@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, AlertTriangle, CreditCard, ArrowRight, XCircle } from "lucide-react"
@@ -17,25 +17,53 @@ export default function PaymentFailedPage() {
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [isProcessing, setIsProcessing] = useState(false)
 
-  // Mock order details
-  const orderDetails = {
+  // State to store order details
+  const [orderDetails, setOrderDetails] = useState({
     id: "ORD-" + Math.floor(Math.random() * 10000),
-    total: 78.5,
-    items: [
-      { name: "Tartufo Nero", quantity: 1, price: 28 },
-      { name: "Margherita Elegante", quantity: 2, price: 18 },
-      { name: "Tiramisu Classico", quantity: 1, price: 14 },
-    ],
+    total: 0,
+    items: [],
     deliveryFee: 5,
-  }
+  })
+
+  // Retrieve cart items from localStorage
+  useEffect(() => {
+    const storedCart = localStorage.getItem("deliveryCart")
+    if (storedCart) {
+      try {
+        const cartItems = JSON.parse(storedCart)
+        const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+        setOrderDetails({
+          ...orderDetails,
+          items: cartItems,
+          total: subtotal + orderDetails.deliveryFee,
+        })
+      } catch (error) {
+        console.error("Error parsing cart data:", error)
+      }
+    }
+  }, [])
 
   const handleRetryPayment = () => {
     setIsProcessing(true)
 
     // Simulate payment processing
     setTimeout(() => {
-      // Redirect to success page (in a real app, this would happen after successful payment)
-      router.push("/delivery?payment=success")
+      setIsProcessing(false)
+
+      if (paymentMethod === "cash") {
+        // If switching to cash payment, it always succeeds
+        router.push("/delivery?payment=success&method=cash")
+      } else {
+        // For card payments, simulate a 70% success rate on retry
+        const isSuccessful = Math.random() > 0.3
+        if (isSuccessful) {
+          router.push("/delivery?payment=success&method=card")
+        } else {
+          // Still failing, but stay on the same page and show an alert
+          alert("Payment failed again. Please try a different card or payment method.")
+        }
+      }
     }, 2000)
   }
 

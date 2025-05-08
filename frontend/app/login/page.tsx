@@ -149,7 +149,7 @@ export default function LoginPage() {
                       </div>
                     </div>
 
-                    <Button type="submit" className="w-full">
+                    <Button type="submit" className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800">
                       Sign In
                     </Button>
                   </div>

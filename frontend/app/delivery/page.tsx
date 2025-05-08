@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ChevronLeft, ShoppingCart, Plus, Minus, X, CreditCard } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -53,6 +53,8 @@ export default function DeliveryPage() {
     notes: "",
     paymentMethod: "cash",
   })
+  const [isProcessing, setIsProcessing] = useState(false)
+  const searchParams = useSearchParams()
 
   // Check if user is logged in
   useEffect(() => {
@@ -66,6 +68,29 @@ export default function DeliveryPage() {
       }))
     }
   }, [user, isLoading, router])
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (cart.length > 0) {
+      localStorage.setItem("deliveryCart", JSON.stringify(cart))
+    }
+  }, [cart])
+
+  // Handle returning from payment-failed page
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment")
+    const orderStatus = searchParams.get("order")
+
+    if (paymentStatus === "success") {
+      // Payment was successful after retry
+      setOrderComplete(true)
+    } else if (orderStatus === "cancelled") {
+      // Order was cancelled
+      setCart([])
+      localStorage.removeItem("deliveryCart")
+      setOrderStep(0)
+    }
+  }, [searchParams])
 
   const handleInputChange = (field: string, value: string) => {
     setDeliveryInfo({
@@ -113,7 +138,24 @@ export default function DeliveryPage() {
   }
 
   const handlePlaceOrder = () => {
-    setOrderComplete(true)
+    // Simulate payment processing
+    setIsProcessing(true)
+
+    setTimeout(() => {
+      setIsProcessing(false)
+
+      // Simulate payment failure when using card payment and the address contains "fail" or "error"
+      if (
+        deliveryInfo.paymentMethod === "card" &&
+        (deliveryInfo.address.toLowerCase().includes("fail") || deliveryInfo.address.toLowerCase().includes("error"))
+      ) {
+        // Redirect to payment failed page
+        router.push("/payment-failed")
+      } else {
+        // Payment successful
+        setOrderComplete(true)
+      }
+    }, 2000)
   }
 
   const menuItems: MenuItem[] = [
@@ -496,6 +538,10 @@ export default function DeliveryPage() {
                         <Label htmlFor="address" className={styles.formLabel}>
                           Delivery Address
                         </Label>
+                        <div className="text-xs text-gray-500 mb-1">
+                          (Tip: Include "fail" or "error" in your address to simulate payment failure when using card
+                          payment)
+                        </div>
                         <Textarea
                           id="address"
                           className={styles.textarea}
@@ -576,9 +622,16 @@ export default function DeliveryPage() {
                       <Button
                         className={styles.placeOrderButton}
                         onClick={handlePlaceOrder}
-                        disabled={!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address}
+                        disabled={!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address || isProcessing}
                       >
-                        Place Order
+                        {isProcessing ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            Processing Payment...
+                          </>
+                        ) : (
+                          "Place Order"
+                        )}
                       </Button>
 
                       <Button variant="outline" className={styles.backToMenuButton} onClick={() => setOrderStep(0)}>
