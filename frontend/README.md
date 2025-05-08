@@ -1,8 +1,8 @@
-# Pizza Liêm Khiết - Michelin-Starred Pizza Restaurant
+# Golden Crust - Michelin-Starred Pizza Restaurant
 
-A sophisticated web application for a high-end, Michelin-starred pizza restaurant chain. This project provides a complete digital experience for customers and administrators, featuring an elegant UI, online ordering, table reservations, and comprehensive management tools.
+A sophisticated web application for Golden Crust, a high-end, Michelin-starred pizza restaurant chain. This project provides a complete digital experience for customers and administrators, featuring an elegant UI, online ordering, table reservations, and comprehensive management tools.
 
-![Pizza Liêm Khiết](https://placeholder.com/pizza-liem-khiet-hero)
+![Golden Crust](https://placeholder.com/golden-crust-hero)
 
 ## 🌟 Features
 

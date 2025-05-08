@@ -8,7 +8,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "700"] })
 
 export const metadata = {
-  title: "Pizza Liêm Khiết - Michelin-Starred Pizza",
+  title: "Golden Crust - Michelin-Starred Pizza",
   description: "Experience the art of pizza making at our Michelin-starred restaurant",
 }
 

@@ -182,7 +182,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
     restaurant: {
       title: "Our Restaurant",
       paragraph1:
-        "Pizza Liêm Khiết is a Michelin-starred restaurant dedicated to the art of pizza making. Our commitment to quality and excellence has earned us recognition as one of the finest dining establishments in Vietnam.",
+        "Golden Crust is a Michelin-starred restaurant dedicated to the art of pizza making. Our commitment to quality and excellence has earned us recognition as one of the finest dining establishments in Vietnam.",
       paragraph2:
         "Our mission is to create unforgettable dining experiences through innovative cuisine, exceptional service, and a warm, inviting atmosphere. We believe that food is not just sustenance, but an art form that brings people together.",
       vision: {
@@ -208,7 +208,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
     },
     gallery: {
       title: "Gallery",
-      description: "Experience the ambiance and artistry of Pizza Liêm Khiết through our gallery.",
+      description: "Experience the ambiance and artistry of Golden Crust through our gallery.",
     },
     contact: {
       title: "Get in Touch",
@@ -296,7 +296,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
     restaurant: {
       title: "Nhà hàng của chúng tôi",
       paragraph1:
-        "Pizza Liêm Khiết là nhà hàng được gắn sao Michelin, chuyên về nghệ thuật làm bánh pizza. Cam kết về chất lượng và sự xuất sắc đã giúp chúng tôi được công nhận là một trong những nhà hàng tốt nhất tại Việt Nam.",
+        "Golden Crust là nhà hàng được gắn sao Michelin, chuyên về nghệ thuật làm bánh pizza. Cam kết về chất lượng và sự xuất sắc đã giúp chúng tôi được công nhận là một trong những nhà hàng tốt nhất tại Việt Nam.",
       paragraph2:
         "Sứ mệnh của chúng tôi là tạo ra những trải nghiệm ẩm thực khó quên thông qua ẩm thực sáng tạo, dịch vụ xuất sắc và không gian ấm cúng, thân thiện. Chúng tôi tin rằng thức ăn không chỉ là nguồn dinh dưỡng, mà còn là một hình thức nghệ thuật kết nối mọi người.",
       vision: {
@@ -322,7 +322,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
     },
     gallery: {
       title: "Thư viện ảnh",
-      description: "Trải nghiệm không gian và nghệ thuật của Pizza Liêm Khiết qua thư viện ảnh của chúng tôi.",
+      description: "Trải nghiệm không gian và nghệ thuật của Golden Crust qua thư viện ảnh của chúng tôi.",
     },
     contact: {
       title: "Liên hệ với chúng tôi",

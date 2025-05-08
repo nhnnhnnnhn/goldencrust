@@ -86,7 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r border-gray-200 bg-white md:flex">
         <div className="flex h-16 items-center justify-center border-b border-gray-200">
           <Link href="/" className="text-xl font-light uppercase tracking-wider text-blue-900">
-            PIZZA LIÊM KHIẾT&apos;S
+            GOLDEN CRUST
           </Link>
         </div>
         <div className="flex flex-1 flex-col justify-between overflow-y-auto p-4">
