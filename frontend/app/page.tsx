@@ -3,14 +3,43 @@
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronDown, X, ArrowRight, MapPin, Instagram, Facebook, MessageCircle } from "lucide-react"
+import {
+  ChevronDown,
+  X,
+  ArrowRight,
+  MapPin,
+  Instagram,
+  Facebook,
+  MessageCircle,
+  User,
+  LogOut,
+  PieChart,
+  Users,
+  CreditCard,
+  History,
+  Settings,
+  ShoppingBag,
+  CalendarDays,
+  LayoutGrid,
+  Award,
+  Truck,
+  MenuIcon,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { AIAssistant } from "@/components/ai-assistant"
+import { useAuth } from "@/contexts/auth-context"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function Home() {
+  const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [selectedCountry, setSelectedCountry] = useState("Vietnam")
   const [currentSection, setCurrentSection] = useState(0)
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -20,6 +49,34 @@ export default function Home() {
 
   // Define sections for navigation
   const sections = ["home", "about", "concept", "locations", "restaurant", "menu", "gallery", "contact"]
+
+  // Dashboard menu items based on user role
+  const userMenuItems = [
+    { label: "Dashboard", href: "/dashboard", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
+    { label: "My Orders", href: "/dashboard/orders", icon: <ShoppingBag className="mr-2 h-4 w-4" /> },
+    { label: "My Reservations", href: "/dashboard/reservations", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+    { label: "Order History", href: "/dashboard/history", icon: <History className="mr-2 h-4 w-4" /> },
+    { label: "Loyalty Program", href: "/dashboard/loyalty", icon: <Award className="mr-2 h-4 w-4" /> },
+    { label: "Profile", href: "/dashboard/profile", icon: <User className="mr-2 h-4 w-4" /> },
+  ]
+
+  const adminMenuItems = [
+    { label: "Dashboard", href: "/dashboard", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
+    { label: "Customers", href: "/dashboard/customers", icon: <Users className="mr-2 h-4 w-4" /> },
+    { label: "Menu", href: "/dashboard/menu-management", icon: <MenuIcon className="mr-2 h-4 w-4" /> },
+    { label: "Reservations", href: "/dashboard/reservations", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+    { label: "Delivery", href: "/dashboard/delivery", icon: <Truck className="mr-2 h-4 w-4" /> },
+    { label: "Statistics", href: "/dashboard/statistics", icon: <PieChart className="mr-2 h-4 w-4" /> },
+    { label: "Table", href: "/dashboard/table-management", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
+    { label: "Payment", href: "/dashboard/payment", icon: <CreditCard className="mr-2 h-4 w-4" /> },
+    { label: "Settings", href: "/dashboard/settings", icon: <Settings className="mr-2 h-4 w-4" /> },
+  ]
+
+  // Get menu items based on user role
+  const getMenuItems = () => {
+    if (!user) return []
+    return user.role === "admin" ? adminMenuItems : userMenuItems
+  }
 
   useEffect(() => {
     // Simulate loading effect
@@ -105,6 +162,11 @@ export default function Home() {
     }
   }
 
+  // Handle logout
+  const handleLogout = () => {
+    logout()
+  }
+
   return (
     <>
       {/* Loading overlay */}
@@ -149,9 +211,34 @@ export default function Home() {
               <Link href="#" className="hover:underline">
                 CAREER
               </Link>
-              <Link href="/login" className="hover:underline">
-                LOGIN
-              </Link>
+
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-sm font-light hover:underline focus:outline-none">{user.name}</button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {getMenuItems().map((item) => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href} className="flex items-center cursor-pointer">
+                          {item.icon}
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-500 cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link href="/login" className="hover:underline">
+                  LOGIN
+                </Link>
+              )}
+
               <div className="flex items-center gap-1">
                 <span>EN</span>
                 <ChevronDown className="h-4 w-4" />
@@ -198,9 +285,39 @@ export default function Home() {
               <Link href="#" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
                 CAREER
               </Link>
-              <Link href="/login" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
-                LOGIN
-              </Link>
+
+              {user ? (
+                <>
+                  <div className="flex flex-col items-center gap-4 max-h-[50vh] overflow-y-auto py-4">
+                    {getMenuItems().map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="flex items-center gap-2 text-xl font-light hover:underline"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        {item.icon}
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleLogout()
+                      setMenuOpen(false)
+                    }}
+                    className="flex items-center gap-2 text-xl font-light text-red-400 hover:underline mt-4"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link href="/login" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
+                  LOGIN
+                </Link>
+              )}
+
               <div className="flex items-center gap-2 text-2xl font-light">
                 <span>EN</span>
                 <ChevronDown className="h-5 w-5" />
@@ -224,27 +341,9 @@ export default function Home() {
             </div>
 
             <div className="relative z-10 px-6 pb-20 md:px-12">
-              {/* Country navigation */}
+              {/* Country display */}
               <div className="mb-8 flex flex-col gap-2 text-white">
-                {["Japan", "Vietnam", "Cambodia", "Indonesia"].map((country) => (
-                  <button
-                    key={country}
-                    className={`text-left text-4xl font-light transition-all hover:translate-x-2 md:text-6xl ${
-                      selectedCountry === country ? "text-white" : "text-white/50"
-                    }`}
-                    onClick={() => setSelectedCountry(country)}
-                  >
-                    {country}
-                  </button>
-                ))}
-              </div>
-
-              {/* WOW!!! section */}
-              <div className="ml-auto max-w-xs rounded-lg bg-blue-600 p-4 text-white md:max-w-sm">
-                <div className="text-3xl font-bold">WOW!!!</div>
-                <p className="text-sm">"WOW" is the highest satisfaction score received from all shops.</p>
-                <div className="mt-1 text-xs">Since 2011~</div>
-                <button className="mt-2 text-xs underline">Learn more</button>
+                <h1 className="text-left text-4xl font-light md:text-6xl">Vietnam</h1>
               </div>
             </div>
           </section>
