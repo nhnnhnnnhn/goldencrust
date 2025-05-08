@@ -1,8 +1,8 @@
-# Golden Crust - Michelin-Starred Pizza Restaurant
+# Pizza Liêm Khiết - Michelin-Starred Pizza Restaurant
 
 A sophisticated web application for a high-end, Michelin-starred pizza restaurant chain. This project provides a complete digital experience for customers and administrators, featuring an elegant UI, online ordering, table reservations, and comprehensive management tools.
 
-![Golden Crust](https://placeholder.com/golden-crust-hero)
+![Pizza Liêm Khiết](https://placeholder.com/pizza-liem-khiet-hero)
 
 ## 🌟 Features
 
@@ -107,24 +107,24 @@ A sophisticated web application for a high-end, Michelin-starred pizza restauran
 ### Installation
 
 1. Clone the repository
-```bash
-git clone https://github.com/yourusername/golden-crust.git
-cd golden-crust
-```
+\`\`\`bash
+git clone https://github.com/yourusername/pizza-liem-khiet.git
+cd pizza-liem-khiet
+\`\`\`
 
 2. Install dependencies
-```bash
+\`\`\`bash
 npm install
 # or
 yarn install
-```
+\`\`\`
 
 3. Run the development server
-```bash
+\`\`\`bash
 npm run dev
 # or
 yarn dev
-```
+\`\`\`
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
@@ -146,8 +146,8 @@ For testing purposes, you can use the following accounts:
 
 ## 📂 Project Structure
 
-```
-golden-crust/
+\`\`\`
+pizza-liem-khiet/
 ├── app/                  # Next.js App Router pages
 │   ├── dashboard/        # Dashboard pages (admin and user)
 │   ├── delivery/         # Food delivery page
@@ -161,11 +161,11 @@ golden-crust/
 │   └── auth-context.tsx  # Authentication context
 ├── public/               # Static assets
 └── styles/               # Global styles and CSS modules
-```
+\`\`\`
 
 ## 🎨 Design Philosophy
 
-Golden Crust's design embodies the elegance and sophistication of a Michelin-starred restaurant:
+Pizza Liêm Khiết's design embodies the elegance and sophistication of a Michelin-starred restaurant:
 
 - **Minimalist Aesthetic**: Clean layouts with ample white space
 - **Sophisticated Color Scheme**: Primary blue and white palette with subtle accents

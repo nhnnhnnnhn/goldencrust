@@ -13,7 +13,7 @@ const paymentSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['credit_card', 'debit_card', 'paypal', 'cash'],
+        enum: ['credit_card', 'debit_card', 'paypal', 'cash', 'stripe'],
         required: true
     },
     transactionId: {
@@ -25,6 +25,26 @@ const paymentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',
         required: true
+    },
+    stripePaymentIntentId: {
+        type: String,
+        sparse: true
+    },
+    stripeCustomerId: {
+        type: String,
+        sparse: true
+    },
+    stripeChargeId: {
+        type: String,
+        sparse: true
+    },
+    stripePaymentMethodId: {
+        type: String,
+        sparse: true
+    },
+    currency: {
+        type: String,
+        default: 'usd'
     },
     status: {
         type: String,

@@ -106,7 +106,7 @@ export default function Home() {
         <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-8 text-white md:px-12">
           <div className="flex items-center gap-2">
             <Link href="/" className="text-xl font-light uppercase tracking-wider">
-              GOLDEN CRUST
+              PIZZA LIÊM KHIẾT&apos;S
             </Link>
             <span className="text-sm font-light">VIETNAM</span>
           </div>

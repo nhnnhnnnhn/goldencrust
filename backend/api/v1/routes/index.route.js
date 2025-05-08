@@ -5,6 +5,7 @@ const menuItemRoute = require('./menuItem.route');
 const reservationRoute = require('./reservation.route');
 const reservedTableRoute = require('./reservedTable.route');
 const tableRoute = require('./table.route');
+const paymentRoute = require('./payment.route');
 
 const authMiddleware = require('../middlewares/auth.middleware');
 
@@ -20,4 +21,5 @@ module.exports = (app) => {
     app.use(version + '/reservations', authMiddleware, reservationRoute);
     app.use(version + '/reserved-tables', authMiddleware, reservedTableRoute);
     app.use(version + '/tables', authMiddleware, tableRoute);
+    app.use(version + '/payments', authMiddleware, paymentRoute);
 };

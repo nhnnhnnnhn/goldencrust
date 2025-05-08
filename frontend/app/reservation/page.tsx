@@ -114,7 +114,7 @@ export default function ReservationPage() {
         </div>
         <div className={styles.headerCenter}>
           <Link href="/" className={styles.logo}>
-            GOLDEN CRUST
+            PIZZA LIÊM KHIẾT&apos;S
           </Link>
         </div>
         <div className={styles.headerRight}></div>
