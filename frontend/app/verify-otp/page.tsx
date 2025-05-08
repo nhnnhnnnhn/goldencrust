@@ -5,11 +5,12 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft, CheckCircle } from "lucide-react"
+import { ChevronLeft, CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function VerifyOTPPage() {
   const router = useRouter()
@@ -23,6 +24,8 @@ export default function VerifyOTPPage() {
   const [error, setError] = useState("")
   const [countdown, setCountdown] = useState(60)
   const [userEmail, setUserEmail] = useState("")
+  const [expiryTime, setExpiryTime] = useState<Date | null>(null)
+  const [isExpired, setIsExpired] = useState(false)
 
   const { login } = useAuth()
 
@@ -37,6 +40,11 @@ export default function VerifyOTPPage() {
     } else if (action === "reset" && email) {
       setUserEmail(email)
     }
+
+    // Set expiry time for OTP (5 minutes from now)
+    const expiry = new Date()
+    expiry.setMinutes(expiry.getMinutes() + 5)
+    setExpiryTime(expiry)
   }, [action, email])
 
   // Countdown timer for resend OTP
@@ -46,6 +54,22 @@ export default function VerifyOTPPage() {
       return () => clearTimeout(timer)
     }
   }, [countdown])
+
+  // Check if OTP is expired
+  useEffect(() => {
+    if (!expiryTime) return
+
+    const checkExpiry = () => {
+      if (new Date() > expiryTime) {
+        setIsExpired(true)
+      }
+    }
+
+    const timer = setInterval(checkExpiry, 1000)
+    checkExpiry() // Check immediately
+
+    return () => clearInterval(timer)
+  }, [expiryTime])
 
   // Handle input change for OTP fields
   const handleOtpChange = (index: number, value: string) => {
@@ -113,6 +137,11 @@ export default function VerifyOTPPage() {
       return
     }
 
+    if (isExpired) {
+      setError("OTP has expired. Please request a new one.")
+      return
+    }
+
     setIsVerifying(true)
     setError("")
 
@@ -124,6 +153,14 @@ export default function VerifyOTPPage() {
 
         // If action is register, redirect to login after 2 seconds
         if (action === "register") {
+          // Update the pending registration to mark as verified
+          const pendingRegistration = localStorage.getItem("pendingRegistration")
+          if (pendingRegistration) {
+            const userData = JSON.parse(pendingRegistration)
+            userData.isVerified = true
+            localStorage.setItem("pendingRegistration", JSON.stringify(userData))
+          }
+
           setTimeout(() => {
             router.push("/login")
           }, 2000)
@@ -131,7 +168,7 @@ export default function VerifyOTPPage() {
         // If action is reset, redirect to reset password page
         else if (action === "reset") {
           setTimeout(() => {
-            router.push(`/reset-password?email=${encodeURIComponent(userEmail)}`)
+            router.push(`/forgot-password?email=${encodeURIComponent(userEmail)}`)
           }, 2000)
         }
       } else {
@@ -146,9 +183,28 @@ export default function VerifyOTPPage() {
     // Simulate resending OTP (in a real app, this would call an API)
     setCountdown(60)
     setError("")
+    setIsExpired(false)
+
+    // Reset expiry time (5 minutes from now)
+    const expiry = new Date()
+    expiry.setMinutes(expiry.getMinutes() + 5)
+    setExpiryTime(expiry)
 
     // Show success message
     alert(`OTP resent to ${userEmail}`)
+  }
+
+  // Format remaining time until expiry
+  const formatExpiryTime = () => {
+    if (!expiryTime) return ""
+
+    const now = new Date()
+    const diff = Math.max(0, Math.floor((expiryTime.getTime() - now.getTime()) / 1000))
+
+    const minutes = Math.floor(diff / 60)
+    const seconds = diff % 60
+
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
   return (
@@ -194,7 +250,24 @@ export default function VerifyOTPPage() {
                   <p className="text-gray-600">
                     We've sent a 6-digit verification code to <span className="font-medium">{userEmail}</span>
                   </p>
+                  {expiryTime && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Code expires in:{" "}
+                      <span className={isExpired ? "text-red-500 font-medium" : "font-medium"}>
+                        {formatExpiryTime()}
+                      </span>
+                    </p>
+                  )}
                 </div>
+
+                {isExpired && (
+                  <Alert className="mb-4 bg-red-50 border-red-200">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-sm text-red-600">
+                      This verification code has expired. Please request a new one.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="mb-6">
                   <Label htmlFor="otp-0" className="sr-only">
@@ -213,6 +286,7 @@ export default function VerifyOTPPage() {
                         onKeyDown={(e) => handleKeyDown(index, e)}
                         onPaste={index === 0 ? handlePaste : undefined}
                         className="w-12 h-12 text-center text-xl font-semibold"
+                        disabled={isExpired}
                       />
                     ))}
                   </div>
@@ -221,7 +295,7 @@ export default function VerifyOTPPage() {
 
                 <Button
                   onClick={handleVerifyOtp}
-                  disabled={isVerifying || otp.join("").length !== 6}
+                  disabled={isVerifying || otp.join("").length !== 6 || isExpired}
                   className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
                 >
                   {isVerifying ? "Verifying..." : "Verify"}

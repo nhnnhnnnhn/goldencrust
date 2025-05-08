@@ -2,17 +2,21 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { ChevronLeft, Eye, EyeOff, Mail } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { ChevronLeft, Eye, EyeOff, Mail, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const searchParams = useSearchParams()
+  const emailParam = searchParams.get("email") || ""
+
+  const [email, setEmail] = useState(emailParam)
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [otp, setOtp] = useState("")
@@ -22,6 +26,31 @@ export default function ForgotPasswordPage() {
   const [otpSent, setOtpSent] = useState(false)
   const [error, setError] = useState("")
   const [otpError, setOtpError] = useState("")
+  const [expiryTime, setExpiryTime] = useState<Date | null>(null)
+  const [isExpired, setIsExpired] = useState(false)
+
+  // Set initial email from URL parameter if available
+  useEffect(() => {
+    if (emailParam) {
+      setEmail(emailParam)
+    }
+  }, [emailParam])
+
+  // Check if OTP is expired
+  useEffect(() => {
+    if (!expiryTime) return
+
+    const checkExpiry = () => {
+      if (new Date() > expiryTime) {
+        setIsExpired(true)
+      }
+    }
+
+    const timer = setInterval(checkExpiry, 1000)
+    checkExpiry() // Check immediately
+
+    return () => clearInterval(timer)
+  }, [expiryTime])
 
   const handleSendOtp = () => {
     if (!email) {
@@ -36,7 +65,26 @@ export default function ForgotPasswordPage() {
     setTimeout(() => {
       setIsSendingOtp(false)
       setOtpSent(true)
+
+      // Set expiry time for OTP (5 minutes from now)
+      const expiry = new Date()
+      expiry.setMinutes(expiry.getMinutes() + 5)
+      setExpiryTime(expiry)
+      setIsExpired(false)
     }, 1500)
+  }
+
+  // Format remaining time until expiry
+  const formatExpiryTime = () => {
+    if (!expiryTime) return ""
+
+    const now = new Date()
+    const diff = Math.max(0, Math.floor((expiryTime.getTime() - now.getTime()) / 1000))
+
+    const minutes = Math.floor(diff / 60)
+    const seconds = diff % 60
+
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,6 +103,11 @@ export default function ForgotPasswordPage() {
 
     if (!otp) {
       setError("Please enter the OTP sent to your email")
+      return
+    }
+
+    if (isExpired) {
+      setError("OTP has expired. Please request a new one.")
       return
     }
 
@@ -144,6 +197,7 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => setOtp(e.target.value)}
                       maxLength={6}
                       className="w-3/4"
+                      disabled={isExpired}
                     />
                     <Button
                       type="button"
@@ -155,10 +209,27 @@ export default function ForgotPasswordPage() {
                     </Button>
                   </div>
                   {otpError && <p className="text-sm text-red-600">{otpError}</p>}
-                  {otpSent && !otpError && (
+                  {otpSent && !otpError && !isExpired && (
                     <p className="text-sm text-green-600">OTP sent! For demo purposes, use code: 123456</p>
                   )}
+                  {expiryTime && otpSent && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Code expires in:{" "}
+                      <span className={isExpired ? "text-red-500 font-medium" : "font-medium"}>
+                        {formatExpiryTime()}
+                      </span>
+                    </p>
+                  )}
                 </div>
+
+                {isExpired && (
+                  <Alert className="bg-red-50 border-red-200">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-sm text-red-600">
+                      This verification code has expired. Please request a new one.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {/* New Password Field */}
                 <div className="space-y-2">
@@ -199,7 +270,7 @@ export default function ForgotPasswordPage() {
 
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isExpired}
                   className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
                 >
                   {isSubmitting ? "Resetting..." : "Reset Password"}
