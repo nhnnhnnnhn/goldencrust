@@ -13,6 +13,8 @@ export default function Home() {
   const [selectedCountry, setSelectedCountry] = useState("Vietnam")
   const [currentSection, setCurrentSection] = useState(0)
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   const sectionRefs = useRef<(HTMLElement | null)[]>([])
 
@@ -66,6 +68,32 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Add click outside handler for mobile menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If the menu is open and the click is outside the menu and not on the menu button
+      if (
+        menuOpen &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false)
+      }
+    }
+
+    // Add event listener when menu is open
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    // Clean up
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [menuOpen])
 
   const scrollToSection = (index: number) => {
     const section = sectionRefs.current[index]
@@ -130,25 +158,32 @@ export default function Home() {
               </div>
             </nav>
             <button
+              ref={menuButtonRef}
               onClick={() => setMenuOpen(!menuOpen)}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-black/20 backdrop-blur-sm"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
             >
-              {menuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <div className="space-y-1.5">
-                  <div className="h-0.5 w-5 bg-white"></div>
-                  <div className="h-0.5 w-5 bg-white"></div>
-                  <div className="h-0.5 w-5 bg-white"></div>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <div className="h-0.5 w-5 bg-white"></div>
+                <div className="h-0.5 w-5 bg-white"></div>
+                <div className="h-0.5 w-5 bg-white"></div>
+              </div>
             </button>
           </div>
         </header>
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="fixed inset-0 z-40 bg-black/90 backdrop-blur-sm transition-all">
+          <div ref={menuRef} className="fixed inset-0 z-40 bg-black/90 backdrop-blur-sm transition-all">
+            {/* Close button - explicitly added and positioned */}
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="absolute top-8 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-black/20 backdrop-blur-sm"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5 text-white" />
+            </button>
+
             <div className="flex h-full flex-col items-center justify-center gap-8 text-white">
               <Link
                 href="/reservation"
@@ -242,7 +277,10 @@ export default function Home() {
                   connections between people through the universal language of food.
                 </p>
 
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-black group">
+                <Button
+                  variant="outline"
+                  className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
+                >
                   Learn More
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
@@ -278,7 +316,10 @@ export default function Home() {
                   crafted pizzas to our thoughtfully designed restaurants.
                 </p>
 
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-black group">
+                <Button
+                  variant="outline"
+                  className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
+                >
                   Discover Our Ingredients
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
@@ -467,7 +508,7 @@ export default function Home() {
               <div className="text-center mt-12">
                 <Link
                   href="/delivery"
-                  className="inline-flex items-center border border-white px-6 py-3 rounded-full text-lg font-light hover:bg-white/10 transition-all"
+                  className="inline-flex items-center border border-white px-6 py-3 rounded-full text-lg font-light bg-black/30 hover:bg-white/20 transition-all"
                 >
                   View Full Menu
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -567,11 +608,17 @@ export default function Home() {
                 </div>
 
                 <div className="flex gap-6">
-                  <Button variant="outline" className="border-white text-white hover:bg-white hover:text-black">
+                  <Button
+                    variant="outline"
+                    className="border-white text-white bg-black/30 hover:bg-white hover:text-black"
+                  >
                     <Instagram className="mr-2 h-5 w-5" />
                     Instagram
                   </Button>
-                  <Button variant="outline" className="border-white text-white hover:bg-white hover:text-black">
+                  <Button
+                    variant="outline"
+                    className="border-white text-white bg-black/30 hover:bg-white hover:text-black"
+                  >
                     <Facebook className="mr-2 h-5 w-5" />
                     Facebook
                   </Button>

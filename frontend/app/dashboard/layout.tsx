@@ -6,7 +6,21 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
-import { Home, User, Calendar, ShoppingBag, Clock, Award, Users, Settings, MenuIcon, Truck, LogOut } from "lucide-react"
+import {
+  Home,
+  User,
+  Calendar,
+  ShoppingBag,
+  Clock,
+  Award,
+  Users,
+  Settings,
+  MenuIcon,
+  Truck,
+  LogOut,
+  BarChart2,
+  CreditCard,
+} from "lucide-react"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, logout } = useAuth()
@@ -44,9 +58,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const adminNavItems = [
     { href: "/dashboard", label: "Dashboard", icon: <Home className="h-5 w-5" /> },
     { href: "/dashboard/customers", label: "Customers", icon: <Users className="h-5 w-5" /> },
-    { href: "/dashboard/menu-management", label: "Menu Management", icon: <MenuIcon className="h-5 w-5" /> },
-    { href: "/dashboard/reservations-management", label: "Reservations", icon: <Calendar className="h-5 w-5" /> },
-    { href: "/dashboard/delivery-management", label: "Delivery", icon: <Truck className="h-5 w-5" /> },
+    { href: "/dashboard/menu-management", label: "Menu", icon: <MenuIcon className="h-5 w-5" /> },
+    { href: "/dashboard/reservations", label: "Reservations", icon: <Calendar className="h-5 w-5" /> },
+    { href: "/dashboard/delivery", label: "Delivery", icon: <Truck className="h-5 w-5" /> },
+    { href: "/dashboard/statistics", label: "Statistics", icon: <BarChart2 className="h-5 w-5" /> },
+    { href: "/dashboard/table-management", label: "Table", icon: <Settings className="h-5 w-5" /> },
+    { href: "/dashboard/payment", label: "Payment", icon: <CreditCard className="h-5 w-5" /> },
     { href: "/dashboard/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
   ]
 
