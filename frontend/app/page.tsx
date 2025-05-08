@@ -37,6 +37,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+// Thêm import cho translations
+import { getTranslation } from "@/utils/translations"
+
 export default function Home() {
   const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -50,26 +53,45 @@ export default function Home() {
   // Define sections for navigation
   const sections = ["home", "about", "concept", "locations", "restaurant", "menu", "gallery", "contact"]
 
+  // Thay đổi nút chuyển đổi ngôn ngữ và thêm state cho ngôn ngữ
+  // Thêm state language và hàm toggleLanguage
+  const [language, setLanguage] = useState<"en" | "vi">("en")
+
+  // Thêm biến t để lấy các chuỗi văn bản theo ngôn ngữ hiện tại
+  // Thêm sau dòng const [language, setLanguage] = useState<"en" | "vi">("en");
+  const t = getTranslation(language)
+
   // Dashboard menu items based on user role
+  // Cập nhật các userMenuItems và adminMenuItems để sử dụng chuỗi văn bản đa ngôn ngữ
+  // Thay đổi userMenuItems
   const userMenuItems = [
-    { label: "Dashboard", href: "/dashboard", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
-    { label: "My Orders", href: "/dashboard/orders", icon: <ShoppingBag className="mr-2 h-4 w-4" /> },
-    { label: "My Reservations", href: "/dashboard/reservations", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-    { label: "Order History", href: "/dashboard/history", icon: <History className="mr-2 h-4 w-4" /> },
-    { label: "Loyalty Program", href: "/dashboard/loyalty", icon: <Award className="mr-2 h-4 w-4" /> },
-    { label: "Profile", href: "/dashboard/profile", icon: <User className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.dashboard, href: "/dashboard", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.myOrders, href: "/dashboard/orders", icon: <ShoppingBag className="mr-2 h-4 w-4" /> },
+    {
+      label: t.dashboard.myReservations,
+      href: "/dashboard/reservations",
+      icon: <CalendarDays className="mr-2 h-4 w-4" />,
+    },
+    { label: t.dashboard.orderHistory, href: "/dashboard/history", icon: <History className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.loyaltyProgram, href: "/dashboard/loyalty", icon: <Award className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.profile, href: "/dashboard/profile", icon: <User className="mr-2 h-4 w-4" /> },
   ]
 
+  // Thay đổi adminMenuItems
   const adminMenuItems = [
-    { label: "Dashboard", href: "/dashboard", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
-    { label: "Customers", href: "/dashboard/customers", icon: <Users className="mr-2 h-4 w-4" /> },
-    { label: "Menu", href: "/dashboard/menu-management", icon: <MenuIcon className="mr-2 h-4 w-4" /> },
-    { label: "Reservations", href: "/dashboard/reservations", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-    { label: "Delivery", href: "/dashboard/delivery", icon: <Truck className="mr-2 h-4 w-4" /> },
-    { label: "Statistics", href: "/dashboard/statistics", icon: <PieChart className="mr-2 h-4 w-4" /> },
-    { label: "Table", href: "/dashboard/table-management", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
-    { label: "Payment", href: "/dashboard/payment", icon: <CreditCard className="mr-2 h-4 w-4" /> },
-    { label: "Settings", href: "/dashboard/settings", icon: <Settings className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.dashboard, href: "/dashboard", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.customers, href: "/dashboard/customers", icon: <Users className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.menu, href: "/dashboard/menu-management", icon: <MenuIcon className="mr-2 h-4 w-4" /> },
+    {
+      label: t.dashboard.reservations,
+      href: "/dashboard/reservations",
+      icon: <CalendarDays className="mr-2 h-4 w-4" />,
+    },
+    { label: t.dashboard.delivery, href: "/dashboard/delivery", icon: <Truck className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.statistics, href: "/dashboard/statistics", icon: <PieChart className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.table, href: "/dashboard/table-management", icon: <LayoutGrid className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.payment, href: "/dashboard/payment", icon: <CreditCard className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.settings, href: "/dashboard/settings", icon: <Settings className="mr-2 h-4 w-4" /> },
   ]
 
   // Get menu items based on user role
@@ -77,6 +99,8 @@ export default function Home() {
     if (!user) return []
     return user.role === "admin" ? adminMenuItems : userMenuItems
   }
+
+  // Thêm hàm toggleLanguage sau hàm handleLogout
 
   useEffect(() => {
     // Simulate loading effect
@@ -152,6 +176,23 @@ export default function Home() {
     }
   }, [menuOpen])
 
+  // Thêm useEffect để lưu trữ và khôi phục ngôn ngữ đã chọn
+  // Thêm sau các useEffect hiện có
+  useEffect(() => {
+    // Khôi phục ngôn ngữ đã chọn từ localStorage khi trang được tải
+    const savedLanguage = localStorage.getItem("language")
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+  }, [])
+
+  // Cập nhật hàm toggleLanguage để lưu ngôn ngữ đã chọn vào localStorage
+  const toggleLanguage = () => {
+    const newLanguage = language === "en" ? "vi" : "en"
+    setLanguage(newLanguage)
+    localStorage.setItem("language", newLanguage)
+  }
+
   const scrollToSection = (index: number) => {
     const section = sectionRefs.current[index]
     if (section) {
@@ -174,7 +215,8 @@ export default function Home() {
         id="loading"
         className="fixed inset-0 z-50 flex items-center justify-center bg-white transition-opacity duration-500"
       >
-        <div className="text-4xl font-light">Loading...</div>
+        {/* Thay đổi text trong loading overlay */}
+        <div className="text-4xl font-light">{t.home.loading}</div>
       </div>
 
       <div className="relative">
@@ -202,14 +244,15 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-6">
             <nav className="hidden md:flex items-center gap-6 text-sm font-light">
+              {/* Thay đổi các liên kết trong header */}
               <Link href="/reservation" className="hover:underline">
-                RESERVATION
+                {t.navigation.reservation}
               </Link>
               <Link href="/delivery" className="hover:underline">
-                DELIVERY
+                {t.navigation.delivery}
               </Link>
               <Link href="#" className="hover:underline">
-                CAREER
+                {t.navigation.career}
               </Link>
 
               {user ? (
@@ -227,22 +270,32 @@ export default function Home() {
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
+                    {/* Thay đổi text trong dropdown menu */}
                     <DropdownMenuItem onClick={handleLogout} className="text-red-500 cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
-                      Logout
+                      {t.navigation.logout}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
+                /* Thay đổi text trong login link */
                 <Link href="/login" className="hover:underline">
-                  LOGIN
+                  {t.navigation.login}
                 </Link>
               )}
 
-              <div className="flex items-center gap-1">
+              {/* Thay đổi phần hiển thị nút chuyển đổi ngôn ngữ trong phần header */}
+              {/* Tìm đoạn code: */}
+              {/* <div className="flex items-center gap-1">
                 <span>EN</span>
                 <ChevronDown className="h-4 w-4" />
-              </div>
+              </div> */}
+
+              {/* Thay thế bằng: */}
+              <button onClick={toggleLanguage} className="flex items-center gap-1 hover:underline">
+                <span>{language === "en" ? "EN" : "VI"}</span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
             </nav>
             <button
               ref={menuButtonRef}
@@ -272,18 +325,19 @@ export default function Home() {
             </button>
 
             <div className="flex h-full flex-col items-center justify-center gap-8 text-white">
+              {/* Thay đổi các liên kết trong mobile menu */}
               <Link
                 href="/reservation"
                 className="text-2xl font-light hover:underline"
                 onClick={() => setMenuOpen(false)}
               >
-                RESERVATION
+                {t.navigation.reservation}
               </Link>
               <Link href="/delivery" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
-                DELIVERY
+                {t.navigation.delivery}
               </Link>
               <Link href="#" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
-                CAREER
+                {t.navigation.career}
               </Link>
 
               {user ? (
@@ -301,6 +355,7 @@ export default function Home() {
                       </Link>
                     ))}
                   </div>
+                  {/* Thay đổi text trong logout button trong mobile menu */}
                   <button
                     onClick={() => {
                       handleLogout()
@@ -309,19 +364,28 @@ export default function Home() {
                     className="flex items-center gap-2 text-xl font-light text-red-400 hover:underline mt-4"
                   >
                     <LogOut className="h-5 w-5" />
-                    Logout
+                    {t.navigation.logout}
                   </button>
                 </>
               ) : (
+                /* Thay đổi text trong login link trong mobile menu */
                 <Link href="/login" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
-                  LOGIN
+                  {t.navigation.login}
                 </Link>
               )}
 
-              <div className="flex items-center gap-2 text-2xl font-light">
+              {/* Thay đổi phần hiển thị nút chuyển đổi ngôn ngữ trong menu mobile */}
+              {/* Tìm đoạn code: */}
+              {/* <div className="flex items-center gap-2 text-2xl font-light">
                 <span>EN</span>
                 <ChevronDown className="h-5 w-5" />
-              </div>
+              </div> */}
+
+              {/* Thay thế bằng: */}
+              <button onClick={toggleLanguage} className="flex items-center gap-2 text-2xl font-light hover:underline">
+                <span>{language === "en" ? "EN" : "VI"}</span>
+                <ChevronDown className="h-5 w-5" />
+              </button>
             </div>
           </div>
         )}
@@ -343,7 +407,8 @@ export default function Home() {
             <div className="relative z-10 px-6 pb-20 md:px-12">
               {/* Country display */}
               <div className="mb-8 flex flex-col gap-2 text-white">
-                <h1 className="text-left text-4xl font-light md:text-6xl">Vietnam</h1>
+                {/* Thay đổi text trong home section */}
+                <h1 className="text-left text-4xl font-light md:text-6xl">{t.home.country}</h1>
               </div>
             </div>
           </section>
@@ -366,21 +431,15 @@ export default function Home() {
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
               <div className="max-w-3xl">
-                <h2 className="text-5xl font-light mb-8">Our Story</h2>
-                <p className="text-xl font-light mb-6">
-                  Pizza 4P's began with a simple dream: to deliver happiness through pizza. What started as a backyard
-                  pizza oven has grown into a beloved restaurant chain.
-                </p>
-                <p className="text-xl font-light mb-10">
-                  Our name stands for "Platform of Personal Pizza for Peace" - reflecting our mission to create
-                  connections between people through the universal language of food.
-                </p>
-
+                {/* Thay đổi text trong about section */}
+                <h2 className="text-5xl font-light mb-8">{t.about.title}</h2>
+                <p className="text-xl font-light mb-6">{t.about.paragraph1}</p>
+                <p className="text-xl font-light mb-10">{t.about.paragraph2}</p>
                 <Button
                   variant="outline"
                   className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
                 >
-                  Learn More
+                  {t.about.learnMore}
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
@@ -405,21 +464,15 @@ export default function Home() {
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
               <div className="max-w-3xl ml-auto">
-                <h2 className="text-5xl font-light mb-8">Farm to Table</h2>
-                <p className="text-xl font-light mb-6">
-                  We believe in the "Farm to Table" concept, ensuring that we use only the freshest ingredients. Many of
-                  our ingredients are grown on our own farms, including our signature cheese which is made daily.
-                </p>
-                <p className="text-xl font-light mb-10">
-                  This commitment to quality and sustainability is at the heart of everything we do, from our carefully
-                  crafted pizzas to our thoughtfully designed restaurants.
-                </p>
-
+                {/* Thay đổi text trong concept section */}
+                <h2 className="text-5xl font-light mb-8">{t.concept.title}</h2>
+                <p className="text-xl font-light mb-6">{t.concept.paragraph1}</p>
+                <p className="text-xl font-light mb-10">{t.concept.paragraph2}</p>
                 <Button
                   variant="outline"
                   className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
                 >
-                  Discover Our Ingredients
+                  {t.concept.discoverIngredients}
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
@@ -443,7 +496,8 @@ export default function Home() {
             </div>
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
-              <h2 className="text-5xl font-light mb-12">Our Locations</h2>
+              {/* Thay đổi text trong locations section */}
+              <h2 className="text-5xl font-light mb-12">{t.locations.title}</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {[
@@ -461,9 +515,12 @@ export default function Home() {
                       <MapPin className="h-6 w-6 mt-1" />
                       <div>
                         <h3 className="text-2xl font-light">{region.city}</h3>
-                        <p className="text-white/70 mt-2">{region.locations} locations</p>
+                        {/* Thay đổi text trong locations items */}
+                        <p className="text-white/70 mt-2">
+                          {region.locations} {t.locations.locations}
+                        </p>
                         <Button variant="link" className="text-white p-0 mt-4 group">
-                          View All
+                          {t.locations.viewAll}
                           <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </Button>
                       </div>
@@ -492,33 +549,24 @@ export default function Home() {
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
               <div className="max-w-3xl">
-                <h2 className="text-5xl font-light mb-8">Our Restaurant</h2>
-                <p className="text-xl font-light mb-6">
-                  Pizza Liêm Khiết is a Michelin-starred restaurant dedicated to the art of pizza making. Our commitment
-                  to quality and excellence has earned us recognition as one of the finest dining establishments in
-                  Vietnam.
-                </p>
-                <p className="text-xl font-light mb-10">
-                  Our mission is to create unforgettable dining experiences through innovative cuisine, exceptional
-                  service, and a warm, inviting atmosphere. We believe that food is not just sustenance, but an art form
-                  that brings people together.
-                </p>
+                {/* Thay đổi text trong restaurant section */}
+                <h2 className="text-5xl font-light mb-8">{t.restaurant.title}</h2>
+                <p className="text-xl font-light mb-6">{t.restaurant.paragraph1}</p>
+                <p className="text-xl font-light mb-10">{t.restaurant.paragraph2}</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
                   <div className="bg-black/30 backdrop-blur-sm p-6 rounded-lg">
-                    <h3 className="text-2xl font-light mb-4">Our Vision</h3>
-                    <p>
-                      To redefine the art of pizza making and elevate it to the highest standards of culinary
-                      excellence.
-                    </p>
+                    {/* Thay đổi text trong restaurant features */}
+                    <h3 className="text-2xl font-light mb-4">{t.restaurant.vision.title}</h3>
+                    <p>{t.restaurant.vision.description}</p>
                   </div>
                   <div className="bg-black/30 backdrop-blur-sm p-6 rounded-lg">
-                    <h3 className="text-2xl font-light mb-4">Our Values</h3>
-                    <p>Quality, innovation, sustainability, and creating meaningful connections through food.</p>
+                    <h3 className="text-2xl font-light mb-4">{t.restaurant.values.title}</h3>
+                    <p>{t.restaurant.values.description}</p>
                   </div>
                   <div className="bg-black/30 backdrop-blur-sm p-6 rounded-lg">
-                    <h3 className="text-2xl font-light mb-4">Our Promise</h3>
-                    <p>An extraordinary dining experience that delights all senses and exceeds expectations.</p>
+                    <h3 className="text-2xl font-light mb-4">{t.restaurant.promise.title}</h3>
+                    <p>{t.restaurant.promise.description}</p>
                   </div>
                 </div>
               </div>
@@ -543,12 +591,10 @@ export default function Home() {
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
               <div className="text-center mb-16">
-                <h2 className="text-5xl font-light mb-4">Featured Menu</h2>
+                {/* Thay đổi text trong menu section */}
+                <h2 className="text-5xl font-light mb-4">{t.menu.title}</h2>
                 <div className="w-20 h-1 bg-white/50 mx-auto mb-6"></div>
-                <p className="text-xl font-light max-w-2xl mx-auto">
-                  Discover our chef's selection of signature dishes, crafted with the finest ingredients and culinary
-                  expertise.
-                </p>
+                <p className="text-xl font-light max-w-2xl mx-auto">{t.menu.description}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto">
@@ -592,11 +638,12 @@ export default function Home() {
                       <p className="text-white/70 mb-4 flex-1">{item.description}</p>
                       <div className="flex justify-between items-center">
                         <span className="text-2xl font-light">${item.price}</span>
+                        {/* Thay đổi text trong menu items */}
                         <Link
                           href="/delivery"
                           className="bg-white/10 hover:bg-white/20 transition-colors px-4 py-2 rounded-full text-sm"
                         >
-                          Order Now
+                          {t.menu.orderNow}
                         </Link>
                       </div>
                     </div>
@@ -605,11 +652,12 @@ export default function Home() {
               </div>
 
               <div className="text-center mt-12">
+                {/* Thay đổi text trong view full menu button */}
                 <Link
                   href="/delivery"
                   className="inline-flex items-center border border-white px-6 py-3 rounded-full text-lg font-light bg-black/30 hover:bg-white/20 transition-all"
                 >
-                  View Full Menu
+                  {t.menu.viewFullMenu}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </div>
@@ -634,11 +682,10 @@ export default function Home() {
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
               <div className="text-center mb-16">
-                <h2 className="text-5xl font-light mb-4">Gallery</h2>
+                {/* Thay đổi text trong gallery section */}
+                <h2 className="text-5xl font-light mb-4">{t.gallery.title}</h2>
                 <div className="w-20 h-1 bg-white/50 mx-auto mb-6"></div>
-                <p className="text-xl font-light max-w-2xl mx-auto">
-                  Experience the ambiance and artistry of Pizza Liêm Khiết through our gallery.
-                </p>
+                <p className="text-xl font-light max-w-2xl mx-auto">{t.gallery.description}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -687,23 +734,21 @@ export default function Home() {
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
               <div className="max-w-3xl">
-                <h2 className="text-5xl font-light mb-8">Get in Touch</h2>
+                {/* Thay đổi text trong contact section */}
+                <h2 className="text-5xl font-light mb-8">{t.contact.title}</h2>
 
                 <div className="grid gap-8 mb-12">
-                  <div>
-                    <h3 className="text-2xl font-light mb-2">General Inquiries</h3>
-                    <p className="text-white/70">info@pizza4ps.com</p>
-                  </div>
+                  {/* Thay đổi text trong contact section */}
+                  <h3 className="text-2xl font-light mb-2">{t.contact.generalInquiries}</h3>
+                  <p className="text-white/70">info@pizza4ps.com</p>
 
-                  <div>
-                    <h3 className="text-2xl font-light mb-2">Careers</h3>
-                    <p className="text-white/70">careers@pizza4ps.com</p>
-                  </div>
+                  {/* Thay đổi text trong contact section */}
+                  <h3 className="text-2xl font-light mb-2">{t.contact.careers}</h3>
+                  <p className="text-white/70">careers@pizza4ps.com</p>
 
-                  <div>
-                    <h3 className="text-2xl font-light mb-2">Press</h3>
-                    <p className="text-white/70">press@pizza4ps.com</p>
-                  </div>
+                  {/* Thay đổi text trong contact section */}
+                  <h3 className="text-2xl font-light mb-2">{t.contact.press}</h3>
+                  <p className="text-white/70">press@pizza4ps.com</p>
                 </div>
 
                 <div className="flex gap-6">
@@ -712,22 +757,23 @@ export default function Home() {
                     className="border-white text-white bg-black/30 hover:bg-white hover:text-black"
                   >
                     <Instagram className="mr-2 h-5 w-5" />
-                    Instagram
+                    {t.contact.instagram}
                   </Button>
                   <Button
                     variant="outline"
                     className="border-white text-white bg-black/30 hover:bg-white hover:text-black"
                   >
                     <Facebook className="mr-2 h-5 w-5" />
-                    Facebook
+                    {t.contact.facebook}
                   </Button>
                 </div>
               </div>
-            </div>
 
-            <footer className="absolute bottom-0 left-0 right-0 border-t border-white/20 py-4 text-white/60 text-center text-sm backdrop-blur-sm bg-black/20">
-              <div className="container mx-auto">© 2023 Pizza 4P's. All rights reserved.</div>
-            </footer>
+              {/* Thay đổi text trong footer */}
+              <footer className="absolute bottom-0 left-0 right-0 border-t border-white/20 py-4 text-white/60 text-center text-sm backdrop-blur-sm bg-black/20">
+                <div className="container mx-auto">{t.contact.copyright}</div>
+              </footer>
+            </div>
           </section>
         </main>
 
