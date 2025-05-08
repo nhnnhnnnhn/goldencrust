@@ -21,6 +21,30 @@ type TranslationKeys = {
     table: string
     payment: string
     settings: string
+    adminRole: string
+    userRole: string
+    welcomeBack: string
+    totalCustomers: string
+    reservationsToday: string
+    ordersToday: string
+    revenueToday: string
+    loyaltyPoints: string
+    upcomingReservations: string
+    recentOrders: string
+    memberSince: string
+    quickActions: string
+    frequentlyUsedActions: string
+    manageReservations: string
+    manageOrders: string
+    updateMenu: string
+    viewCustomers: string
+    makeReservation: string
+    orderFood: string
+    loyaltyRewards: string
+    updateProfile: string
+    recentActivity: string
+    latestUpdates: string
+    you: string
   }
   home: {
     loading: string
@@ -105,6 +129,30 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       table: "Table",
       payment: "Payment",
       settings: "Settings",
+      adminRole: "Admin",
+      userRole: "User",
+      welcomeBack: "Welcome back",
+      totalCustomers: "Total Customers",
+      reservationsToday: "Reservations Today",
+      ordersToday: "Orders Today",
+      revenueToday: "Revenue Today",
+      loyaltyPoints: "Loyalty Points",
+      upcomingReservations: "Upcoming Reservations",
+      recentOrders: "Recent Orders",
+      memberSince: "Member Since",
+      quickActions: "Quick Actions",
+      frequentlyUsedActions: "Frequently used actions and shortcuts",
+      manageReservations: "Manage Reservations",
+      manageOrders: "Manage Orders",
+      updateMenu: "Update Menu",
+      viewCustomers: "View Customers",
+      makeReservation: "Make Reservation",
+      orderFood: "Order Food",
+      loyaltyRewards: "Loyalty Rewards",
+      updateProfile: "Update Profile",
+      recentActivity: "Recent Activity",
+      latestUpdates: "Latest updates and activities",
+      you: "You",
     },
     home: {
       loading: "Loading...",
@@ -195,6 +243,30 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       table: "Quản lý bàn",
       payment: "Thanh toán",
       settings: "Cài đặt",
+      adminRole: "Quản trị viên",
+      userRole: "Người dùng",
+      welcomeBack: "Chào mừng trở lại",
+      totalCustomers: "Tổng số khách hàng",
+      reservationsToday: "Đặt bàn hôm nay",
+      ordersToday: "Đơn hàng hôm nay",
+      revenueToday: "Doanh thu hôm nay",
+      loyaltyPoints: "Điểm thưởng",
+      upcomingReservations: "Đặt bàn sắp tới",
+      recentOrders: "Đơn hàng gần đây",
+      memberSince: "Thành viên từ",
+      quickActions: "Thao tác nhanh",
+      frequentlyUsedActions: "Các thao tác và lối tắt thường dùng",
+      manageReservations: "Quản lý đặt bàn",
+      manageOrders: "Quản lý đơn hàng",
+      updateMenu: "Cập nhật thực đơn",
+      viewCustomers: "Xem khách hàng",
+      makeReservation: "Đặt bàn",
+      orderFood: "Đặt món",
+      loyaltyRewards: "Phần thưởng thành viên",
+      updateProfile: "Cập nhật hồ sơ",
+      recentActivity: "Hoạt động gần đây",
+      latestUpdates: "Cập nhật và hoạt động mới nhất",
+      you: "Bạn",
     },
     home: {
       loading: "Đang tải...",
