@@ -2,15 +2,39 @@
 
 import type React from "react"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
-import { Home, User, Calendar, ShoppingBag, Clock, Award, Users, Settings, MenuIcon, Truck, LogOut } from "lucide-react"
+import {
+  Home,
+  User,
+  Calendar,
+  ShoppingBag,
+  Clock,
+  Award,
+  Users,
+  Settings,
+  MenuIcon,
+  Truck,
+  LogOut,
+  BarChart2,
+  CreditCard,
+} from "lucide-react"
+import { getTranslation } from "@/utils/translations"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, logout } = useAuth()
   const router = useRouter()
+  const [language, setLanguage] = useState<"en" | "vi">("en")
+
+  useEffect(() => {
+    // Get language from localStorage
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+  }, [])
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -31,23 +55,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const isAdmin = user.role === "admin"
+  const t = getTranslation(language)
 
   const userNavItems = [
-    { href: "/dashboard", label: "Dashboard", icon: <Home className="h-5 w-5" /> },
-    { href: "/dashboard/profile", label: "Profile", icon: <User className="h-5 w-5" /> },
-    { href: "/dashboard/reservations", label: "My Reservations", icon: <Calendar className="h-5 w-5" /> },
-    { href: "/dashboard/orders", label: "My Orders", icon: <ShoppingBag className="h-5 w-5" /> },
-    { href: "/dashboard/history", label: "History", icon: <Clock className="h-5 w-5" /> },
-    { href: "/dashboard/loyalty", label: "Loyalty Program", icon: <Award className="h-5 w-5" /> },
+    { href: "/dashboard", label: t.dashboard.dashboard, icon: <Home className="h-5 w-5" /> },
+    { href: "/dashboard/profile", label: t.dashboard.profile, icon: <User className="h-5 w-5" /> },
+    { href: "/dashboard/reservations", label: t.dashboard.myReservations, icon: <Calendar className="h-5 w-5" /> },
+    { href: "/dashboard/orders", label: t.dashboard.myOrders, icon: <ShoppingBag className="h-5 w-5" /> },
+    { href: "/dashboard/history", label: t.dashboard.orderHistory, icon: <Clock className="h-5 w-5" /> },
+    { href: "/dashboard/loyalty", label: t.dashboard.loyaltyProgram, icon: <Award className="h-5 w-5" /> },
   ]
 
   const adminNavItems = [
-    { href: "/dashboard", label: "Dashboard", icon: <Home className="h-5 w-5" /> },
-    { href: "/dashboard/customers", label: "Customers", icon: <Users className="h-5 w-5" /> },
-    { href: "/dashboard/menu-management", label: "Menu Management", icon: <MenuIcon className="h-5 w-5" /> },
-    { href: "/dashboard/reservations-management", label: "Reservations", icon: <Calendar className="h-5 w-5" /> },
-    { href: "/dashboard/delivery-management", label: "Delivery", icon: <Truck className="h-5 w-5" /> },
-    { href: "/dashboard/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
+    { href: "/dashboard", label: t.dashboard.dashboard, icon: <Home className="h-5 w-5" /> },
+    { href: "/dashboard/customers", label: t.dashboard.customers, icon: <Users className="h-5 w-5" /> },
+    { href: "/dashboard/menu-management", label: t.dashboard.menu, icon: <MenuIcon className="h-5 w-5" /> },
+    { href: "/dashboard/reservations", label: t.dashboard.reservations, icon: <Calendar className="h-5 w-5" /> },
+    { href: "/dashboard/delivery", label: t.dashboard.delivery, icon: <Truck className="h-5 w-5" /> },
+    { href: "/dashboard/statistics", label: t.dashboard.statistics, icon: <BarChart2 className="h-5 w-5" /> },
+    { href: "/dashboard/table-management", label: t.dashboard.table, icon: <Settings className="h-5 w-5" /> },
+    { href: "/dashboard/payment", label: t.dashboard.payment, icon: <CreditCard className="h-5 w-5" /> },
+    { href: "/dashboard/settings", label: t.dashboard.settings, icon: <Settings className="h-5 w-5" /> },
   ]
 
   const navItems = isAdmin ? adminNavItems : userNavItems
@@ -58,7 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r border-gray-200 bg-white md:flex">
         <div className="flex h-16 items-center justify-center border-b border-gray-200">
           <Link href="/" className="text-xl font-light uppercase tracking-wider text-blue-900">
-            PIZZA LIÊM KHIẾT&apos;S
+            GOLDEN CRUST
           </Link>
         </div>
         <div className="flex flex-1 flex-col justify-between overflow-y-auto p-4">
@@ -83,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="flex w-full items-center rounded-md px-3 py-2 text-gray-700 hover:bg-red-50 hover:text-red-700"
             >
               <LogOut className="h-5 w-5" />
-              <span className="ml-3">Logout</span>
+              <span className="ml-3">{t.navigation.logout}</span>
             </button>
           </div>
         </div>
@@ -101,7 +129,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex flex-1 justify-end">
             <div className="flex items-center">
               <span className="mr-2 text-sm text-gray-700">
-                {user.name} ({isAdmin ? "Admin" : "User"})
+                {user.name} ({isAdmin ? t.dashboard.adminRole : t.dashboard.userRole})
               </span>
               <div className="relative">
                 <button className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-900">
