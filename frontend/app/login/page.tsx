@@ -6,12 +6,13 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { ChevronLeft, Eye, EyeOff, Info } from "lucide-react"
+import { ChevronLeft, Eye, EyeOff, Info, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getTranslation } from "@/utils/translations"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,11 +25,31 @@ export default function LoginPage() {
     password: "",
   })
   const [registerData, setRegisterData] = useState({
-    name: "",
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
+    phone: "",
+    address: "",
   })
+  const [language, setLanguage] = useState<"en" | "vi">("en")
+  const [registerErrors, setRegisterErrors] = useState<{
+    fullName?: string
+    email?: string
+    password?: string
+    confirmPassword?: string
+    phone?: string
+  }>({})
+
+  // Get language from localStorage
+  useState(() => {
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+  })
+
+  const t = getTranslation(language)
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,19 +59,81 @@ export default function LoginPage() {
     router.push(redirect)
   }
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // In a real app, this would register a new user with a backend
-    // For now, we'll just simulate a successful registration and login
-    login(registerData.name, registerData.email, "user", 0, new Date().toISOString().split("T")[0])
-    router.push(redirect)
+  const validateRegisterForm = () => {
+    const errors: {
+      fullName?: string
+      email?: string
+      password?: string
+      confirmPassword?: string
+      phone?: string
+    } = {}
+
+    if (!registerData.fullName.trim()) {
+      errors.fullName = "Full name is required"
+    }
+
+    if (!registerData.email.trim()) {
+      errors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(registerData.email)) {
+      errors.email = "Email is invalid"
+    }
+
+    if (!registerData.password) {
+      errors.password = "Password is required"
+    } else if (registerData.password.length < 8) {
+      errors.password = "Password must be at least 8 characters"
+    }
+
+    if (registerData.password !== registerData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match"
+    }
+
+    if (registerData.phone && !/^\d{10,11}$/.test(registerData.phone.replace(/[^0-9]/g, ""))) {
+      errors.phone = "Phone number is invalid"
+    }
+
+    setRegisterErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
-  const handleTestAccountLogin = (type: "admin" | "user") => {
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateRegisterForm()) {
+      return
+    }
+
+    // In a real app, this would register a new user with a backend
+    // For now, we'll just simulate a successful registration and redirect to OTP verification
+    // Store registration data in localStorage for demo purposes
+    localStorage.setItem(
+      "pendingRegistration",
+      JSON.stringify({
+        fullName: registerData.fullName,
+        email: registerData.email,
+        phone: registerData.phone,
+        address: registerData.address,
+        role: "user",
+        isVerified: false,
+        isActive: true,
+        isSuspended: false,
+        avatar: "",
+        loyaltyPoints: 0,
+        joinDate: new Date().toISOString().split("T")[0],
+      }),
+    )
+
+    // Redirect to OTP verification page
+    router.push("/verify-otp?action=register")
+  }
+
+  const handleTestAccountLogin = (type: "admin" | "employee" | "user") => {
     if (type === "admin") {
-      login("Admin User", "admin@pizza.com", "admin", 500, "2022-05-10")
+      login("Admin User", "admin@goldencrust.com", "admin", 500, "2022-05-10")
+    } else if (type === "employee") {
+      login("Employee User", "employee@goldencrust.com", "employee", 300, "2022-08-15")
     } else {
-      login("Regular User", "user@pizza.com", "user", 150, "2023-01-15")
+      login("Regular User", "user@goldencrust.com", "user", 150, "2023-01-15")
     }
     router.push(redirect)
   }
@@ -68,7 +151,7 @@ export default function LoginPage() {
         <div className="mx-auto max-w-md">
           <div className="mb-8 text-center">
             <Link href="/" className="text-2xl font-light uppercase tracking-wider text-blue-900">
-              PIZZA LIÊM KHIẾT&apos;S
+              GOLDEN CRUST
             </Link>
             <p className="mt-2 text-gray-600">Sign in to your account or create a new one</p>
           </div>
@@ -87,6 +170,14 @@ export default function LoginPage() {
                     onClick={() => handleTestAccountLogin("admin")}
                   >
                     Login as Admin
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-300 text-blue-900 hover:bg-blue-100"
+                    onClick={() => handleTestAccountLogin("employee")}
+                  >
+                    Login as Employee
                   </Button>
                   <Button
                     size="sm"
@@ -126,7 +217,7 @@ export default function LoginPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="password">Password</Label>
-                        <Link href="#" className="text-xs text-blue-900 hover:underline">
+                        <Link href="/forgot-password" className="text-xs text-blue-900 hover:underline">
                           Forgot password?
                         </Link>
                       </div>
@@ -164,10 +255,11 @@ export default function LoginPage() {
                       <Input
                         id="register-name"
                         placeholder="John Doe"
-                        value={registerData.name}
-                        onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
+                        value={registerData.fullName}
+                        onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
                         required
                       />
+                      {registerErrors.fullName && <p className="text-sm text-red-600">{registerErrors.fullName}</p>}
                     </div>
 
                     <div className="space-y-2">
@@ -180,6 +272,37 @@ export default function LoginPage() {
                         onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                         required
                       />
+                      {registerErrors.email && <p className="text-sm text-red-600">{registerErrors.email}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="register-phone">Phone Number</Label>
+                      <div className="relative">
+                        <Input
+                          id="register-phone"
+                          type="tel"
+                          placeholder="(123) 456-7890"
+                          value={registerData.phone}
+                          onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
+                          className="pl-10"
+                        />
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      </div>
+                      {registerErrors.phone && <p className="text-sm text-red-600">{registerErrors.phone}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="register-address">Address (Optional)</Label>
+                      <div className="relative">
+                        <Input
+                          id="register-address"
+                          placeholder="123 Main St, City, Country"
+                          value={registerData.address}
+                          onChange={(e) => setRegisterData({ ...registerData, address: e.target.value })}
+                          className="pl-10"
+                        />
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -201,6 +324,7 @@ export default function LoginPage() {
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
+                      {registerErrors.password && <p className="text-sm text-red-600">{registerErrors.password}</p>}
                     </div>
 
                     <div className="space-y-2">
@@ -213,9 +337,12 @@ export default function LoginPage() {
                         onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
                         required
                       />
+                      {registerErrors.confirmPassword && (
+                        <p className="text-sm text-red-600">{registerErrors.confirmPassword}</p>
+                      )}
                     </div>
 
-                    <Button type="submit" className="w-full">
+                    <Button type="submit" className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800">
                       Create Account
                     </Button>
                   </div>
