@@ -1,37 +1,50 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, ShoppingBag, Users, Award, TrendingUp, Clock } from "lucide-react"
 import Link from "next/link"
+import { getTranslation } from "@/utils/translations"
 
 export default function Dashboard() {
   const { user } = useAuth()
   const isAdmin = user?.role === "admin"
+  const [language, setLanguage] = useState<"en" | "vi">("en")
+
+  useEffect(() => {
+    // Get language from localStorage
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+  }, [])
+
+  const t = getTranslation(language)
 
   // Mock data for demonstration
   const stats = isAdmin
     ? [
         {
-          label: "Total Customers",
+          label: t.dashboard.totalCustomers,
           value: "1,248",
           icon: <Users className="h-5 w-5" />,
           color: "bg-blue-100 text-blue-800",
         },
         {
-          label: "Reservations Today",
+          label: t.dashboard.reservationsToday,
           value: "32",
           icon: <Calendar className="h-5 w-5" />,
           color: "bg-green-100 text-green-800",
         },
         {
-          label: "Orders Today",
+          label: t.dashboard.ordersToday,
           value: "64",
           icon: <ShoppingBag className="h-5 w-5" />,
           color: "bg-purple-100 text-purple-800",
         },
         {
-          label: "Revenue Today",
+          label: t.dashboard.revenueToday,
           value: "$3,240",
           icon: <TrendingUp className="h-5 w-5" />,
           color: "bg-amber-100 text-amber-800",
@@ -39,25 +52,25 @@ export default function Dashboard() {
       ]
     : [
         {
-          label: "Loyalty Points",
+          label: t.dashboard.loyaltyPoints,
           value: user?.loyaltyPoints || 0,
           icon: <Award className="h-5 w-5" />,
           color: "bg-blue-100 text-blue-800",
         },
         {
-          label: "Upcoming Reservations",
+          label: t.dashboard.upcomingReservations,
           value: "2",
           icon: <Calendar className="h-5 w-5" />,
           color: "bg-green-100 text-green-800",
         },
         {
-          label: "Recent Orders",
+          label: t.dashboard.recentOrders,
           value: "3",
           icon: <ShoppingBag className="h-5 w-5" />,
           color: "bg-purple-100 text-purple-800",
         },
         {
-          label: "Member Since",
+          label: t.dashboard.memberSince,
           value: user?.joinDate || "-",
           icon: <Clock className="h-5 w-5" />,
           color: "bg-amber-100 text-amber-800",
@@ -86,8 +99,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500">Welcome back, {user?.name}</p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t.dashboard.dashboard}</h1>
+        <p className="text-gray-500">
+          {t.dashboard.welcomeBack}, {user?.name}
+        </p>
       </div>
 
       {/* Stats */}
@@ -110,8 +125,8 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Frequently used actions and shortcuts</CardDescription>
+          <CardTitle>{t.dashboard.quickActions}</CardTitle>
+          <CardDescription>{t.dashboard.frequentlyUsedActions}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -122,28 +137,28 @@ export default function Dashboard() {
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <Calendar className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>Manage Reservations</span>
+                  <span>{t.dashboard.manageReservations}</span>
                 </Link>
                 <Link
                   href="/dashboard/delivery-management"
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <ShoppingBag className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>Manage Orders</span>
+                  <span>{t.dashboard.manageOrders}</span>
                 </Link>
                 <Link
                   href="/dashboard/menu-management"
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <TrendingUp className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>Update Menu</span>
+                  <span>{t.dashboard.updateMenu}</span>
                 </Link>
                 <Link
                   href="/dashboard/customers"
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <Users className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>View Customers</span>
+                  <span>{t.dashboard.viewCustomers}</span>
                 </Link>
               </>
             ) : (
@@ -153,28 +168,28 @@ export default function Dashboard() {
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <Calendar className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>Make Reservation</span>
+                  <span>{t.dashboard.makeReservation}</span>
                 </Link>
                 <Link
                   href="/delivery"
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <ShoppingBag className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>Order Food</span>
+                  <span>{t.dashboard.orderFood}</span>
                 </Link>
                 <Link
                   href="/dashboard/loyalty"
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <Award className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>Loyalty Rewards</span>
+                  <span>{t.dashboard.loyaltyRewards}</span>
                 </Link>
                 <Link
                   href="/dashboard/profile"
                   className="flex flex-col items-center rounded-lg border border-gray-200 p-4 text-center hover:bg-gray-50"
                 >
                   <Users className="mb-2 h-8 w-8 text-blue-900" />
-                  <span>Update Profile</span>
+                  <span>{t.dashboard.updateProfile}</span>
                 </Link>
               </>
             )}
@@ -185,8 +200,8 @@ export default function Dashboard() {
       {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest updates and activities</CardDescription>
+          <CardTitle>{t.dashboard.recentActivity}</CardTitle>
+          <CardDescription>{t.dashboard.latestUpdates}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -220,7 +235,7 @@ export default function Dashboard() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-gray-900">
-                      {isAdmin && activity.customer ? `${activity.customer}` : "You"}
+                      {isAdmin && activity.customer ? `${activity.customer}` : t.dashboard.you}
                     </p>
                     <span className="text-sm text-gray-500">{activity.time}</span>
                   </div>
