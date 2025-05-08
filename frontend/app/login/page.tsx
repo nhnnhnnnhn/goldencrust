@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getTranslation } from "@/utils/translations"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -29,6 +30,17 @@ export default function LoginPage() {
     password: "",
     confirmPassword: "",
   })
+  const [language, setLanguage] = useState<"en" | "vi">("en")
+
+  // Get language from localStorage
+  useState(() => {
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+  })
+
+  const t = getTranslation(language)
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,16 +53,28 @@ export default function LoginPage() {
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // In a real app, this would register a new user with a backend
-    // For now, we'll just simulate a successful registration and login
-    login(registerData.name, registerData.email, "user", 0, new Date().toISOString().split("T")[0])
-    router.push(redirect)
+    // For now, we'll just simulate a successful registration and redirect to OTP verification
+    // Store registration data in localStorage for demo purposes
+    localStorage.setItem(
+      "pendingRegistration",
+      JSON.stringify({
+        name: registerData.name,
+        email: registerData.email,
+        role: "user",
+        loyaltyPoints: 0,
+        joinDate: new Date().toISOString().split("T")[0],
+      }),
+    )
+
+    // Redirect to OTP verification page
+    router.push("/verify-otp?action=register")
   }
 
   const handleTestAccountLogin = (type: "admin" | "user") => {
     if (type === "admin") {
-      login("Admin User", "admin@pizza.com", "admin", 500, "2022-05-10")
+      login("Admin User", "admin@goldencrust.com", "admin", 500, "2022-05-10")
     } else {
-      login("Regular User", "user@pizza.com", "user", 150, "2023-01-15")
+      login("Regular User", "user@goldencrust.com", "user", 150, "2023-01-15")
     }
     router.push(redirect)
   }
@@ -68,7 +92,7 @@ export default function LoginPage() {
         <div className="mx-auto max-w-md">
           <div className="mb-8 text-center">
             <Link href="/" className="text-2xl font-light uppercase tracking-wider text-blue-900">
-              PIZZA LIÊM KHIẾT&apos;S
+              GOLDEN CRUST
             </Link>
             <p className="mt-2 text-gray-600">Sign in to your account or create a new one</p>
           </div>
@@ -126,7 +150,7 @@ export default function LoginPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="password">Password</Label>
-                        <Link href="#" className="text-xs text-blue-900 hover:underline">
+                        <Link href="/forgot-password" className="text-xs text-blue-900 hover:underline">
                           Forgot password?
                         </Link>
                       </div>
@@ -215,7 +239,7 @@ export default function LoginPage() {
                       />
                     </div>
 
-                    <Button type="submit" className="w-full">
+                    <Button type="submit" className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800">
                       Create Account
                     </Button>
                   </div>
