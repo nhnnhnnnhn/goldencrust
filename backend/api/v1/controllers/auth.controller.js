@@ -5,6 +5,7 @@ const User = require('../models/user.model');
 const Otp = require('../../../helpers/email');
 const controllerHandler = require('../../../helpers/controllerHandler');
 const Token = require('../models/token.model');
+const logger = require('../../../helpers/logger');  // Import logger để thêm logging
 
 // Login user
 module.exports.loginUser = controllerHandler(async (req, res) => {
@@ -42,8 +43,18 @@ module.exports.loginUser = controllerHandler(async (req, res) => {
         return res.status(403).json({ message: 'User account is suspended' });
     }
 
+    // Log ra các biến môi trường liên quan đến JWT (không log giá trị thật, chỉ log trạng thái)
+    logger.info('JWT Environment Variables Status', {
+        JWT_SECRET_STATUS: process.env.JWT_SECRET ? 'Available' : 'Missing',
+        JWT_REFRESH_SECRET_STATUS: process.env.JWT_REFRESH_SECRET ? 'Available' : 'Missing',
+        JWT_RESET_SECRET_STATUS: process.env.JWT_RESET_SECRET ? 'Available' : 'Missing'
+    });
+    
+    // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
+    const refreshSecretKey = process.env.JWT_REFRESH_SECRET || 'golden-crust-refresh-default-secret-key';
+    
     // Create refresh token
-    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
+    const refreshToken = jwt.sign({ id: user._id }, refreshSecretKey, {
         expiresIn: '7d',
     });
     await Token.create({
@@ -54,8 +65,12 @@ module.exports.loginUser = controllerHandler(async (req, res) => {
         createdByIp: req.ip,
     });
 
+    // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
+    const secretKey = process.env.JWT_SECRET || 'golden-crust-default-secret-key';
+    logger.info('Generating JWT token with user ID', { userId: user._id });
+    
     // Generate JWT token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id }, secretKey, {
         expiresIn: '1h',
     });
 
@@ -271,8 +286,12 @@ module.exports.verifyOtpForgotPassword = controllerHandler(async (req, res) => {
         return res.status(400).json({ message: otpResponse.message });
     }
 
+    // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
+    const resetSecretKey = process.env.JWT_RESET_SECRET || 'golden-crust-reset-default-secret-key';
+    logger.info('Generating reset token for email', { email });
+    
     // Generate reset token
-    const resetToken = jwt.sign({ email }, process.env.JWT_RESET_SECRET, {
+    const resetToken = jwt.sign({ email }, resetSecretKey, {
         expiresIn: '15m',
     });
 
@@ -295,9 +314,14 @@ module.exports.resetPassword = controllerHandler(async (req, res) => {
     // Verify reset token
     let email;
     try {
-        const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
+        // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
+        const resetSecretKey = process.env.JWT_RESET_SECRET || 'golden-crust-reset-default-secret-key';
+        logger.info('Verifying reset token');
+        
+        const decoded = jwt.verify(token, resetSecretKey);
         email = decoded.email;
     } catch (error) {
+        logger.error('Token verification failed', { error });
         return res.status(401).json({ message: 'Invalid or expired token' });
     }
 

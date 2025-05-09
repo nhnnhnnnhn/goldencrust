@@ -12,18 +12,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getTranslation } from "@/utils/translations"
+import { useLoginMutation } from "@/redux/api/authApi"
+import { useAppSelector } from "@/redux/hooks"
 
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get("redirect") || "/dashboard"
-  const { login } = useAuth()
+  const { login: contextLogin } = useAuth() // Keep auth context for now as we transition
+  const [login, { isLoading }] = useLoginMutation()
+  const { error } = useAppSelector(state => state.auth || {})
+  
   const [showPassword, setShowPassword] = useState(false)
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
   })
   const [language, setLanguage] = useState<"en" | "vi">("en")
+  const [loginError, setLoginError] = useState<string | null>(null)
 
   // Get language from localStorage
   useEffect(() => {
@@ -35,23 +41,75 @@ export default function LoginPage() {
 
   const t = getTranslation(language)
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, this would authenticate with a backend
-    // For now, we'll just simulate a successful login
-    login("John Doe", loginData.email, loginData.email.includes("admin") ? "admin" : "user", 150, "2023-01-15")
-    router.push(redirect)
+    setLoginError(null)
+    
+    try {
+      // Gọi API đăng nhập thông qua Redux Toolkit
+      const result = await login({
+        email: loginData.email,
+        password: loginData.password
+      }).unwrap()
+      
+      // Cũng cập nhật auth context để đảm bảo backwards compatibility
+      if (result.user) {
+        contextLogin(
+          result.user.fullName,
+          result.user.email,
+          result.user.role,
+          0, // Giả sử loyaltyPoints chưa có trong API
+          new Date().toISOString() // Giả sử joinDate chưa có trong API
+        )
+      }
+      
+      router.push(redirect)
+    } catch (err: any) {
+      console.error('Login error:', err)
+      setLoginError(err?.data?.message || 'Đăng nhập thất bại')
+    }
   }
 
-  const handleTestAccountLogin = (type: "admin" | "employee" | "user") => {
+  const handleTestAccountLogin = async (type: "admin" | "employee" | "user") => {
+    let testEmail = '';
+    let testPassword = 'password123'; // Giả sử mật khẩu demo
+    
     if (type === "admin") {
-      login("Admin User", "admin@goldencrust.com", "admin", 500, "2022-05-10")
+      testEmail = "admin@goldencrust.com";
     } else if (type === "employee") {
-      login("Employee User", "employee@goldencrust.com", "employee", 300, "2022-08-15")
+      testEmail = "employee@goldencrust.com";
     } else {
-      login("Regular User", "user@goldencrust.com", "user", 150, "2023-01-15")
+      testEmail = "user@goldencrust.com";
     }
-    router.push(redirect)
+    
+    setLoginData({
+      email: testEmail,
+      password: testPassword
+    });
+    
+    try {
+      // Gọi API đăng nhập thông qua Redux Toolkit
+      const result = await login({
+        email: testEmail,
+        password: testPassword
+      }).unwrap();
+      
+      // Cũng cập nhật auth context để đảm bảo backwards compatibility
+      if (result.user) {
+        contextLogin(
+          result.user.fullName,
+          result.user.email,
+          result.user.role,
+          0,
+          new Date().toISOString()
+        )
+      }
+      
+      router.push(redirect);
+    } catch (err: any) {
+      console.error('Test login error:', err);
+      setLoginError(err?.data?.message || 'Đăng nhập thất bại');
+    }
   }
 
   return (
@@ -110,6 +168,15 @@ export default function LoginPage() {
 
           <div className="overflow-hidden rounded-lg bg-white shadow">
             <div className="p-6">
+              {/* Hiển thị lỗi đăng nhập nếu có */}
+              {(loginError || error) && (
+                <Alert className="mb-4 bg-red-50 border-red-200 text-red-800">
+                  <AlertDescription>
+                    {loginError || error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <form onSubmit={handleLoginSubmit}>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -150,8 +217,12 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800">
-                    Sign In
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Đang đăng nhập...' : 'Sign In'}
                   </Button>
                 </div>
               </form>

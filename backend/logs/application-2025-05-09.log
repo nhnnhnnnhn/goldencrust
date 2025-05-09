@@ -1,2 +1,28 @@
 2025-05-09 15:44:36 [info]: 	Connected to database successfully 
 2025-05-09 15:44:36 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:46:49 [info]: 	Connected to database successfully 
+2025-05-09 18:46:49 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:54:00 [info]: 	Connected to database successfully 
+2025-05-09 18:54:00 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:54:12 [info]: 	Connected to database successfully 
+2025-05-09 18:54:12 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:54:24 [info]: 	Connected to database successfully 
+2025-05-09 18:54:24 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:55:32 [info]: 	Connected to database successfully 
+2025-05-09 18:55:32 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:56:12 [info]: 	Connected to database successfully 
+2025-05-09 18:56:12 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:59:01 [info]: 	Connected to database successfully 
+2025-05-09 18:59:01 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:59:30 [info]: 	Connected to database successfully 
+2025-05-09 18:59:30 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 18:59:45 [info]: 	Connected to database successfully 
+2025-05-09 18:59:45 [info]: 	Server is running on port 5000 in development mode 
+2025-05-09 19:01:13 [info]: 	JWT Environment Variables Status {
+  "JWT_SECRET_STATUS": "Missing",
+  "JWT_REFRESH_SECRET_STATUS": "Missing",
+  "JWT_RESET_SECRET_STATUS": "Missing"
+}
+2025-05-09 19:01:13 [info]: 	Generating JWT token with user ID {
+  "userId": "681ddd48eba96e82cc7e7067"
+}

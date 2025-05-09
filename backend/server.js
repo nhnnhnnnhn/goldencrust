@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const database = require('./config/database');
 const routes = require('./api/v1/routes/index.route');
 const logger = require('./helpers/logger');
@@ -20,6 +21,14 @@ try {
 }
 
 // Middleware
+// Cấu hình CORS để cho phép frontend kết nối đến API
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
+
 app.use(requestTime); // Đo thời gian xử lý request
 app.use(httpLogger); // Log tất cả HTTP requests
 app.use(express.json());
