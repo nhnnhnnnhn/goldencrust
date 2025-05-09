@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\nhnn\\Documents\\CODE\\goldencrust-1\\backend\\logs\\.0f4b2792e683ce0543f48dd8e26a4f2ff0818bc2-audit.json",
+    "files": [
+        {
+            "date": 1746780276305,
+            "name": "C:\\Users\\nhnn\\Documents\\CODE\\goldencrust-1\\backend\\logs\\error-2025-05-09.log",
+            "hash": "961ff8fcc75388d0f71a2b091c774cf0bf58556fc1ccab073047f786f265e78f"
+        }
+    ],
+    "hashType": "sha256"
+}
