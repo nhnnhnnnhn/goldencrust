@@ -9,7 +9,7 @@ const uploadCloud = require('../middlewares/uploadCloud.middleware');
 
 
 // Get all users
-router.get('/get-user/', authMiddleware, userController.getAllUsers);
+router.get('/get-user', authMiddleware, userController.getAllUsers);
 
 // Get user by ID
 router.get('/get-user/:id', authMiddleware, userController.getUserById);

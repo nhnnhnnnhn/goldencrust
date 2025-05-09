@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
+const bcrypt = require('bcrypt');
 
 // Get all users
 module.exports.getAllUsers = controllerHandler(async (req, res) => {
@@ -27,10 +28,10 @@ module.exports.getUserById = controllerHandler(async (req, res) => {
 
 // Create a new user
 module.exports.createUser = controllerHandler(async (req, res) => {
-    const { email, password, role } = req.body;
+    const { email, password, role, phone, address } = req.body;
 
     // Validate input
-    if (!email || !password || !role) {
+    if (!email || !password || !role || !phone) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -40,15 +41,30 @@ module.exports.createUser = controllerHandler(async (req, res) => {
         return res.status(409).json({ message: 'User already exists' });
     }
 
+    // Check if phone number is already in use
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) {
+        return res.status(409).json({ message: 'Phone number already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = bcrypt.hashSync(password, 10);
+
     // Create new user
     try {
-        const newUser = new User({ email, password, role });
-        await newUser.save();
+        await User.create({
+            email,
+            password: hashedPassword,
+            phone,
+            address: address,
+            role,
+            isVerified: true,
+        });
     } catch (error) {
         return res.status(500).json({ message: 'Error creating user', error });
     }
 
-    return res.status(201).json(newUser);
+    return res.status(201).json({ message: 'User created successfully' });
 });
 
 // Change user role
@@ -65,6 +81,27 @@ module.exports.changeUserRole = controllerHandler(async (req, res) => {
     const user = await User.findById(id);
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if role is valid
+    const validRoles = ['admin', 'user', 'employee'];
+    if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+    }
+
+    // Check if user is already in the specified role
+    if (user.role === role) {
+        return res.status(400).json({ message: 'User is already in the specified role' });
+    }
+
+    // Check if user is suspended
+    if (user.isSuspended) {
+        return res.status(400).json({ message: 'User is suspended' });
+    }
+
+    // Check if user is admin
+    if (user.role === 'admin') {
+        return res.status(400).json({ message: 'Cannot change admin role' });
     }
 
     // Update user role
