@@ -1,50 +1,11 @@
-type TranslationKeys = {
+type Translation = {
   navigation: {
     reservation: string
     delivery: string
     career: string
     login: string
     logout: string
-  }
-  dashboard: {
-    dashboard: string
-    myOrders: string
-    myReservations: string
-    orderHistory: string
-    loyaltyProgram: string
-    profile: string
-    customers: string
-    menu: string
-    reservations: string
-    delivery: string
-    statistics: string
-    table: string
-    payment: string
-    settings: string
-    adminRole: string
-    userRole: string
-    welcomeBack: string
-    totalCustomers: string
-    reservationsToday: string
-    ordersToday: string
-    revenueToday: string
-    loyaltyPoints: string
-    upcomingReservations: string
-    recentOrders: string
-    memberSince: string
-    quickActions: string
-    frequentlyUsedActions: string
-    manageReservations: string
-    manageOrders: string
-    updateMenu: string
-    viewCustomers: string
-    makeReservation: string
-    orderFood: string
-    loyaltyRewards: string
-    updateProfile: string
-    recentActivity: string
-    latestUpdates: string
-    you: string
+    register: string
   }
   home: {
     loading: string
@@ -64,8 +25,8 @@ type TranslationKeys = {
   }
   locations: {
     title: string
-    viewAll: string
     locations: string
+    viewAll: string
   }
   restaurant: {
     title: string
@@ -103,16 +64,100 @@ type TranslationKeys = {
     facebook: string
     copyright: string
   }
+  dashboard: {
+    dashboard: string
+    myOrders: string
+    myReservations: string
+    orderHistory: string
+    loyaltyProgram: string
+    profile: string
+    customers: string
+    menu: string
+    reservations: string
+    delivery: string
+    statistics: string
+    table: string
+    payment: string
+    settings: string
+  }
 }
 
-export const translations: Record<"en" | "vi", TranslationKeys> = {
+const translations: Record<"en" | "vi", Translation> = {
   en: {
     navigation: {
-      reservation: "RESERVATION",
-      delivery: "DELIVERY",
-      career: "CAREER",
-      login: "LOGIN",
+      reservation: "Reservation",
+      delivery: "Delivery",
+      career: "Career",
+      login: "Login",
       logout: "Logout",
+      register: "Register",
+    },
+    home: {
+      loading: "Loading...",
+      country: "VIETNAM",
+    },
+    about: {
+      title: "About Us",
+      paragraph1:
+        "Golden Crust is a Michelin-starred pizza restaurant that combines traditional Italian techniques with Vietnamese flavors and ingredients.",
+      paragraph2:
+        "Founded in 2015, we've quickly become a culinary destination known for our commitment to quality, innovation, and exceptional dining experiences.",
+      learnMore: "Learn More",
+    },
+    concept: {
+      title: "Farm to Table",
+      paragraph1:
+        "We believe in sourcing the freshest ingredients directly from local Vietnamese farms and producers, ensuring that every dish tells a story of quality and sustainability.",
+      paragraph2:
+        "Our chefs visit farms weekly to select the finest seasonal produce, creating a menu that evolves with nature's rhythms and celebrates Vietnam's rich agricultural heritage.",
+      discoverIngredients: "Discover Our Ingredients",
+    },
+    locations: {
+      title: "Our Locations",
+      locations: "locations",
+      viewAll: "View All Locations",
+    },
+    restaurant: {
+      title: "Our Restaurant",
+      paragraph1:
+        "Step into a space where contemporary design meets traditional Vietnamese elements, creating an atmosphere that's both sophisticated and welcoming.",
+      paragraph2:
+        "Our open kitchen allows guests to witness the artistry of our chefs as they craft each pizza in our custom-built wood-fired ovens imported from Naples.",
+      vision: {
+        title: "Our Vision",
+        description:
+          "To create a dining experience that honors both Italian pizza traditions and Vietnamese culinary heritage.",
+      },
+      values: {
+        title: "Our Values",
+        description:
+          "Quality, sustainability, innovation, and respect for both cultures that inspire our unique approach.",
+      },
+      promise: {
+        title: "Our Promise",
+        description:
+          "Every dish we serve will tell a story of cultural fusion, exceptional ingredients, and passionate craftsmanship.",
+      },
+    },
+    menu: {
+      title: "Our Menu",
+      description:
+        "Discover our selection of handcrafted pizzas and dishes that blend Italian traditions with Vietnamese flavors.",
+      orderNow: "Order Now",
+      viewFullMenu: "View Full Menu",
+    },
+    gallery: {
+      title: "Gallery",
+      description: "Take a visual journey through our restaurant, dishes, and the culinary artistry that defines us.",
+    },
+    contact: {
+      title: "Contact Us",
+      generalInquiries: "General Inquiries",
+      careers: "Careers",
+      press: "Press",
+      instagram: "Instagram",
+      facebook: "Facebook",
+      copyright: "© 2023 Golden Crust. All rights reserved.",
     },
     dashboard: {
       dashboard: "Dashboard",
@@ -122,218 +167,109 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       loyaltyProgram: "Loyalty Program",
       profile: "Profile",
       customers: "Customers",
-      menu: "Menu",
+      menu: "Menu Management",
       reservations: "Reservations",
       delivery: "Delivery",
       statistics: "Statistics",
-      table: "Table",
+      table: "Table Management",
       payment: "Payment",
       settings: "Settings",
-      adminRole: "Admin",
-      userRole: "User",
-      welcomeBack: "Welcome back",
-      totalCustomers: "Total Customers",
-      reservationsToday: "Reservations Today",
-      ordersToday: "Orders Today",
-      revenueToday: "Revenue Today",
-      loyaltyPoints: "Loyalty Points",
-      upcomingReservations: "Upcoming Reservations",
-      recentOrders: "Recent Orders",
-      memberSince: "Member Since",
-      quickActions: "Quick Actions",
-      frequentlyUsedActions: "Frequently used actions and shortcuts",
-      manageReservations: "Manage Reservations",
-      manageOrders: "Manage Orders",
-      updateMenu: "Update Menu",
-      viewCustomers: "View Customers",
-      makeReservation: "Make Reservation",
-      orderFood: "Order Food",
-      loyaltyRewards: "Loyalty Rewards",
-      updateProfile: "Update Profile",
-      recentActivity: "Recent Activity",
-      latestUpdates: "Latest updates and activities",
-      you: "You",
-    },
-    home: {
-      loading: "Loading...",
-      country: "Vietnam",
-    },
-    about: {
-      title: "Our Story",
-      paragraph1:
-        "Pizza 4P's began with a simple dream: to deliver happiness through pizza. What started as a backyard pizza oven has grown into a beloved restaurant chain.",
-      paragraph2:
-        'Our name stands for "Platform of Personal Pizza for Peace" - reflecting our mission to create connections between people through the universal language of food.',
-      learnMore: "Learn More",
-    },
-    concept: {
-      title: "Farm to Table",
-      paragraph1:
-        'We believe in the "Farm to Table" concept, ensuring that we use only the freshest ingredients. Many of our ingredients are grown on our own farms, including our signature cheese which is made daily.',
-      paragraph2:
-        "This commitment to quality and sustainability is at the heart of everything we do, from our carefully crafted pizzas to our thoughtfully designed restaurants.",
-      discoverIngredients: "Discover Our Ingredients",
-    },
-    locations: {
-      title: "Our Locations",
-      viewAll: "View All",
-      locations: "locations",
-    },
-    restaurant: {
-      title: "Our Restaurant",
-      paragraph1:
-        "Golden Crust is a Michelin-starred restaurant dedicated to the art of pizza making. Our commitment to quality and excellence has earned us recognition as one of the finest dining establishments in Vietnam.",
-      paragraph2:
-        "Our mission is to create unforgettable dining experiences through innovative cuisine, exceptional service, and a warm, inviting atmosphere. We believe that food is not just sustenance, but an art form that brings people together.",
-      vision: {
-        title: "Our Vision",
-        description:
-          "To redefine the art of pizza making and elevate it to the highest standards of culinary excellence.",
-      },
-      values: {
-        title: "Our Values",
-        description: "Quality, innovation, sustainability, and creating meaningful connections through food.",
-      },
-      promise: {
-        title: "Our Promise",
-        description: "An extraordinary dining experience that delights all senses and exceeds expectations.",
-      },
-    },
-    menu: {
-      title: "Featured Menu",
-      description:
-        "Discover our chef's selection of signature dishes, crafted with the finest ingredients and culinary expertise.",
-      orderNow: "Order Now",
-      viewFullMenu: "View Full Menu",
-    },
-    gallery: {
-      title: "Gallery",
-      description: "Experience the ambiance and artistry of Golden Crust through our gallery.",
-    },
-    contact: {
-      title: "Get in Touch",
-      generalInquiries: "General Inquiries",
-      careers: "Careers",
-      press: "Press",
-      instagram: "Instagram",
-      facebook: "Facebook",
-      copyright: "© 2023 Pizza 4P's. All rights reserved.",
     },
   },
   vi: {
     navigation: {
-      reservation: "ĐẶT BÀN",
-      delivery: "GIAO HÀNG",
-      career: "TUYỂN DỤNG",
-      login: "ĐĂNG NHẬP",
-      logout: "Đăng xuất",
-    },
-    dashboard: {
-      dashboard: "Bảng điều khiển",
-      myOrders: "Đơn hàng của tôi",
-      myReservations: "Đặt bàn của tôi",
-      orderHistory: "Lịch sử đơn hàng",
-      loyaltyProgram: "Chương trình khách hàng thân thiết",
-      profile: "Hồ sơ",
-      customers: "Khách hàng",
-      menu: "Thực đơn",
-      reservations: "Đặt bàn",
-      delivery: "Giao hàng",
-      statistics: "Thống kê",
-      table: "Quản lý bàn",
-      payment: "Thanh toán",
-      settings: "Cài đặt",
-      adminRole: "Quản trị viên",
-      userRole: "Người dùng",
-      welcomeBack: "Chào mừng trở lại",
-      totalCustomers: "Tổng số khách hàng",
-      reservationsToday: "Đặt bàn hôm nay",
-      ordersToday: "Đơn hàng hôm nay",
-      revenueToday: "Doanh thu hôm nay",
-      loyaltyPoints: "Điểm thưởng",
-      upcomingReservations: "Đặt bàn sắp tới",
-      recentOrders: "Đơn hàng gần đây",
-      memberSince: "Thành viên từ",
-      quickActions: "Thao tác nhanh",
-      frequentlyUsedActions: "Các thao tác và lối tắt thường dùng",
-      manageReservations: "Quản lý đặt bàn",
-      manageOrders: "Quản lý đơn hàng",
-      updateMenu: "Cập nhật thực đơn",
-      viewCustomers: "Xem khách hàng",
-      makeReservation: "Đặt bàn",
-      orderFood: "Đặt món",
-      loyaltyRewards: "Phần thưởng thành viên",
-      updateProfile: "Cập nhật hồ sơ",
-      recentActivity: "Hoạt động gần đây",
-      latestUpdates: "Cập nhật và hoạt động mới nhất",
-      you: "Bạn",
+      reservation: "Đặt Bàn",
+      delivery: "Giao Hàng",
+      career: "Tuyển Dụng",
+      login: "Đăng Nhập",
+      logout: "Đăng Xuất",
+      register: "Đăng Ký",
     },
     home: {
       loading: "Đang tải...",
-      country: "Việt Nam",
+      country: "VIỆT NAM",
     },
     about: {
-      title: "Câu chuyện của chúng tôi",
+      title: "Về Chúng Tôi",
       paragraph1:
-        "Pizza 4P's bắt đầu với một ước mơ đơn giản: mang lại hạnh phúc thông qua bánh pizza. Từ một lò nướng bánh pizza ở sân sau, chúng tôi đã phát triển thành một chuỗi nhà hàng được yêu thích.",
+        "Golden Crust là nhà hàng pizza được gắn sao Michelin, kết hợp kỹ thuật truyền thống Ý với hương vị và nguyên liệu Việt Nam.",
       paragraph2:
-        'Tên của chúng tôi là viết tắt của "Platform of Personal Pizza for Peace" - phản ánh sứ mệnh tạo ra kết nối giữa mọi người thông qua ngôn ngữ chung của ẩm thực.',
-      learnMore: "Tìm hiểu thêm",
+        "Được thành lập vào năm 2015, chúng tôi nhanh chóng trở thành điểm đến ẩm thực nổi tiếng với cam kết về chất lượng, sự đổi mới và trải nghiệm ẩm thực đặc biệt.",
+      learnMore: "Tìm Hiểu Thêm",
     },
     concept: {
-      title: "Từ nông trại đến bàn ăn",
+      title: "Từ Nông Trại Đến Bàn Ăn",
       paragraph1:
-        'Chúng tôi tin tưởng vào khái niệm "Từ nông trại đến bàn ăn", đảm bảo rằng chúng tôi chỉ sử dụng những nguyên liệu tươi ngon nhất. Nhiều nguyên liệu của chúng tôi được trồng trên các trang trại riêng, bao gồm cả phô mai đặc trưng được làm mới mỗi ngày.',
+        "Chúng tôi tin tưởng vào việc tìm nguồn nguyên liệu tươi ngon trực tiếp từ các trang trại và nhà sản xuất địa phương Việt Nam, đảm bảo rằng mỗi món ăn đều kể một câu chuyện về chất lượng và tính bền vững.",
       paragraph2:
-        "Cam kết về chất lượng và tính bền vững này là trọng tâm của mọi việc chúng tôi làm, từ những chiếc bánh pizza được chế biến tỉ mỉ đến những nhà hàng được thiết kế chu đáo.",
-      discoverIngredients: "Khám phá nguyên liệu của chúng tôi",
+        "Các đầu bếp của chúng tôi thăm các trang trại hàng tuần để lựa chọn những sản phẩm theo mùa tốt nhất, tạo ra một thực đơn phát triển theo nhịp điệu của thiên nhiên và tôn vinh di sản nông nghiệp phong phú của Việt Nam.",
+      discoverIngredients: "Khám Phá Nguyên Liệu Của Chúng Tôi",
     },
     locations: {
-      title: "Địa điểm của chúng tôi",
-      viewAll: "Xem tất cả",
+      title: "Các Chi Nhánh",
       locations: "chi nhánh",
+      viewAll: "Xem Tất Cả Chi Nhánh",
     },
     restaurant: {
-      title: "Nhà hàng của chúng tôi",
+      title: "Nhà Hàng Của Chúng Tôi",
       paragraph1:
-        "Golden Crust là nhà hàng được gắn sao Michelin, chuyên về nghệ thuật làm bánh pizza. Cam kết về chất lượng và sự xuất sắc đã giúp chúng tôi được công nhận là một trong những nhà hàng tốt nhất tại Việt Nam.",
+        "Bước vào không gian nơi thiết kế hiện đại gặp gỡ các yếu tố truyền thống Việt Nam, tạo nên một bầu không khí vừa tinh tế vừa thân thiện.",
       paragraph2:
-        "Sứ mệnh của chúng tôi là tạo ra những trải nghiệm ẩm thực khó quên thông qua ẩm thực sáng tạo, dịch vụ xuất sắc và không gian ấm cúng, thân thiện. Chúng tôi tin rằng thức ăn không chỉ là nguồn dinh dưỡng, mà còn là một hình thức nghệ thuật kết nối mọi người.",
+        "Nhà bếp mở của chúng tôi cho phép thực khách chứng kiến nghệ thuật của các đầu bếp khi họ chế biến từng chiếc bánh pizza trong lò nướng củi được thiết kế riêng nhập khẩu từ Naples.",
       vision: {
-        title: "Tầm nhìn của chúng tôi",
-        description:
-          "Định nghĩa lại nghệ thuật làm bánh pizza và nâng cao nó lên tiêu chuẩn cao nhất của sự xuất sắc ẩm thực.",
+        title: "Tầm Nhìn",
+        description: "Tạo ra trải nghiệm ẩm thực tôn vinh cả truyền thống pizza Ý và di sản ẩm thực Việt Nam.",
       },
       values: {
-        title: "Giá trị của chúng tôi",
-        description: "Chất lượng, đổi mới, bền vững và tạo ra những kết nối ý nghĩa thông qua ẩm thực.",
+        title: "Giá Trị",
+        description:
+          "Chất lượng, bền vững, đổi mới và tôn trọng cả hai nền văn hóa truyền cảm hứng cho cách tiếp cận độc đáo của chúng tôi.",
       },
       promise: {
-        title: "Cam kết của chúng tôi",
-        description: "Một trải nghiệm ẩm thực phi thường làm hài lòng mọi giác quan và vượt quá mong đợi.",
+        title: "Lời Hứa",
+        description:
+          "Mỗi món ăn chúng tôi phục vụ sẽ kể một câu chuyện về sự hòa quyện văn hóa, nguyên liệu đặc biệt và tay nghề đầy đam mê.",
       },
     },
     menu: {
-      title: "Thực đơn nổi bật",
+      title: "Thực Đơn",
       description:
-        "Khám phá tuyển chọn các món ăn đặc trưng của đầu bếp, được chế biến với những nguyên liệu tốt nhất và chuyên môn ẩm thực.",
-      orderNow: "Đặt ngay",
-      viewFullMenu: "Xem toàn bộ thực đơn",
+        "Khám phá bộ sưu tập bánh pizza thủ công và các món ăn kết hợp giữa truyền thống Ý với hương vị Việt Nam.",
+      orderNow: "Đặt Hàng Ngay",
+      viewFullMenu: "Xem Toàn Bộ Thực Đơn",
     },
     gallery: {
-      title: "Thư viện ảnh",
-      description: "Trải nghiệm không gian và nghệ thuật của Golden Crust qua thư viện ảnh của chúng tôi.",
+      title: "Thư Viện Ảnh",
+      description: "Hãy tham gia hành trình hình ảnh qua nhà hàng, món ăn và nghệ thuật ẩm thực định nghĩa chúng tôi.",
     },
     contact: {
-      title: "Liên hệ với chúng tôi",
-      generalInquiries: "Thông tin chung",
-      careers: "Tuyển dụng",
-      press: "Báo chí",
+      title: "Liên Hệ",
+      generalInquiries: "Thông Tin Chung",
+      careers: "Tuyển Dụng",
+      press: "Báo Chí",
       instagram: "Instagram",
       facebook: "Facebook",
-      copyright: "© 2023 Pizza 4P's. Bản quyền thuộc về chúng tôi.",
+      copyright: "© 2023 Golden Crust. Bảo lưu mọi quyền.",
+    },
+    dashboard: {
+      dashboard: "Bảng Điều Khiển",
+      myOrders: "Đơn Hàng Của Tôi",
+      myReservations: "Đặt Bàn Của Tôi",
+      orderHistory: "Lịch Sử Đơn Hàng",
+      loyaltyProgram: "Chương Trình Khách Hàng Thân Thiết",
+      profile: "Hồ Sơ",
+      customers: "Khách Hàng",
+      menu: "Quản Lý Thực Đơn",
+      reservations: "Đặt Bàn",
+      delivery: "Giao Hàng",
+      statistics: "Thống Kê",
+      table: "Quản Lý Bàn",
+      payment: "Thanh Toán",
+      settings: "Cài Đặt",
     },
   },
 }
 
-export const getTranslation = (lang: "en" | "vi") => translations[lang]
+export function getTranslation(language: "en" | "vi"): Translation {
+  return translations[language]
+}

@@ -278,10 +278,15 @@ export default function Home() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                /* Thay đổi text trong login link */
-                <Link href="/login" className="hover:underline">
-                  {t.navigation.login}
-                </Link>
+                <div className="flex items-center gap-4">
+                  {/* Thay đổi text trong login link */}
+                  <Link href="/login" className="hover:underline">
+                    {t.navigation.login}
+                  </Link>
+                  <Link href="/register" className="hover:underline">
+                    {t.navigation.register || "Register"}
+                  </Link>
+                </div>
               )}
 
               {/* Thay đổi phần hiển thị nút chuyển đổi ngôn ngữ trong phần header */}
@@ -368,10 +373,23 @@ export default function Home() {
                   </button>
                 </>
               ) : (
-                /* Thay đổi text trong login link trong mobile menu */
-                <Link href="/login" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
-                  {t.navigation.login}
-                </Link>
+                <>
+                  {/* Thay đổi text trong login link trong mobile menu */}
+                  <Link
+                    href="/login"
+                    className="text-2xl font-light hover:underline"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {t.navigation.login}
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="text-2xl font-light hover:underline"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {t.navigation.register || "Register"}
+                  </Link>
+                </>
               )}
 
               {/* Thay đổi phần hiển thị nút chuyển đổi ngôn ngữ trong menu mobile */}
