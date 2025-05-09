@@ -9,11 +9,15 @@ import { ChevronLeft, Eye, EyeOff, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getTranslation } from "@/utils/translations"
+import { useRegisterMutation } from "@/redux/api/authApi"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const [register, { isLoading }] = useRegisterMutation()
   const [showPassword, setShowPassword] = useState(false)
+  const [registerError, setRegisterError] = useState<string | null>(null)
   const [registerData, setRegisterData] = useState({
     fullName: "",
     email: "",
@@ -78,35 +82,38 @@ export default function RegisterPage() {
     return Object.keys(errors).length === 0
   }
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setRegisterError(null)
 
     if (!validateRegisterForm()) {
       return
     }
 
-    // In a real app, this would register a new user with a backend
-    // For now, we'll just simulate a successful registration and redirect to OTP verification
-    // Store registration data in localStorage for demo purposes
-    localStorage.setItem(
-      "pendingRegistration",
-      JSON.stringify({
-        fullName: registerData.fullName,
+    try {
+      // Gọi API đăng ký từ backend thông qua Redux Toolkit
+      await register({
         email: registerData.email,
+        password: registerData.password,
+        fullName: registerData.fullName,
         phone: registerData.phone,
         address: registerData.address,
-        role: "user",
-        isVerified: false,
-        isActive: true,
-        isSuspended: false,
-        avatar: "",
-        loyaltyPoints: 0,
-        joinDate: new Date().toISOString().split("T")[0],
-      }),
-    )
+      }).unwrap()
 
-    // Redirect to OTP verification page
-    router.push("/verify-otp?action=register")
+      // Lưu email để sử dụng trong trang xác thực OTP
+      localStorage.setItem(
+        "pendingRegistration",
+        JSON.stringify({
+          email: registerData.email,
+        }),
+      )
+
+      // Chuyển hướng đến trang xác thực OTP
+      router.push("/verify-otp?action=register")
+    } catch (err: any) {
+      console.error('Registration error:', err)
+      setRegisterError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.')
+    }
   }
 
   return (
@@ -129,6 +136,15 @@ export default function RegisterPage() {
 
           <div className="overflow-hidden rounded-lg bg-white shadow">
             <div className="p-6">
+              {/* Hiển thị lỗi đăng ký nếu có */}
+              {registerError && (
+                <Alert className="mb-4 bg-red-50 border-red-200 text-red-800">
+                  <AlertDescription>
+                    {registerError}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <form onSubmit={handleRegisterSubmit}>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -223,8 +239,12 @@ export default function RegisterPage() {
                     )}
                   </div>
 
-                  <Button type="submit" className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800">
-                    Create Account
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Đang đăng ký...' : 'Create Account'}
                   </Button>
                 </div>
               </form>

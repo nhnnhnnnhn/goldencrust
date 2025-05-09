@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useVerifyOtpMutation, useForgotPasswordMutation } from "@/redux/api/authApi"
 
 export default function VerifyOTPPage() {
   const router = useRouter()
@@ -18,6 +19,8 @@ export default function VerifyOTPPage() {
   const action = searchParams.get("action") || "register"
   const email = searchParams.get("email") || ""
 
+  const [verifyOtp, { isLoading }] = useVerifyOtpMutation()
+  const [forgotPassword, { isLoading: isResending }] = useForgotPasswordMutation()
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
   const [isVerifying, setIsVerifying] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
@@ -129,7 +132,7 @@ export default function VerifyOTPPage() {
   }
 
   // Handle verify OTP
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     const otpValue = otp.join("")
 
     if (otpValue.length !== 6) {
@@ -141,57 +144,101 @@ export default function VerifyOTPPage() {
       setError("OTP has expired. Please request a new one.")
       return
     }
-
     setIsVerifying(true)
     setError("")
 
-    // Simulate OTP verification (in a real app, this would call an API)
-    setTimeout(() => {
-      // For demo purposes, any OTP "123456" is considered valid
-      if (otpValue === "123456") {
-        setIsVerified(true)
-
-        // If action is register, redirect to login after 2 seconds
-        if (action === "register") {
-          // Update the pending registration to mark as verified
-          const pendingRegistration = localStorage.getItem("pendingRegistration")
-          if (pendingRegistration) {
-            const userData = JSON.parse(pendingRegistration)
-            userData.isVerified = true
-            localStorage.setItem("pendingRegistration", JSON.stringify(userData))
-          }
-
-          setTimeout(() => {
-            router.push("/login")
-          }, 2000)
+    try {
+      // Gọi API xác thực OTP thông qua Redux Toolkit
+      const pendingRegistration = localStorage.getItem("pendingRegistration")
+      let emailToVerify = userEmail
+      
+      if (!emailToVerify && pendingRegistration) {
+        try {
+          const userData = JSON.parse(pendingRegistration)
+          emailToVerify = userData.email
+        } catch (error) {
+          console.error("Error parsing pending registration:", error)
+          setError("An error occurred. Please try again.")
+          setIsVerifying(false)
+          return
         }
-        // If action is reset, redirect to reset password page
-        else if (action === "reset") {
-          setTimeout(() => {
-            router.push(`/forgot-password?email=${encodeURIComponent(userEmail)}`)
-          }, 2000)
-        }
-      } else {
-        setError("Invalid OTP. Please try again.")
-        setIsVerifying(false)
       }
-    }, 1500)
+      
+      if (!emailToVerify) {
+        setError("Missing email information")
+        setIsVerifying(false)
+        return
+      }
+      
+      await verifyOtp({
+        email: emailToVerify,
+        code: otpValue,
+        action: action.toUpperCase() // API expects action in uppercase - REGISTER, FORGOT_PASSWORD etc.
+      }).unwrap()
+      
+      // Verification successful
+      localStorage.removeItem("pendingRegistration")
+      setIsVerified(true)
+      
+      // Redirect after a delay
+      setTimeout(() => {
+        if (action === "register") {
+          router.push("/login")
+        } else if (action === "reset") {
+          router.push("/reset-password")
+        }
+      }, 3000)
+      
+    } catch (err: any) {
+      console.error('OTP verification error:', err)
+      setError(err?.data?.message || 'Xác thực OTP thất bại')
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   // Handle resend OTP
-  const handleResendOtp = () => {
-    // Simulate resending OTP (in a real app, this would call an API)
-    setCountdown(60)
-    setError("")
-    setIsExpired(false)
-
-    // Reset expiry time (5 minutes from now)
-    const expiry = new Date()
-    expiry.setMinutes(expiry.getMinutes() + 5)
-    setExpiryTime(expiry)
-
-    // Show success message
-    alert(`OTP resent to ${userEmail}`)
+  const handleResendOtp = async () => {
+    try {
+      // Gọi API gửi lại OTP (sẽ mở rộng API với endpoint resend-otp)
+      // Hoặc trong trường hợp này, ta có thể gọi lại API gửi OTP ban đầu
+      let emailToVerify = userEmail;
+      
+      const pendingRegistration = localStorage.getItem("pendingRegistration")
+      if (!emailToVerify && pendingRegistration) {
+        try {
+          const userData = JSON.parse(pendingRegistration)
+          emailToVerify = userData.email
+        } catch (error) {
+          console.error("Error parsing pending registration:", error)
+          setError("An error occurred. Please try again.")
+          return
+        }
+      }
+      
+      if (!emailToVerify) {
+        setError("Missing email information")
+        return
+      }
+      
+      // Gọi API forgotPassword để gửi lại OTP
+      await forgotPassword({ email: emailToVerify }).unwrap()
+      
+      // Reset đồng hồ và thời gian hết hạn
+      setCountdown(60)
+      setIsExpired(false)
+      
+      // Đặt lại thời gian hết hạn (5 phút kể từ bây giờ)
+      const expiry = new Date()
+      expiry.setMinutes(expiry.getMinutes() + 5)
+      setExpiryTime(expiry)
+      
+      setError("")
+      alert("OTP has been resent to your email! (Simulated - will implement actual API call)")
+    } catch (err: any) {
+      console.error('Resend OTP error:', err)
+      setError(err?.data?.message || 'Gửi lại OTP thất bại')
+    }
   }
 
   // Format remaining time until expiry
@@ -295,10 +342,10 @@ export default function VerifyOTPPage() {
 
                 <Button
                   onClick={handleVerifyOtp}
-                  disabled={isVerifying || otp.join("").length !== 6 || isExpired}
+                  disabled={isVerifying || isLoading || otp.join("").length !== 6 || isExpired}
                   className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
                 >
-                  {isVerifying ? "Verifying..." : "Verify"}
+                  {isVerifying || isLoading ? "Verifying..." : "Verify"}
                 </Button>
 
                 <div className="mt-6 text-center">
@@ -306,8 +353,12 @@ export default function VerifyOTPPage() {
                   {countdown > 0 ? (
                     <p className="text-sm text-gray-500">Resend code in {countdown} seconds</p>
                   ) : (
-                    <button onClick={handleResendOtp} className="text-sm text-blue-900 hover:underline">
-                      Resend Code
+                    <button 
+                      onClick={handleResendOtp} 
+                      disabled={isResending}
+                      className="text-sm text-blue-900 hover:underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed"
+                    >
+                      {isResending ? "Sending..." : "Resend Code"}
                     </button>
                   )}
                 </div>
