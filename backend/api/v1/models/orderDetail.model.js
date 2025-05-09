@@ -27,8 +27,10 @@ const orderDetailSchema = new mongoose.Schema({
     },
     deletedAt: Date,
     
+}, {
+    timestamps: true
 });
 
-const orderDetail = mongoose.model('Order', orderDetailSchema, 'orderDetail');
+const OrderDetail = mongoose.model('OrderDetail', orderDetailSchema, 'orderDetail');
 
-module.exports = Order;
+module.exports = OrderDetail;

@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "D:\\TTCS\\goldencrust-main\\backend\\logs\\.21cf771eeac9e0a8719d850bda5e26237c4beb2f-audit.json",
+    "files": [
+        {
+            "date": 1746781201243,
+            "name": "D:\\TTCS\\goldencrust-main\\backend\\logs\\error-2025-05-09.log",
+            "hash": "28e70b2c1e3a0573a51ab59a6170ce55995059ee388dfc0649f8a2d7797ccf59"
+        }
+    ],
+    "hashType": "sha256"
+}

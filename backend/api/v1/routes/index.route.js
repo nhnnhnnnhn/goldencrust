@@ -6,6 +6,8 @@ const reservationRoute = require('./reservation.route');
 const reservedTableRoute = require('./reservedTable.route');
 const tableRoute = require('./table.route');
 const paymentRoute = require('./payment.route');
+const orderRoute = require('./order.route');
+const orderDetailRoute = require('./orderDetail.route');
 
 const authMiddleware = require('../middlewares/auth.middleware');
 
@@ -21,5 +23,7 @@ module.exports = (app) => {
     app.use(version + '/reservations', authMiddleware, reservationRoute);
     app.use(version + '/reserved-tables', authMiddleware, reservedTableRoute);
     app.use(version + '/tables', authMiddleware, tableRoute);
-    app.use(version + '/payments', authMiddleware, paymentRoute);
+    app.use(version + '/orders', orderRoute);
+    app.use(version + '/order-details', orderDetailRoute);
+    // app.use(version + '/payments', authMiddleware, paymentRoute);
 };
