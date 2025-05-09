@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
 
 // Định nghĩa các kiểu dữ liệu
 interface MenuItem {
@@ -34,7 +35,7 @@ interface OrderItem extends MenuItem {
 }
 
 interface Order {
-  id: string
+  _id: string
   tableId: string
   tableNumber: string
   items: OrderItem[]
@@ -42,6 +43,36 @@ interface Order {
   totalAmount: number
   createdAt: Date
   notes?: string
+  deleted?: boolean
+  deletedAt?: Date
+  updatedAt: Date
+}
+
+// Định nghĩa kiểu dữ liệu cho Table
+interface Table {
+  _id: string
+  restaurantId: string
+  tableNumber: string
+  capacity: number
+  status: "available" | "reserved" | "occupied"
+  location: string
+  customerName?: string | null
+  reservationTime?: string | null
+  deleted?: boolean
+  deletedAt?: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Định nghĩa kiểu dữ liệu cho Restaurant
+interface Restaurant {
+  _id: string
+  address: string
+  tableNumber: number
+  deleted?: boolean
+  deletedAt?: Date
+  createdAt: Date
+  updatedAt: Date
 }
 
 // Dữ liệu mẫu cho menu
@@ -161,11 +192,36 @@ const categories = [
   { id: "beverage", name: "Beverages" },
 ]
 
+// Dữ liệu mẫu cho các nhà hàng
+const sampleRestaurants: Restaurant[] = [
+  {
+    _id: "rest1",
+    address: "123 Nguyễn Huệ, Quận 1, TP.HCM",
+    tableNumber: 15,
+    createdAt: new Date("2023-01-15"),
+    updatedAt: new Date("2023-01-15"),
+  },
+]
+
+// Dữ liệu mẫu cho các bàn
+const sampleTables: Table[] = [
+  {
+    _id: "table1",
+    restaurantId: "rest1",
+    tableNumber: "A1",
+    capacity: 4,
+    status: "occupied",
+    location: "Main Hall",
+    createdAt: new Date("2023-01-15"),
+    updatedAt: new Date("2023-01-15"),
+  },
+]
+
 // Dữ liệu mẫu cho các đơn hàng hiện tại của bàn
 const sampleOrders: Order[] = [
   {
-    id: "ord-1",
-    tableId: "1",
+    _id: "ord-1",
+    tableId: "table1",
     tableNumber: "A1",
     items: [
       {
@@ -181,12 +237,15 @@ const sampleOrders: Order[] = [
     status: "served",
     totalAmount: 62,
     createdAt: new Date(Date.now() - 45 * 60000), // 45 phút trước
+    updatedAt: new Date(Date.now() - 45 * 60000),
   },
 ]
 
 export default function TableOrderPage() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const { toast } = useToast()
+
   const tableId = params.tableId as string
   const tableNumber = searchParams.get("tableNumber") || "Unknown"
 
@@ -198,6 +257,22 @@ export default function TableOrderPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [existingOrders, setExistingOrders] = useState<Order[]>([])
+  const [currentTable, setCurrentTable] = useState<Table | null>(null)
+  const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant | null>(null)
+
+  // Lấy thông tin bàn và nhà hàng
+  useEffect(() => {
+    // Trong thực tế, bạn sẽ gọi API để lấy dữ liệu
+    // Ở đây chúng ta sử dụng dữ liệu mẫu
+    const table = sampleTables.find((table) => table._id === tableId)
+    if (table) {
+      setCurrentTable(table)
+      const restaurant = sampleRestaurants.find((restaurant) => restaurant._id === table.restaurantId)
+      if (restaurant) {
+        setCurrentRestaurant(restaurant)
+      }
+    }
+  }, [tableId])
 
   // Lấy các đơn hàng hiện tại của bàn
   useEffect(() => {
@@ -270,35 +345,56 @@ export default function TableOrderPage() {
     setTimeout(() => {
       setOrderSuccess(true)
       // Thêm đơn hàng mới vào danh sách đơn hàng hiện tại
+      const now = new Date()
       const newOrder: Order = {
-        id: `ord-${Math.floor(Math.random() * 1000)}`,
+        _id: `ord-${Math.floor(Math.random() * 1000)}`,
         tableId,
         tableNumber,
         items: [...cart],
         status: "pending",
         totalAmount: getTotalPrice(),
-        createdAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
         notes: orderNotes,
       }
       setExistingOrders((prev) => [...prev, newOrder])
+
+      // Cập nhật trạng thái bàn thành occupied nếu chưa
+      if (currentTable && currentTable.status !== "occupied") {
+        setCurrentTable({
+          ...currentTable,
+          status: "occupied",
+          updatedAt: now,
+        })
+      }
+
       // Xóa giỏ hàng
       setCart([])
       setOrderNotes("")
       setShowConfirmModal(false)
+
+      toast({
+        title: "Order Placed Successfully",
+        description: `Your order for Table ${tableNumber} has been sent to the kitchen.`,
+      })
     }, 1500)
   }
 
   // Xử lý in hóa đơn
-  const handlePrintReceipt = (order) => {
+  const handlePrintReceipt = (order: Order) => {
     // Tạo cửa sổ mới để in
     const printWindow = window.open("", "_blank")
+    if (!printWindow) return
+
+    // Tìm thông tin nhà hàng
+    const restaurantAddress = currentRestaurant ? currentRestaurant.address : "123 Nguyễn Huệ, Quận 1, TP.HCM"
 
     // Tạo nội dung hóa đơn
     const receiptContent = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Hóa đơn - Pizza Liêm Khiết</title>
+        <title>Hóa đơn - Golden Crust</title>
         <meta charset="UTF-8">
         <style>
           body {
@@ -359,13 +455,13 @@ export default function TableOrderPage() {
       <body>
         <div class="receipt">
           <div class="header">
-            <div class="logo">Pizza Liêm Khiết</div>
-            <div>123 Nguyễn Huệ, Quận 1, TP.HCM</div>
+            <div class="logo">Golden Crust</div>
+            <div>${restaurantAddress}</div>
             <div>SĐT: 028-1234-5678</div>
           </div>
           
           <div class="info">
-            <p><strong>Mã đơn hàng:</strong> #${order.id}</p>
+            <p><strong>Mã đơn hàng:</strong> #${order._id}</p>
             <p><strong>Bàn:</strong> ${order.tableNumber}</p>
             <p><strong>Ngày:</strong> ${new Date(order.createdAt).toLocaleDateString("vi-VN")}</p>
             <p><strong>Giờ:</strong> ${new Date(order.createdAt).toLocaleTimeString("vi-VN")}</p>
@@ -391,7 +487,7 @@ export default function TableOrderPage() {
           
           <div class="footer">
             <p>Cảm ơn quý khách đã sử dụng dịch vụ của chúng tôi!</p>
-            <p>www.pizzaliemkhiet.com</p>
+            <p>www.goldencrust.com</p>
           </div>
         </div>
         
@@ -449,6 +545,14 @@ export default function TableOrderPage() {
       </header>
 
       <div className="container mx-auto py-6 px-4 md:px-6">
+        {/* Hiển thị thông tin nhà hàng */}
+        {currentRestaurant && (
+          <div className="mb-4 bg-white rounded-lg shadow-sm p-4">
+            <h2 className="text-lg font-medium mb-2">Restaurant Information</h2>
+            <p className="text-gray-600">{currentRestaurant.address}</p>
+          </div>
+        )}
+
         {/* Hiển thị các đơn hàng hiện tại của bàn */}
         {existingOrders.length > 0 && (
           <div className="mb-8">
@@ -458,11 +562,11 @@ export default function TableOrderPage() {
             </h2>
             <div className="bg-white rounded-lg shadow overflow-hidden">
               {existingOrders.map((order) => (
-                <div key={order.id} className="p-4 border-b last:border-b-0">
+                <div key={order._id} className="p-4 border-b last:border-b-0">
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Order #{order.id}</span>
+                        <span className="font-medium">Order #{order._id}</span>
                         <span
                           className={`px-2 py-0.5 text-xs rounded-full ${
                             order.status === "served"
@@ -492,7 +596,7 @@ export default function TableOrderPage() {
 
                   <div className="space-y-2">
                     {order.items.map((item, index) => (
-                      <div key={`${order.id}-${item.id}-${index}`} className="flex justify-between text-sm">
+                      <div key={`${order._id}-${item.id}-${index}`} className="flex justify-between text-sm">
                         <div>
                           <span className="font-medium">{item.quantity}x</span> {item.name}
                           {item.notes && <div className="text-xs text-gray-500 ml-5">Note: {item.notes}</div>}
