@@ -7,13 +7,15 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { ChevronLeft, Eye, EyeOff, Info } from "lucide-react"
+import { GoogleLoginButton } from "@/components/auth/google-login-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getTranslation } from "@/utils/translations"
 import { useLoginMutation } from "@/redux/api/authApi"
-import { useAppSelector } from "@/redux/hooks"
+import { useAppSelector, useAppDispatch } from "@/redux/hooks"
+import { clearError } from "@/redux/slices/authSlice"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -21,7 +23,8 @@ export default function LoginPage() {
   const redirect = searchParams.get("redirect") || "/dashboard"
   const { login: contextLogin } = useAuth() // Keep auth context for now as we transition
   const [login, { isLoading }] = useLoginMutation()
-  const { error } = useAppSelector(state => state.auth || {})
+  const { error } = useAppSelector((state: any) => state.auth || {})
+  const dispatch = useAppDispatch()
   
   const [showPassword, setShowPassword] = useState(false)
   const [loginData, setLoginData] = useState({
@@ -30,85 +33,93 @@ export default function LoginPage() {
   })
   const [language, setLanguage] = useState<"en" | "vi">("en")
   const [loginError, setLoginError] = useState<string | null>(null)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  // Get language from localStorage
+  // Get language from localStorage and clear any previous auth errors on page load
   useEffect(() => {
     const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
     if (savedLanguage === "en" || savedLanguage === "vi") {
       setLanguage(savedLanguage)
     }
   }, [])
+  
+  // Clear any errors on component mount
+  useEffect(() => {
+    // Reset any previous auth errors from Redux store when the page loads
+    setLoginError(null)
+    if (error) {
+      dispatch(clearError())
+    }
+  }, [dispatch])
 
   const t = getTranslation(language)
+
+  const handleGoogleLogin = async () => {
+    try {
+      setIsGoogleLoading(true)
+      setLoginError(null)
+      
+      // Backend chưa được triển khai, đây chỉ là mẫu
+      console.log('Đang cố gắng đăng nhập bằng Google...')
+      
+      // TODO: Gọi API đăng nhập bằng Google khi backend được triển khai
+      // const result = await googleLogin().unwrap()
+      // if (contextLogin) {
+      //   contextLogin(result.token, result.user)
+      // }
+      // router.push(redirect)
+      
+      // Giả lập delay để hiển thị trạng thái loading
+      setTimeout(() => {
+        setIsGoogleLoading(false)
+        setLoginError('Tính năng đăng nhập bằng Google đang được phát triển.')
+      }, 2000)
+    } catch (err: any) {
+      setIsGoogleLoading(false)
+      console.error('Google login failed:', err)
+      setLoginError(
+        err?.data?.message || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại sau.'
+      )
+    }
+  }
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoginError(null)
     
     try {
-      // Gọi API đăng nhập thông qua Redux Toolkit
+      // Kiểm tra các trường nhập liệu
+      if (!loginData.email || !loginData.password) {
+        setLoginError("Vui lòng nhập đầy đủ email và mật khẩu")
+        return
+      }
+
+      // Gọi API login qua Redux
       const result = await login({
         email: loginData.email,
         password: loginData.password
       }).unwrap()
       
-      // Cũng cập nhật auth context để đảm bảo backwards compatibility
-      if (result.user) {
+      // Cập nhật login qua context cho các phần cũ
+      if (contextLogin) {
         contextLogin(
           result.user.fullName,
           result.user.email,
           result.user.role,
-          0, // Giả sử loyaltyPoints chưa có trong API
-          new Date().toISOString() // Giả sử joinDate chưa có trong API
+          result.user.loyaltyPoints || 0,
+          result.user.joinDate || new Date().toISOString()
         )
       }
       
+      // Tự động chuyển hướng người dùng sau khi đăng nhập
       router.push(redirect)
     } catch (err: any) {
       console.error('Login error:', err)
-      setLoginError(err?.data?.message || 'Đăng nhập thất bại')
-    }
-  }
-
-  const handleTestAccountLogin = async (type: "admin" | "employee" | "user") => {
-    let testEmail = '';
-    let testPassword = 'password123'; // Giả sử mật khẩu demo
-    
-    if (type === "admin") {
-      testEmail = "admin@goldencrust.com";
-    } else if (type === "employee") {
-      testEmail = "employee@goldencrust.com";
-    } else {
-      testEmail = "user@goldencrust.com";
-    }
-    
-    setLoginData({
-      email: testEmail,
-      password: testPassword
-    });
-    
-    try {
-      // Gọi API đăng nhập thông qua Redux Toolkit
-      const result = await login({
-        email: testEmail,
-        password: testPassword
-      }).unwrap();
-      
-      // Cũng cập nhật auth context để đảm bảo backwards compatibility
-      if (result.user) {
-        contextLogin(
-          result.user.fullName,
-          result.user.email,
-          result.user.role,
-          0,
-          new Date().toISOString()
-        )
+      if (err.status === 'FETCH_ERROR') {
+        setLoginError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối của bạn.')
+      } else {
+        setLoginError(err?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.')
       }
-      
-      router.push(redirect);
-    } catch (err: any) {
-      console.error('Test login error:', err);
-      setLoginError(err?.data?.message || 'Đăng nhập thất bại');
     }
   }
 
@@ -128,42 +139,6 @@ export default function LoginPage() {
               GOLDEN CRUST
             </Link>
             <p className="mt-2 text-gray-600">Sign in to your account</p>
-          </div>
-
-          {/* Test Accounts Section */}
-          <div className="mb-6">
-            <Alert className="bg-blue-50 border-blue-200">
-              <Info className="h-4 w-4 text-blue-900" />
-              <AlertDescription className="text-sm text-blue-900">
-                <span className="font-medium">Test Accounts:</span>
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:gap-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-300 text-blue-900 hover:bg-blue-100"
-                    onClick={() => handleTestAccountLogin("admin")}
-                  >
-                    Login as Admin
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-300 text-blue-900 hover:bg-blue-100"
-                    onClick={() => handleTestAccountLogin("employee")}
-                  >
-                    Login as Employee
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-300 text-blue-900 hover:bg-blue-100"
-                    onClick={() => handleTestAccountLogin("user")}
-                  >
-                    Login as User
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
           </div>
 
           <div className="overflow-hidden rounded-lg bg-white shadow">
@@ -222,8 +197,23 @@ export default function LoginPage() {
                     className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Đang đăng nhập...' : 'Sign In'}
+                    {isLoading ? (
+                      <>
+                        <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
+                        Đang đăng nhập...
+                      </>
+                    ) : 'Đăng nhập'}
                   </Button>
+                  
+                  <div className="my-4 flex items-center before:mt-0.5 before:flex-1 before:border-t before:border-gray-300 after:mt-0.5 after:flex-1 after:border-t after:border-gray-300">
+                    <p className="mx-4 mb-0 text-center text-sm text-gray-500">hoặc</p>
+                  </div>
+                  
+                  <GoogleLoginButton 
+                    onClick={handleGoogleLogin} 
+                    isLoading={isGoogleLoading} 
+                    className="mt-1"
+                  />
                 </div>
               </form>
             </div>

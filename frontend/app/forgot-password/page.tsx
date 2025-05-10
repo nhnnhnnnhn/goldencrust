@@ -5,11 +5,12 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ChevronLeft, Eye, EyeOff, Mail, AlertCircle } from "lucide-react"
+import { ChevronLeft, Eye, EyeOff, Mail, AlertCircle, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useForgotPasswordMutation, useResetPasswordMutation, useVerifyOtpMutation } from "@/redux/api/authApi"
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
@@ -28,6 +29,7 @@ export default function ForgotPasswordPage() {
   const [otpError, setOtpError] = useState("")
   const [expiryTime, setExpiryTime] = useState<Date | null>(null)
   const [isExpired, setIsExpired] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("") // Thông báo thành công
 
   // Set initial email from URL parameter if available
   useEffect(() => {
@@ -52,26 +54,39 @@ export default function ForgotPasswordPage() {
     return () => clearInterval(timer)
   }, [expiryTime])
 
-  const handleSendOtp = () => {
+  const [forgotPassword, { isLoading: isForgotPasswordLoading }] = useForgotPasswordMutation()
+  const [verifyOtp, { isLoading: isVerifyingOtp }] = useVerifyOtpMutation()
+  const [resetPassword, { isLoading: isResetPasswordLoading }] = useResetPasswordMutation()
+  const [resetToken, setResetToken] = useState<string>("")
+
+  const handleSendOtp = async () => {
     if (!email) {
-      setOtpError("Please enter your email address")
+      setOtpError("Vui lòng nhập địa chỉ email của bạn")
       return
     }
 
     setIsSendingOtp(true)
     setOtpError("")
 
-    // Simulate sending OTP (in a real app, this would call an API)
-    setTimeout(() => {
+    try {
+      // Gọi API gửi OTP
+      const response = await forgotPassword({ email }).unwrap()
       setIsSendingOtp(false)
       setOtpSent(true)
 
-      // Set expiry time for OTP (5 minutes from now)
+      // Đặt thời gian hết hạn cho OTP (5 phút kể từ bây giờ)
       const expiry = new Date()
       expiry.setMinutes(expiry.getMinutes() + 5)
       setExpiryTime(expiry)
       setIsExpired(false)
-    }, 1500)
+
+      // Hiển thị thông báo thành công trên giao diện
+      setSuccessMessage(response.message || "Mã OTP đã được gửi đến email của bạn")
+      setError("") // Xóa thông báo lỗi nếu có
+    } catch (err: any) {
+      setIsSendingOtp(false)
+      setOtpError(err?.data?.message || "Không thể gửi OTP. Vui lòng thử lại sau.")
+    }
   }
 
   // Format remaining time until expiry
@@ -87,57 +102,93 @@ export default function ForgotPasswordPage() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate form
+    // Kiểm tra form
     if (!email) {
-      setError("Please enter your email address")
+      setError("Vui lòng nhập địa chỉ email của bạn")
       return
     }
 
     if (!otpSent) {
-      setError("Please send and verify OTP first")
+      setError("Vui lòng gửi và xác minh OTP trước")
       return
     }
 
     if (!otp) {
-      setError("Please enter the OTP sent to your email")
+      setError("Vui lòng nhập mã OTP đã gửi đến email của bạn")
       return
     }
 
     if (isExpired) {
-      setError("OTP has expired. Please request a new one.")
-      return
-    }
-
-    if (otp !== "123456") {
-      // Demo OTP validation
-      setError("Invalid OTP. Please try again")
+      setError("OTP đã hết hạn. Vui lòng yêu cầu mã mới.")
       return
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters long")
+      setError("Mật khẩu phải có ít nhất 8 ký tự")
       return
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError("Mật khẩu không khớp")
       return
     }
 
     setIsSubmitting(true)
     setError("")
 
-    // Simulate password reset (in a real app, this would call an API)
-    setTimeout(() => {
+    try {
+      // Bước 1: Gọi API xác thực OTP trước để lấy token JWT
+      // Lưu ý: chúng ta không phụ thuộc vào state resetToken vì state không cập nhật ngay
+      let tokenToUse = resetToken
+      
+      if (!tokenToUse) {
+        console.log('Gọi API xác thực OTP để lấy token')
+        const verifyResponse = await verifyOtp({
+          email,
+          code: otp,
+          action: 'FORGOT_PASSWORD'
+        }).unwrap()
+
+        console.log('Verify OTP response:', verifyResponse)
+        if (verifyResponse.token) {
+          tokenToUse = verifyResponse.token
+          setResetToken(verifyResponse.token) // Cập nhật state (chỉ cho lần sau)
+        } else {
+          throw new Error("Không nhận được token từ server")
+        }
+      }
+      
+      // Bước 2: Sử dụng token JWT để reset password
+      console.log('Token sẽ được sử dụng để reset password:', tokenToUse)
+      console.log('New password:', password)
+      
+      if (!tokenToUse) {
+        throw new Error('Token không tồn tại, vui lòng thử lại')
+      }
+      
+      const resetResponse = await resetPassword({
+        token: tokenToUse,
+        newPassword: password
+      }).unwrap()
+
       setIsSubmitting(false)
 
-      // Show success message and redirect to login
-      alert("Password reset successful! Please login with your new password.")
-      router.push("/login")
-    }, 1500)
+      // Hiển thị thông báo thành công trên giao diện
+      setSuccessMessage(resetResponse.message || "Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.")
+      setError("") // Xóa thông báo lỗi nếu có
+      
+      // Tự động chuyển hướng sau 3 giây
+      setTimeout(() => {
+        router.push("/login")
+      }, 3000)
+    } catch (err: any) {
+      setIsSubmitting(false)
+      console.error('Reset password error:', err)
+      setError(err?.data?.message || "Không thể đặt lại mật khẩu. Vui lòng thử lại.")
+    }
   }
 
   return (
@@ -192,7 +243,7 @@ export default function ForgotPasswordPage() {
                     <Input
                       id="otp"
                       type="text"
-                      placeholder="Enter 6-digit code"
+                      placeholder="Nhập mã 6 chữ số"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
                       maxLength={6}
@@ -201,32 +252,51 @@ export default function ForgotPasswordPage() {
                     />
                     <Button
                       type="button"
+                      className="w-1/4"
                       onClick={handleSendOtp}
-                      disabled={isSendingOtp}
-                      className="w-1/4 bg-blue-900 text-white hover:bg-blue-800 text-xs px-2"
+                      disabled={isSendingOtp || !email || (otpSent && !isExpired)}
                     >
-                      {isSendingOtp ? "Sending..." : otpSent ? "Resend" : "Send OTP"}
+                      {isSendingOtp ? (
+                        <>
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
+                          <span className="ml-1">Gửi...</span>
+                        </>
+                      ) : otpSent && !isExpired ? (
+                        "Đã gửi"
+                      ) : (
+                        "Lấy OTP"
+                      )}
                     </Button>
                   </div>
                   {otpError && <p className="text-sm text-red-600">{otpError}</p>}
                   {otpSent && !otpError && !isExpired && (
-                    <p className="text-sm text-green-600">OTP sent! For demo purposes, use code: 123456</p>
-                  )}
-                  {expiryTime && otpSent && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      Code expires in:{" "}
-                      <span className={isExpired ? "text-red-500 font-medium" : "font-medium"}>
-                        {formatExpiryTime()}
-                      </span>
-                    </p>
+                    <p className="text-sm text-green-600">OTP sent!</p>
                   )}
                 </div>
 
+                {/* Hiển thị thông báo thành công */}
+                {successMessage && (
+                  <Alert className="mb-4 bg-green-50 border-green-200">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-sm text-green-600">
+                      {successMessage}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Hiển thị thông báo lỗi */}
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Thông báo OTP hết hạn */}
                 {isExpired && (
                   <Alert className="bg-red-50 border-red-200">
                     <AlertCircle className="h-4 w-4 text-red-600" />
                     <AlertDescription className="text-sm text-red-600">
-                      This verification code has expired. Please request a new one.
+                      Mã xác thực đã hết hạn. Vui lòng yêu cầu mã mới.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -270,10 +340,15 @@ export default function ForgotPasswordPage() {
 
                 <Button
                   type="submit"
-                  disabled={isSubmitting || isExpired}
                   className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
+                  disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Resetting..." : "Reset Password"}
+                  {isSubmitting ? (
+                    <>
+                      <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
+                      Đang xử lý...
+                    </>
+                  ) : "Đặt lại mật khẩu"}
                 </Button>
               </div>
             </form>

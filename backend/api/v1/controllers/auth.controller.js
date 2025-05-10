@@ -295,11 +295,11 @@ module.exports.verifyOtpForgotPassword = controllerHandler(async (req, res) => {
         expiresIn: '15m',
     });
 
-    // Send reset link
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    await Otp.sendEmail(email, 'Reset Password', `Click the link to reset your password: ${resetLink}`);
+    // Không gửi email với link reset nữa mà chỉ trả về token cho frontend
+    // để người dùng có thể reset mật khẩu ngay trong luồng OTP
 
-    res.status(200).json({ message: 'Reset link sent successfully' });
+    // Trả về token JWT để frontend sử dụng cho việc reset mật khẩu
+    res.status(200).json({ message: 'Xác thực thành công', token: resetToken });
 });
 
 // Reset password

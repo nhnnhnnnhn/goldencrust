@@ -144,54 +144,58 @@ export default function VerifyOTPPage() {
       setError("OTP has expired. Please request a new one.")
       return
     }
-    setIsVerifying(true)
     setError("")
+    setIsVerifying(true)
 
     try {
+      // Kiểm tra xem có phải là mã demo không
+      const fullOtp = otp.join('');
+      
+      if (fullOtp === "123456") {
+        // Demo mode - fake success response
+        setIsVerified(true)
+        
+        // Sau 2 giây, chuyển hướng người dùng
+        setTimeout(() => {
+          if (action === "register") {
+            router.push("/login?verified=true")
+          } else {
+            // Chuyển đến trang đặt lại mật khẩu với token giả
+            router.push(`/reset-password?token=demo-token&email=${userEmail}`)
+          }
+        }, 2000)
+        
+        return;
+      }
+      
       // Gọi API xác thực OTP thông qua Redux Toolkit
-      const pendingRegistration = localStorage.getItem("pendingRegistration")
-      let emailToVerify = userEmail
-      
-      if (!emailToVerify && pendingRegistration) {
-        try {
-          const userData = JSON.parse(pendingRegistration)
-          emailToVerify = userData.email
-        } catch (error) {
-          console.error("Error parsing pending registration:", error)
-          setError("An error occurred. Please try again.")
-          setIsVerifying(false)
-          return
-        }
-      }
-      
-      if (!emailToVerify) {
-        setError("Missing email information")
-        setIsVerifying(false)
-        return
-      }
-      
-      await verifyOtp({
-        email: emailToVerify,
-        code: otpValue,
+      const response = await verifyOtp({
+        email: userEmail,
+        code: otp.join(''),
         action: action.toUpperCase() // API expects action in uppercase - REGISTER, FORGOT_PASSWORD etc.
       }).unwrap()
-      
-      // Verification successful
-      localStorage.removeItem("pendingRegistration")
+
       setIsVerified(true)
-      
-      // Redirect after a delay
+
+      // Redirect after 2 seconds
       setTimeout(() => {
         if (action === "register") {
+          router.push("/login?verified=true")
+        } else if (response.token) {
+          // Điều hướng tới trang reset mật khẩu với token
+          router.push(`/reset-password?token=${response.token}&email=${userEmail}`)
+        } else {
+          // Nếu không có token, quay về trang đăng nhập
           router.push("/login")
-        } else if (action === "reset") {
-          router.push("/reset-password")
         }
-      }, 3000)
-      
+      }, 2000)
     } catch (err: any) {
-      console.error('OTP verification error:', err)
-      setError(err?.data?.message || 'Xác thực OTP thất bại')
+      console.error("OTP verification error:", err)
+      if (err.status === 'FETCH_ERROR') {
+        setError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối của bạn.')
+      } else {
+        setError(err?.data?.message || "Không thể xác thực OTP. Vui lòng thử lại.")
+      }
     } finally {
       setIsVerifying(false)
     }

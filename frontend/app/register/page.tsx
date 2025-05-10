@@ -52,30 +52,39 @@ export default function RegisterPage() {
       password?: string
       confirmPassword?: string
       phone?: string
+      address?: string
     } = {}
 
     if (!registerData.fullName.trim()) {
-      errors.fullName = "Full name is required"
+      errors.fullName = "Họ tên là bắt buộc"
     }
 
     if (!registerData.email.trim()) {
-      errors.email = "Email is required"
+      errors.email = "Email là bắt buộc"
     } else if (!/\S+@\S+\.\S+/.test(registerData.email)) {
-      errors.email = "Email is invalid"
+      errors.email = "Email không hợp lệ"
     }
 
     if (!registerData.password) {
-      errors.password = "Password is required"
+      errors.password = "Mật khẩu là bắt buộc"
     } else if (registerData.password.length < 8) {
-      errors.password = "Password must be at least 8 characters"
+      errors.password = "Mật khẩu phải có ít nhất 8 ký tự"
     }
 
-    if (registerData.password !== registerData.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match"
+    if (!registerData.confirmPassword) {
+      errors.confirmPassword = "Vui lòng xác nhận mật khẩu"
+    } else if (registerData.password !== registerData.confirmPassword) {
+      errors.confirmPassword = "Mật khẩu không khớp"
     }
 
-    if (registerData.phone && !/^\d{10,11}$/.test(registerData.phone.replace(/[^0-9]/g, ""))) {
-      errors.phone = "Phone number is invalid"
+    if (!registerData.phone) {
+      errors.phone = "Số điện thoại là bắt buộc"
+    } else if (!/^\d{10,11}$/.test(registerData.phone.replace(/[^0-9]/g, ""))) {
+      errors.phone = "Số điện thoại không hợp lệ"
+    }
+    
+    if (!registerData.address.trim()) {
+      errors.address = "Địa chỉ là bắt buộc"
     }
 
     setRegisterErrors(errors)
@@ -105,6 +114,7 @@ export default function RegisterPage() {
         "pendingRegistration",
         JSON.stringify({
           email: registerData.email,
+          fullName: registerData.fullName,
         }),
       )
 
@@ -112,7 +122,13 @@ export default function RegisterPage() {
       router.push("/verify-otp?action=register")
     } catch (err: any) {
       console.error('Registration error:', err)
-      setRegisterError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.')
+      if (err.status === 'FETCH_ERROR') {
+        setRegisterError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối của bạn.')
+      } else if (err?.data?.message?.includes('already exists')) {
+        setRegisterError('Email này đã được sử dụng. Vui lòng sử dụng email khác hoặc đăng nhập nếu đã có tài khoản.')
+      } else {
+        setRegisterError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.')
+      }
     }
   }
 
@@ -189,7 +205,7 @@ export default function RegisterPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="register-address">Address (Optional)</Label>
+                    <Label htmlFor="register-address">Address</Label>
                     <div className="relative">
                       <Input
                         id="register-address"
@@ -244,7 +260,12 @@ export default function RegisterPage() {
                     className="w-full bg-blue-900 text-white rounded-md py-2 hover:bg-blue-800"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Đang đăng ký...' : 'Create Account'}
+                    {isLoading ? (
+                      <>
+                        <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
+                        Đang xử lý...
+                      </>
+                    ) : 'Tạo tài khoản'}
                   </Button>
                 </div>
               </form>

@@ -1,18 +1,29 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import { persistReducer, persistStore } from 'redux-persist';
+import { setupListeners } from '@reduxjs/toolkit/query';
+import { 
+  persistStore, 
+  persistReducer, 
+  FLUSH, 
+  REHYDRATE, 
+  PAUSE, 
+  PERSIST, 
+  PURGE, 
+  REGISTER 
+} from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
-import { authApi } from './api/authApi';
-import authReducer from './slices/authSlice';
+// Import từ file index thay vì trực tiếp từ file module
+import authReducer from '../slices';
+import { authApi } from '../api';
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'] // Chỉ lưu auth state
+  whitelist: ['auth'] // chỉ persist auth state
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
-  [authApi.reducerPath]: authApi.reducer
+  [authApi.reducerPath]: authApi.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -22,13 +33,15 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ['persist/PERSIST'],
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
     }).concat(authApi.middleware),
   devTools: process.env.NODE_ENV !== 'production',
 });
 
 export const persistor = persistStore(store);
+
+setupListeners(store.dispatch);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

@@ -1,0 +1,76 @@
+2025-05-11 01:04:33 [info]: 	Connected to database successfully 
+2025-05-11 01:04:33 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 01:06:58 [info]: 	JWT Environment Variables Status {
+  "JWT_SECRET_STATUS": "Missing",
+  "JWT_REFRESH_SECRET_STATUS": "Missing",
+  "JWT_RESET_SECRET_STATUS": "Missing"
+}
+2025-05-11 01:06:59 [info]: 	Generating JWT token with user ID {
+  "userId": "681ddd48eba96e82cc7e7067"
+}
+2025-05-11 01:09:37 [info]: 	Connected to database successfully 
+2025-05-11 01:09:37 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 01:13:54 [info]: 	Connected to database successfully 
+2025-05-11 01:13:54 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 01:14:12 [info]: 	Connected to database successfully 
+2025-05-11 01:14:12 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 01:54:36 [info]: 	Verifying reset token 
+2025-05-11 01:54:36 [error]: 	Token verification failed {
+  "error": {
+    "name": "JsonWebTokenError",
+    "message": "jwt malformed"
+  }
+}
+2025-05-11 01:59:56 [info]: 	Generating reset token for email {
+  "email": "hoangnghia04@gmail.com"
+}
+2025-05-11 02:08:53 [info]: 	Generating reset token for email {
+  "email": "contact.hoangnghia04@gmail.com"
+}
+2025-05-11 02:10:58 [info]: 	Connected to database successfully 
+2025-05-11 02:10:58 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:11:09 [info]: 	Connected to database successfully 
+2025-05-11 02:11:09 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:13:01 [info]: 	Connected to database successfully 
+2025-05-11 02:13:01 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:13:01 [info]: 	Connected to database successfully 
+2025-05-11 02:13:01 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:13:11 [info]: 	Connected to database successfully 
+2025-05-11 02:13:11 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:14:57 [info]: 	Generating reset token for email {
+  "email": "hoangnghia04@gmail.com"
+}
+2025-05-11 02:16:59 [info]: 	Generating reset token for email {
+  "email": "hoangnghia04@gmail.com"
+}
+2025-05-11 02:19:26 [info]: 	Connected to database successfully 
+2025-05-11 02:19:26 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:20:09 [info]: 	Generating reset token for email {
+  "email": "contact.hoangnghia04@gmail.com"
+}
+2025-05-11 02:22:15 [info]: 	Connected to database successfully 
+2025-05-11 02:22:15 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:23:14 [info]: 	Generating reset token for email {
+  "email": "contact.hoangnghia04@gmail.com"
+}
+2025-05-11 02:23:14 [info]: 	Verifying reset token 
+2025-05-11 02:23:26 [info]: 	JWT Environment Variables Status {
+  "JWT_SECRET_STATUS": "Missing",
+  "JWT_REFRESH_SECRET_STATUS": "Missing",
+  "JWT_RESET_SECRET_STATUS": "Missing"
+}
+2025-05-11 02:23:26 [info]: 	Generating JWT token with user ID {
+  "userId": "681f9b0e24a0ec7d6a24f5cc"
+}
+2025-05-11 02:31:38 [info]: 	Generating reset token for email {
+  "email": "contact.hoangnghia04@gmail.com"
+}
+2025-05-11 02:31:38 [info]: 	Verifying reset token 
+2025-05-11 02:32:28 [info]: 	JWT Environment Variables Status {
+  "JWT_SECRET_STATUS": "Missing",
+  "JWT_REFRESH_SECRET_STATUS": "Missing",
+  "JWT_RESET_SECRET_STATUS": "Missing"
+}
+2025-05-11 02:32:28 [info]: 	Generating JWT token with user ID {
+  "userId": "681f95ec98825935d694e7a2"
+}
