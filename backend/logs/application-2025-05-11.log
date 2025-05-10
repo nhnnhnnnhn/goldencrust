@@ -82,3 +82,86 @@
 2025-05-11 02:36:41 [info]: 	Generating JWT token with user ID {
   "userId": "681f95ec98825935d694e7a2"
 }
+2025-05-11 02:46:37 [info]: 	Connected to database successfully 
+2025-05-11 02:46:37 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:48:42 [info]: 	Connected to database successfully 
+2025-05-11 02:48:42 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:48:52 [info]: 	Connected to database successfully 
+2025-05-11 02:48:52 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:49:38 [info]: 	Connected to database successfully 
+2025-05-11 02:49:38 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:49:49 [info]: 	Connected to database successfully 
+2025-05-11 02:49:49 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 02:59:51 [info]: 	Connected to database successfully 
+2025-05-11 02:59:51 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 03:00:03 [info]: 	Connected to database successfully 
+2025-05-11 03:00:03 [info]: 	Server is running on port 5000 in development mode 
+2025-05-11 03:00:47 [error]: 	Stripe checkout session creation failed {
+  "error": {
+    "type": "StripeInvalidRequestError",
+    "raw": {
+      "code": "url_invalid",
+      "doc_url": "https://stripe.com/docs/error-codes/url-invalid",
+      "message": "Not a valid URL",
+      "param": "line_items[0][price_data][product_data][images][0]",
+      "request_log_url": "https://dashboard.stripe.com/test/logs/req_JCGzGswqdpyYn6?t=1746907247",
+      "type": "invalid_request_error",
+      "headers": {
+        "server": "nginx",
+        "date": "Sat, 10 May 2025 20:00:47 GMT",
+        "content-type": "application/json",
+        "content-length": "348",
+        "connection": "keep-alive",
+        "access-control-allow-credentials": "true",
+        "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+        "access-control-allow-origin": "*",
+        "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+        "access-control-max-age": "300",
+        "cache-control": "no-cache, no-store",
+        "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=G_K34F85LaZrXFppszy26UOTr4DCkqxb1cmEkkEavep2f4z__wLYSmSYcjOxsJXQrrECkKzFaVlyhjsE",
+        "idempotency-key": "stripe-node-retry-86ee43e6-bae8-4fae-b976-a860b946b984",
+        "original-request": "req_JCGzGswqdpyYn6",
+        "request-id": "req_JCGzGswqdpyYn6",
+        "stripe-version": "2025-04-30.basil",
+        "vary": "Origin",
+        "x-stripe-priority-routing-enabled": "true",
+        "x-stripe-routing-context-priority-tier": "api-testmode",
+        "x-wc": "ABGHI",
+        "strict-transport-security": "max-age=63072000; includeSubDomains; preload"
+      },
+      "statusCode": 400,
+      "requestId": "req_JCGzGswqdpyYn6"
+    },
+    "rawType": "invalid_request_error",
+    "code": "url_invalid",
+    "doc_url": "https://stripe.com/docs/error-codes/url-invalid",
+    "param": "line_items[0][price_data][product_data][images][0]",
+    "headers": {
+      "server": "nginx",
+      "date": "Sat, 10 May 2025 20:00:47 GMT",
+      "content-type": "application/json",
+      "content-length": "348",
+      "connection": "keep-alive",
+      "access-control-allow-credentials": "true",
+      "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+      "access-control-allow-origin": "*",
+      "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+      "access-control-max-age": "300",
+      "cache-control": "no-cache, no-store",
+      "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=G_K34F85LaZrXFppszy26UOTr4DCkqxb1cmEkkEavep2f4z__wLYSmSYcjOxsJXQrrECkKzFaVlyhjsE",
+      "idempotency-key": "stripe-node-retry-86ee43e6-bae8-4fae-b976-a860b946b984",
+      "original-request": "req_JCGzGswqdpyYn6",
+      "request-id": "req_JCGzGswqdpyYn6",
+      "stripe-version": "2025-04-30.basil",
+      "vary": "Origin",
+      "x-stripe-priority-routing-enabled": "true",
+      "x-stripe-routing-context-priority-tier": "api-testmode",
+      "x-wc": "ABGHI",
+      "strict-transport-security": "max-age=63072000; includeSubDomains; preload"
+    },
+    "requestId": "req_JCGzGswqdpyYn6",
+    "statusCode": 400
+  }
+}
+2025-05-11 03:03:20 [info]: 	Connected to database successfully 
+2025-05-11 03:03:20 [info]: 	Server is running on port 5000 in development mode 

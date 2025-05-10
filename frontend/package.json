@@ -39,6 +39,7 @@
     "@radix-ui/react-tooltip": "^1.1.6",
     "@redux-devtools/extension": "^3.3.0",
     "@reduxjs/toolkit": "^2.8.1",
+    "@stripe/stripe-js": "^7.3.0",
     "autoprefixer": "^10.4.20",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",

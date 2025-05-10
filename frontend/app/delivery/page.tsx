@@ -6,23 +6,18 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ChevronLeft, ShoppingCart, Plus, Minus, X, CreditCard } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useCreateCheckoutSessionMutation } from "@/redux/api/stripeApi"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetFooter,
-  SheetClose,
-} from "@/components/ui/sheet"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetClose } from "@/components/ui/sheet"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "@/components/ui/use-toast"
 
 import styles from "./styles.module.css"
 
@@ -76,16 +71,64 @@ export default function DeliveryPage() {
     }
   }, [cart])
 
-  // Handle returning from payment-failed page
+  // Load giỏ hàng từ localStorage khi component mount
+  useEffect(() => {
+    const storedCart = localStorage.getItem("deliveryCart")
+    if (storedCart && cart.length === 0) {
+      try {
+        const parsedCart = JSON.parse(storedCart)
+        if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+          setCart(parsedCart)
+        }
+      } catch (error) {
+        console.error("Lỗi khi đọc giỏ hàng từ localStorage:", error)
+      }
+    }
+  }, [])
+
+  // Xử lý trạng thái thanh toán khi người dùng quay trở lại từ Stripe hoặc payment-failed
   useEffect(() => {
     const paymentStatus = searchParams.get("payment")
     const orderStatus = searchParams.get("order")
+    const sessionId = searchParams.get("session_id")
+    const method = searchParams.get("method")
 
-    if (paymentStatus === "success") {
-      // Payment was successful after retry
+    // Kiểm tra nếu từ trang thanh toán Stripe trở về
+    if (paymentStatus === "success" && sessionId) {
+      // Thanh toán thành công với Stripe
+      setIsProcessing(false)
       setOrderComplete(true)
+      // Xóa giỏ hàng sau khi đã thanh toán thành công
+      localStorage.removeItem("deliveryCart")
+      setCart([])
+    } else if (paymentStatus === "failed" && sessionId) {
+      // Thanh toán thất bại từ Stripe, quay lại bước giỏ hàng
+      setOrderStep(1)
+      setIsProcessing(false)
+      // Hiển thị thông báo lỗi để người dùng biết
+      toast({
+        variant: "destructive",
+        title: "Thanh toán thất bại",
+        description: "Vui lòng thử lại hoặc chọn phương thức thanh toán khác",
+      })
+    } else if (paymentStatus === "retry") {
+      // Người dùng quay lại từ trang payment-failed để thử lại
+      setOrderStep(1) // Quay lại bước điền thông tin
+      setIsProcessing(false)
+      
+      // Thiết lập phương thức thanh toán mặc định dựa trên lựa chọn
+      const preferredPaymentMethod = localStorage.getItem("preferredPaymentMethod")
+      if (preferredPaymentMethod) {
+        setDeliveryInfo(prev => ({
+          ...prev,
+          paymentMethod: preferredPaymentMethod
+        }))
+      }
+      
+      // Xóa tham số URL để tránh việc xử lý lại nếu refresh trang
+      window.history.replaceState({}, document.title, "/delivery")
     } else if (orderStatus === "cancelled") {
-      // Order was cancelled
+      // Đơn hàng bị hủy
       setCart([])
       localStorage.removeItem("deliveryCart")
       setOrderStep(0)
@@ -137,25 +180,56 @@ export default function DeliveryPage() {
     setOrderStep(1)
   }
 
-  const handlePlaceOrder = () => {
-    // Simulate payment processing
+  const [createCheckoutSession, { isLoading: isCreatingCheckout }] = useCreateCheckoutSessionMutation()
+
+  const handlePlaceOrder = async () => {
+    // Thiết lập trạng thái đang xử lý
     setIsProcessing(true)
 
-    setTimeout(() => {
-      setIsProcessing(false)
+    try {
+      // Nếu thanh toán bằng thẻ, sử dụng Stripe Checkout
+      if (deliveryInfo.paymentMethod === "card") {
+        // Chuẩn bị dữ liệu cho Stripe Checkout
+        const checkoutData = {
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity
+          })),
+          customer: {
+            name: deliveryInfo.name,
+            phone: deliveryInfo.phone,
+            address: deliveryInfo.address,
+            notes: deliveryInfo.notes
+          },
+          deliveryFee: 5 // Phí vận chuyển cố định 5$
+        }
 
-      // Simulate payment failure when using card payment and the address contains "fail" or "error"
-      if (
-        deliveryInfo.paymentMethod === "card" &&
-        (deliveryInfo.address.toLowerCase().includes("fail") || deliveryInfo.address.toLowerCase().includes("error"))
-      ) {
-        // Redirect to payment failed page
-        router.push("/payment-failed")
+        // Gọi API để tạo Stripe Checkout Session
+        const response = await createCheckoutSession(checkoutData).unwrap()
+        
+        // Chuyển hướng người dùng đến trang thanh toán Stripe
+        if (response.url) {
+          window.location.href = response.url
+          return // Ngừng xử lý hàm vì người dùng sẽ rời khỏi trang
+        }
       } else {
-        // Payment successful
-        setOrderComplete(true)
+        // Thanh toán bằng tiền mặt khi giao hàng (COD)
+        setTimeout(() => {
+          setIsProcessing(false)
+          setOrderComplete(true)
+        }, 1000)
       }
-    }, 2000)
+    } catch (error) {
+      console.error('Lỗi xử lý thanh toán:', error)
+      setIsProcessing(false)
+      
+      // Hiển thị thông báo lỗi hoặc chuyển hướng đến trang lỗi thanh toán
+      router.push("/payment-failed")
+    }
   }
 
   const menuItems: MenuItem[] = [
