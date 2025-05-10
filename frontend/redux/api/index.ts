@@ -1,5 +1,7 @@
 import { authApi } from './authApi';
+import { stripeApi } from './stripeApi';
 
 export {
-  authApi
+  authApi,
+  stripeApi
 };

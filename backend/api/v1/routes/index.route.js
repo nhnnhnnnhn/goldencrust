@@ -8,6 +8,7 @@ const tableRoute = require('./table.route');
 const paymentRoute = require('./payment.route');
 const orderRoute = require('./order.route');
 const orderDetailRoute = require('./orderDetail.route');
+const stripeRoute = require('./stripe.routes');
 
 const authMiddleware = require('../middlewares/auth.middleware');
 
@@ -26,4 +27,5 @@ module.exports = (app) => {
     app.use(version + '/orders', orderRoute);
     app.use(version + '/order-details', orderDetailRoute);
     // app.use(version + '/payments', authMiddleware, paymentRoute);
+    app.use(version + '/stripe', stripeRoute);
 };

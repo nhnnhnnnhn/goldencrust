@@ -13,7 +13,7 @@ import {
 import storage from 'redux-persist/lib/storage';
 // Import từ file index thay vì trực tiếp từ file module
 import authReducer from '../slices';
-import { authApi } from '../api';
+import { authApi, stripeApi } from '../api';
 
 const persistConfig = {
   key: 'root',
@@ -24,6 +24,7 @@ const persistConfig = {
 const rootReducer = combineReducers({
   auth: authReducer,
   [authApi.reducerPath]: authApi.reducer,
+  [stripeApi.reducerPath]: stripeApi.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -35,7 +36,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }).concat(authApi.middleware),
+    }).concat(authApi.middleware, stripeApi.middleware),
   devTools: process.env.NODE_ENV !== 'production',
 });
 

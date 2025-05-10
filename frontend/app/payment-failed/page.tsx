@@ -17,21 +17,31 @@ export default function PaymentFailedPage() {
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [isProcessing, setIsProcessing] = useState(false)
 
-  // State to store order details
+  // Định nghĩa kiểu dữ liệu cho item trong giỏ hàng
+  interface CartItem {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    image?: string;
+    quantity: number;
+  }
+
+  // State để lưu trữ thông tin đơn hàng
   const [orderDetails, setOrderDetails] = useState({
     id: "ORD-" + Math.floor(Math.random() * 10000),
     total: 0,
-    items: [],
+    items: [] as CartItem[],
     deliveryFee: 5,
   })
 
-  // Retrieve cart items from localStorage
+  // Lấy dữ liệu giỏ hàng từ localStorage
   useEffect(() => {
     const storedCart = localStorage.getItem("deliveryCart")
     if (storedCart) {
       try {
-        const cartItems = JSON.parse(storedCart)
-        const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        const cartItems = JSON.parse(storedCart) as CartItem[]
+        const subtotal = cartItems.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0)
 
         setOrderDetails({
           ...orderDetails,
@@ -42,29 +52,20 @@ export default function PaymentFailedPage() {
         console.error("Error parsing cart data:", error)
       }
     }
-  }, [])
+  }, [orderDetails.deliveryFee])
 
   const handleRetryPayment = () => {
     setIsProcessing(true)
 
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false)
-
-      if (paymentMethod === "cash") {
-        // If switching to cash payment, it always succeeds
-        router.push("/delivery?payment=success&method=cash")
-      } else {
-        // For card payments, simulate a 70% success rate on retry
-        const isSuccessful = Math.random() > 0.3
-        if (isSuccessful) {
-          router.push("/delivery?payment=success&method=card")
-        } else {
-          // Still failing, but stay on the same page and show an alert
-          alert("Payment failed again. Please try a different card or payment method.")
-        }
-      }
-    }, 2000)
+    if (paymentMethod === "cash") {
+      // Chuyển sang phương thức thanh toán tiền mặt
+      localStorage.setItem("preferredPaymentMethod", "cash")
+      router.push("/delivery?payment=retry&method=cash")
+    } else {
+      // Vẫn sử dụng thẻ tín dụng, quay lại trang delivery để tạo Stripe Checkout Session mới
+      localStorage.setItem("preferredPaymentMethod", "card")
+      router.push("/delivery?payment=retry&method=card")
+    }
   }
 
   const handleCancelOrder = () => {
