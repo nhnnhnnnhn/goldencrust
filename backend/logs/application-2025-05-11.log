@@ -74,3 +74,11 @@
 2025-05-11 02:32:28 [info]: 	Generating JWT token with user ID {
   "userId": "681f95ec98825935d694e7a2"
 }
+2025-05-11 02:36:40 [info]: 	JWT Environment Variables Status {
+  "JWT_SECRET_STATUS": "Missing",
+  "JWT_REFRESH_SECRET_STATUS": "Missing",
+  "JWT_RESET_SECRET_STATUS": "Missing"
+}
+2025-05-11 02:36:41 [info]: 	Generating JWT token with user ID {
+  "userId": "681f95ec98825935d694e7a2"
+}
