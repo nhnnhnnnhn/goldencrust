@@ -133,12 +133,12 @@ module.exports.updateUser = controllerHandler(async (req, res) => {
 
     // Check if phone number is already in use
     const existingPhone = await User.findOne({ phone });
-    if (existingPhone) {
+    if (existingPhone && existingPhone._id.toString() !== id) {
         return res.status(409).json({ message: 'Phone number already exists' });
     }
 
     // Hash password
-    const hashedPassword = await User.hashPassword(password);
+    const hashedPassword = bcrypt.hashSync(password, 10);  
 
     // Update user
     try {
@@ -150,11 +150,10 @@ module.exports.updateUser = controllerHandler(async (req, res) => {
         if (!updatedUser) {
             return res.status(404).json({ message: 'User not found' });
         }
+        return res.status(200).json({ message: 'User updated successfully', user: updatedUser });
     } catch (error) {
         return res.status(500).json({ message: 'Error updating user', error });
     }
-
-    return res.status(200).json({ message: 'User updated successfully', user: updatedUser });
 });
 
 // Delete user
@@ -240,8 +239,7 @@ module.exports.toggleUserSuspension = controllerHandler(async (req, res) => {
 
     // Toggle suspension status
     try {
-        user.isSuspended = !user.isSuspended;
-        await user.save();
+        await User.updateOne({ _id: id }, { isSuspended: !user.isSuspended });
     } catch (error) {
         return res.status(500).json({ message: 'Error toggling user suspension', error });
     }
@@ -266,8 +264,7 @@ module.exports.toggleUserActivation = controllerHandler(async (req, res) => {
 
     // Toggle activation status
     try {
-        user.isActive = !user.isActive;
-        await user.save();
+        await User.updateOne({ _id: id }, { isActive: !user.isActive });
     } catch (error) {
         return res.status(500).json({ message: 'Error toggling user activation', error });
     }
@@ -347,7 +344,7 @@ module.exports.updateUserProfile = controllerHandler(async (req, res) => {
 
 // Change user password
 module.exports.changeUserPassword = controllerHandler(async (req, res) => {
-    const { userId } = req;
+    const { userId } = req.params;
     const { oldPassword, newPassword } = req.body;
 
     // Validate input
@@ -362,7 +359,7 @@ module.exports.changeUserPassword = controllerHandler(async (req, res) => {
     }
 
     // Check if old password is correct
-    const isMatch = await User.comparePassword(oldPassword, user.password);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
         return res.status(401).json({ message: 'Old password is incorrect' });
     }
@@ -373,12 +370,14 @@ module.exports.changeUserPassword = controllerHandler(async (req, res) => {
     }
 
     // Hash new password
-    const hashedNewPassword = await User.hashPassword(newPassword);
-
+    const hashedNewPassword = bcrypt.hashSync(newPassword, 10);
     // Update password
     try {
-        user.password = hashedNewPassword;
-        await user.save();
+        await User.findByIdAndUpdate(
+            userId,
+            { password: hashedNewPassword },
+            { new: true }
+        );
     } catch (error) {
         return res.status(500).json({ message: 'Error changing password', error });
     }

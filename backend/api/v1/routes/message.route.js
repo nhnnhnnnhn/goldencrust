@@ -11,3 +11,5 @@ router.get('/guest/:guestId', authMiddleware, messageController.getMessagesByGue
 
 // Search messages
 router.get('/search', authMiddleware, messageController.searchMessages);
+
+module.exports = router;

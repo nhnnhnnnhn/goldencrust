@@ -3,6 +3,9 @@ const router = express.Router();
 const notificationController = require('../controllers/notification.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 
+// Create a new notification
+router.post('/create', authMiddleware, notificationController.createNotification);
+
 // Get notifications by ID
 router.get('/:notificationId', authMiddleware, notificationController.getNotificationsById);
 
@@ -28,9 +31,9 @@ router.delete('/:notificationId', authMiddleware, notificationController.deleteN
 router.delete('/all', authMiddleware, notificationController.deleteAllNotifications);
 
 // Get notification count
-router.get('/count', authMiddleware, notificationController.getNotificationCount);
+router.get('/count', authMiddleware, notificationController.getNotificationsCount);
 
 // Get unread notification count
-router.get('/unread/count', authMiddleware, notificationController.getUnreadNotificationCount);
+router.get('/unread/count', authMiddleware, notificationController.getUnreadNotificationsCount);
 
 module.exports = router;

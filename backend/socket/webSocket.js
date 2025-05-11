@@ -23,7 +23,7 @@ function initWebSocket(server) {
             const token = socket.handshake.auth.token;
             if (!token) return next(new Error("No token"));
 
-            const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await User.findById(decoded.id);
 
             if (!user || user.isSuspended) return next(new Error("Unauthorized"));
@@ -59,10 +59,6 @@ function initWebSocket(server) {
                 const { visitorId, text } = data;
                 const guest = await Guest.findOne({ visitorId });
                 if (!guest) return socket.emit('errorMessage', { message: 'Guest not found' });
-
-                if (user.role !== 'employee') {
-                    return socket.emit('errorMessage', { message: `Don't have permission to send` });
-                }
 
                 const message = await Message.create({
                     guest: guest._id,
@@ -126,41 +122,48 @@ function initWebSocket(server) {
             try {
                 const { userId, text } = data;
 
+                console.log("➡️ Received sendMessageFromEmployeeToUser with:", data);
+
                 const message = await Message.create({
                     user: userId,
                     senderType: 'employee',
                     text,
                 });
 
+                console.log("✅ Message created:", message);
+
                 if (onlineUser.has(userId)) {
-                    onlineUser.get(userId).forEach(socketId => {
+                    const socketSet = onlineUser.get(userId);
+                    console.log("🔗 Target user online with sockets:", Array.from(socketSet));
+                    socketSet.forEach(socketId => {
                         io.to(socketId).emit('newMessage', message);
                     });
+                } else {
+                    console.log("⚠️ User not online:", userId);
                 }
 
                 socket.emit('messageSent', message);
-
             } catch (err) {
-                console.error("Error sending message from employee to user:", err);
+                console.error("❌ Error sending message from employee to user:", err);
                 socket.emit('errorMessage', { message: 'Không thể gửi tin nhắn' });
             }
         });
 
+
         socket.on("sendNotification", async (data) => {
             try {
-                const { type, content, recipientType, userId, visitorId } = data;
-
+                const { recipientType, recipient, type, content, link } = data;
                 const notification = await Notification.create({
-                    recipient: recipientType === "user" ? userId : null,
-                    sender: socket.user._id,
+                    recipientType,
+                    recipient,
+                    sender: user._id,
                     type,
                     content,
-                    link: null,
-                    isRead: false,
+                    link,
                 });
 
                 if (recipientType === "user") {
-                    const socketSet = onlineUser.get(userId);
+                    const socketSet = onlineUser.get(recipient);
                     if (socketSet) {
                         socketSet.forEach(socketId => {
                             io.to(socketId).emit("receiveNotification", notification);
@@ -168,8 +171,8 @@ function initWebSocket(server) {
                     }
                 }
 
-                if (recipientType === "guest" && guestSockets.has(visitorId)) {
-                    const guestSocketId = guestSockets.get(visitorId);
+                if (recipientType === "guest" && guestSockets.has(recipient)) {
+                    const guestSocketId = guestSockets.get(recipient);
                     io.of("/guest").to(guestSocketId).emit("receiveNotification", {
                         type,
                         content

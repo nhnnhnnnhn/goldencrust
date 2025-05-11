@@ -3,6 +3,41 @@ const User = require('../models/user.model');
 const Guest = require('../models/guest.model');
 const mongoose = require('mongoose');
 
+// Create a new notification
+exports.createNotification = async (req, res) => {
+    try {
+        const {recipientType, recipient, sender, type, content, link, isRead } = req.body;
+        if (!recipientType || !recipient || !type || !content) {
+            return res.status(400).json({ message: 'Recipient, type, and content are required' });
+        }
+        if (recipientType !== 'user' && recipientType !== 'guest') {
+            return res.status(400).json({ message: 'Invalid recipient type' });
+        }
+        if (recipientType === 'user') {
+            const user = await User.findById(recipient);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+        } else if (recipientType === 'guest') {
+            const guest = await Guest.findById(recipient);
+            if (!guest) {
+                return res.status(404).json({ message: 'Guest not found' });
+            }
+        }
+        await Notification.create({
+            recipient,
+            sender,
+            type,
+            content,
+            link,
+            isRead
+        });
+        res.status(201).json(notification);
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating notification', error });
+    }
+};
+
 // Get notifications by ID
 exports.getNotificationsById = async (req, res) => {
     try {

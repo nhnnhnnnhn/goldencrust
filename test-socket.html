@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Socket.IO Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>🔌 Socket.IO Test Client</h2>
+
+  <button onclick="sendMessageFromUser()">👤 User → Employee</button>
+  <button onclick="sendMessageFromEmployeeToUser()">💼 Employee → User</button>
+  <button onclick="sendMessageFromEmployeeToGuest()">💼 Employee → Guest</button>
+  <br><br>
+  <button onclick="sendNotificationToUser()">🔔 Notify User</button>
+  <button onclick="sendNotificationToGuest()">🔔 Notify Guest</button>
+
+  <script>
+    const socket = io('http://localhost:3000', {
+      auth: {
+        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MDg1OTNjZTZiZjA4ZGFiMmZjNDJhZSIsImlhdCI6MTc0Njg4NjQzNCwiZXhwIjoxNzQ2ODkwMDM0fQ.5kxPAH8BbYe9t7H3s_0LNu35S5BCxtr_5sBBN3SeIp8' // 🔑 Nhớ thay bằng token hợp lệ!
+      }
+    });
+
+    socket.on('connect', () => {
+      console.log("✅ Connected:", socket.id);
+    });
+
+    socket.on('newMessage', (data) => {
+      console.log("📩 Received message:", data);
+    });
+
+    socket.on('newEmployeeMessage', (data) => {
+      console.log("📩 Received message from employee:", data);
+    });
+
+    socket.on('receiveNotification', (data) => {
+      console.log("🔔 Received notification:", data);
+    });
+
+    socket.on('messageSent', (data) => {
+      console.log("✅ Message sent confirmation:", data);
+    });
+
+    socket.on('errorMessage', (data) => {
+      console.error("❌ Error:", data.message);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error("❌ Connection error:", err.message);
+    });
+
+    // === Test functions ===
+
+    function sendMessageFromUser() {
+      socket.emit("sendMessageFromUser", {
+        text: "👤 Hello from user to employee!"
+      });
+    }
+
+    function sendMessageFromEmployeeToUser() {
+      socket.emit("sendMessageFromEmployeeToUser", {
+        userId: "6808593ce6bf08dab2fc42ae",  // 🆔 ID người dùng đang online
+        text: "💼 Hello from employee to user!"
+      });
+    }
+
+    function sendMessageFromEmployeeToGuest() {
+      socket.emit("sendMessageFromEmployee", {
+        visitorId: "guest_1746888330739",  // 🆔 ID của guest (visitorId)
+        text: "💼 Hello from employee to guest!"
+      });
+    }
+
+    function sendNotificationToUser() {
+      socket.emit("sendNotification", {
+        recipientType: "user",
+        recipient: "REPLACE_WITH_USER_ID", // 🆔 ID user nhận thông báo
+        type: "custom",
+        content: "🔔 Notification for user",
+        link: "/dashboard"
+      });
+    }
+
+    function sendNotificationToGuest() {
+      socket.emit("sendNotification", {
+        recipientType: "guest",
+        recipient: "guest_1746888330739", // 🆔 visitorId của guest
+        type: "custom",
+        content: "🔔 Notification for guest"
+      });
+    }
+  </script>
+</body>
+</html>

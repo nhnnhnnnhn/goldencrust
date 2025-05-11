@@ -2,6 +2,7 @@ const userRoute = require('./user.route');
 const authRoute = require('./auth.route');
 const messageRoute = require('./message.route');
 const notificationRoute = require('./notification.route');
+const guestRoute = require('./guest.route');
 
 const authMiddleware = require('../middlewares/auth.middleware');
 
@@ -15,4 +16,6 @@ module.exports = (app) => {
     app.use(version + '/messages', authMiddleware, messageRoute);
 
     app.use(version + '/notifications', authMiddleware, notificationRoute);
+
+    app.use(version + '/guests', guestRoute);
 };

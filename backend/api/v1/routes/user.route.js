@@ -29,10 +29,10 @@ router.put('/update/:id',
 );
 
 // Delete user
-router.delete('/delete/:id', authMiddleware, userController.deleteUser);
+router.patch('/delete/:id', authMiddleware, userController.deleteUser);
 
 // Delete multiple users
-router.delete('/delete-multiple', authMiddleware, userController.deleteMultipleUsers);
+router.patch('/delete-multiple', authMiddleware, userController.deleteMultipleUsers);
 
 // Search users
 router.get('/search', authMiddleware, userController.searchUsers);
@@ -50,7 +50,7 @@ router.get('/stats', authMiddleware, userController.getUserStats);
 router.get('/profile', authMiddleware, userController.getUserProfile);
 
 // Update User Profile
-router.put('/profile/update',
+router.patch('/profile/update',
     authMiddleware,
     upload.single('avatar'),
     uploadCloud.upload,
@@ -58,6 +58,6 @@ router.put('/profile/update',
 );
 
 // Change User Password
-router.put('/profile/change-password', authMiddleware, userController.changeUserPassword);
+router.patch('/change-password/:userId', authMiddleware, userController.changeUserPassword);
 
 module.exports = router;
