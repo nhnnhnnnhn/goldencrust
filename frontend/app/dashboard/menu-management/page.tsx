@@ -506,9 +506,8 @@ export default function MenuManagement() {
           <TabsTrigger value="menu">Quản lý Menu</TabsTrigger>
           <TabsTrigger value="categories">Quản lý Danh mục</TabsTrigger>
         </TabsList>
-      </Tabs>
-
-      <TabsContent value="menu" className="mt-0">
+        
+        <TabsContent value="menu" className="mt-0">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Quản Lý Menu</h1>
           <Button onClick={handleAddItem} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
@@ -771,6 +770,7 @@ export default function MenuManagement() {
           </div>
         </div>
       </TabsContent>
+      </Tabs>
 
       {/* Modal thêm/sửa món ăn */}
       {showAddEditModal && currentItem && (
