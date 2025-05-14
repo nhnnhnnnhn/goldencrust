@@ -54,10 +54,6 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
           <p className="text-gray-500">Manage and view customer information</p>
         </div>
-        <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add Customer
-        </Button>
       </div>
 
       {/* Stats */}
