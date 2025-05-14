@@ -8,13 +8,14 @@ async function authMiddleware(req, res, next) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({message: "Wrong token"});
-    }
-    req.user = user;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'golden-crust-default-secret-key');
+    req.user = decoded; // This will contain the user ID from the token
     next();
-  });
+  } catch (err) {
+    console.error('Token verification error:', err);
+    return res.status(403).json({ message: "Invalid token" });
+  }
 }
 
 module.exports = authMiddleware;

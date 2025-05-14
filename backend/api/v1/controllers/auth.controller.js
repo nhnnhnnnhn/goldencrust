@@ -174,6 +174,12 @@ module.exports.registerUser = controllerHandler(async (req, res) => {
         else {
             await User.updateOne({ email }, { phone });
         }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await User.updateOne({email}, {
+            fullName,
+            address,
+            hashedPassword
+        });
         const otpResponse = await Otp.sendOtp(email, 'REGISTER');
         if (!otpResponse.status) {
             return res.status(500).json({ message: otpResponse.message });

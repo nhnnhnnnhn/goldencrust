@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
+const bcrypt = require('bcrypt');
 
 // Get all users
 module.exports.getAllUsers = controllerHandler(async (req, res) => {
@@ -254,15 +255,15 @@ module.exports.getUserStats = controllerHandler(async (req, res) => {
 
 // Get user profile
 module.exports.getUserProfile = controllerHandler(async (req, res) => {
-    const { userId } = req;
+    const userId = req.user.id; // Get user ID from the token
 
     // Validate input
     if (!userId) {
-        return res.status(400).json({ message: 'Missing required fields' });
+        return res.status(400).json({ message: 'Missing user ID' });
     }
 
     // Get user profile
-    const user = await User.findById({userId, deleted: false });
+    const user = await User.findById(userId);
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
     }
@@ -272,50 +273,67 @@ module.exports.getUserProfile = controllerHandler(async (req, res) => {
 
 // Update user profile
 module.exports.updateUserProfile = controllerHandler(async (req, res) => {
-    const { userId } = req;
-    const {fullName, address, phone, avatar} = req.body;
+    const userId = req.user.id; // Get user ID from the token
+    const { fullName, address, phone, avatar } = req.body;
 
     // Validate input
-    if (!userId || !fullName || !address || !phone) {
-        return res.status(400).json({ message: 'Missing required fields' });
+    if (!userId) {
+        return res.status(400).json({ message: 'User not authenticated' });
     }
 
     // Check if user exists
-    const existingUser = User.find({userId, deleted: false});
+    const existingUser = await User.findById(userId);
     if (!existingUser) {
         return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if phone number is already in use
-    const existingPhone = User.findOne({ phone });
-    if(existingPhone && existingPhone._id.toString() !== userId) {
-        return res.status(409).json({ message: 'Phone number already exists' });
+    // Check if phone number is already in use by another user
+    if (phone) {
+        const existingPhone = await User.findOne({ phone, _id: { $ne: userId } });
+        if (existingPhone) {
+            return res.status(409).json({ message: 'Phone number already exists' });
+        }
     }
 
     // Update user profile
     try {
+        const updateData = {};
+        if (fullName) updateData.fullName = fullName;
+        if (address) updateData.address = address;
+        if (phone) updateData.phone = phone;
+        if (avatar) updateData.avatar = avatar;
+
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { fullName, address, phone, avatar },
+            updateData,
             { new: true }
         );
+
         if (!updatedUser) {
             return res.status(404).json({ message: 'User not found' });
         }
+
+        return res.status(200).json({ 
+            message: 'User profile updated successfully', 
+            user: updatedUser 
+        });
     } catch (error) {
         return res.status(500).json({ message: 'Error updating user profile', error });
     }
-    return res.status(200).json({ message: 'User profile updated successfully', user: updatedUser });
 });
 
 // Change user password
 module.exports.changeUserPassword = controllerHandler(async (req, res) => {
-    const { userId } = req;
+    const userId = req.user.id; // Get user ID from the token
     const { oldPassword, newPassword } = req.body;
 
     // Validate input
-    if (!userId || !oldPassword || !newPassword) {
-        return res.status(400).json({ message: 'Missing required fields' });
+    if (!userId) {
+        return res.status(400).json({ message: 'User not authenticated' });
+    }
+
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ message: 'Both old and new passwords are required' });
     }
 
     // Check if user exists
@@ -324,29 +342,29 @@ module.exports.changeUserPassword = controllerHandler(async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if old password is correct
-    const isMatch = await User.comparePassword(oldPassword, user.password);
+    // Check if old password is correct using bcrypt.compare
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-        return res.status(401).json({ message: 'Old password is incorrect' });
+        return res.status(401).json({ message: 'Current password is incorrect' });
     }
 
     // Check if new password is the same as old password
     if (oldPassword === newPassword) {
-        return res.status(400).json({ message: 'New password cannot be the same as old password' });
+        return res.status(400).json({ message: 'New password cannot be the same as current password' });
     }
 
-    // Hash new password
-    const hashedNewPassword = await User.hashPassword(newPassword);
+    // Hash new password before saving
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password
     try {
         user.password = hashedNewPassword;
         await user.save();
+        return res.status(200).json({ message: 'Password changed successfully' });
     } catch (error) {
+        console.error('Password change error:', error);
         return res.status(500).json({ message: 'Error changing password', error });
     }
-
-    return res.status(200).json({ message: 'Password changed successfully' });
 });
 
 // Delete user data
