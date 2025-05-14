@@ -348,3 +348,28 @@ module.exports.changeUserPassword = controllerHandler(async (req, res) => {
 
     return res.status(200).json({ message: 'Password changed successfully' });
 });
+
+// Delete user data
+module.exports.deleteUserData = controllerHandler(async (req, res) => {
+    const { email } = req.body; 
+
+    // Validate input
+    if (!email) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete user data 
+    try {
+        await User.deleteOne({ email });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error deleting user data', error });
+    }
+
+    return res.status(200).json({ message: 'User data deleted successfully' });
+});

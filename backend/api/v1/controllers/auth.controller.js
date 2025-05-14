@@ -9,12 +9,14 @@ const logger = require('../../../helpers/logger');  // Import logger để thêm
 
 // Login user
 module.exports.loginUser = controllerHandler(async (req, res) => {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
     // Validate input
     if (!email || !password) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
+
+    email = email.toLowerCase();
 
     // Check if user exists
     const user = await User.findOne({ email });
@@ -49,10 +51,10 @@ module.exports.loginUser = controllerHandler(async (req, res) => {
         JWT_REFRESH_SECRET_STATUS: process.env.JWT_REFRESH_SECRET ? 'Available' : 'Missing',
         JWT_RESET_SECRET_STATUS: process.env.JWT_RESET_SECRET ? 'Available' : 'Missing'
     });
-    
+
     // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
     const refreshSecretKey = process.env.JWT_REFRESH_SECRET || 'golden-crust-refresh-default-secret-key';
-    
+
     // Create refresh token
     const refreshToken = jwt.sign({ id: user._id }, refreshSecretKey, {
         expiresIn: '7d',
@@ -68,7 +70,7 @@ module.exports.loginUser = controllerHandler(async (req, res) => {
     // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
     const secretKey = process.env.JWT_SECRET || 'golden-crust-default-secret-key';
     logger.info('Generating JWT token with user ID', { userId: user._id });
-    
+
     // Generate JWT token
     const token = jwt.sign({ id: user._id }, secretKey, {
         expiresIn: '1h',
@@ -82,9 +84,9 @@ module.exports.loginUser = controllerHandler(async (req, res) => {
     });
 
     // Update user status
-    await User.updateOne({ _id: user._id }, { 
+    await User.updateOne({ _id: user._id }, {
         isActive: true,
-        lastLogin: new Date() 
+        lastLogin: new Date()
     });
 
 
@@ -128,7 +130,7 @@ module.exports.logoutUser = controllerHandler(async (req, res) => {
         isActive: false,
         lastLogin: new Date(),
     });
-    
+
     // Clear cookie
     res.clearCookie('refreshToken');
 
@@ -137,12 +139,14 @@ module.exports.logoutUser = controllerHandler(async (req, res) => {
 
 // Register user
 module.exports.registerUser = controllerHandler(async (req, res) => {
-    const { email, password, fullName, address, phone } = req.body;
+    let { email, password, fullName, address, phone } = req.body;
 
     // Validate input
     if (!email || !password || !fullName || !address || !phone) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
+
+    email = email.toLowerCase();
 
     // Check if email is valid
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -158,48 +162,66 @@ module.exports.registerUser = controllerHandler(async (req, res) => {
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    if (existingUser && existingUser.isVerified) {
         return res.status(409).json({ message: 'Email already exists' });
     }
-
-    // Check if phone number already exists
-    const existingPhone = await User.findOne({ phone });
-    if (existingPhone) {
-        return res.status(409).json({ message: 'Phone number already exists' });
+    else if (existingUser && !existingUser.isVerified) {
+        // Check if phone number already exists
+        const existingPhone = await User.findOne({ phone });
+        if (existingPhone && existingPhone.isVerified) {
+            return res.status(409).json({ message: 'Phone number already exists' });
+        }
+        else {
+            await User.updateOne({ email }, { phone });
+        }
+        const otpResponse = await Otp.sendOtp(email, 'REGISTER');
+        if (!otpResponse.status) {
+            return res.status(500).json({ message: otpResponse.message });
+        }
+        return res.status(200).json({ message: 'OTP sent successfully. Please verify email!' });
     }
+    else {
+        // Check if phone number already exists
+        const existingPhone = await User.findOne({ phone });
+        if (existingPhone && existingPhone.isVerified) {
+            return res.status(409).json({ message: 'Phone number already exists' });
+        }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    await User.create({
-        email,
-        password: hashedPassword,
-        fullName,
-        address,
-        phone,
-        isVerified: false,
-        avatar: null,
-        lastLogin: null,
-        role: 'user',
-    });
+        // Create user
+        await User.create({
+            email,
+            password: hashedPassword,
+            fullName,
+            address,
+            phone,
+            isVerified: false,
+            avatar: null,
+            lastLogin: null,
+            role: 'user',
+        });
 
-    // Send OTP
-    const otpResponse = await Otp.sendOtp(email, 'REGISTER');
-    if (!otpResponse.status) {
-        return res.status(500).json({ message: otpResponse.message });
+        // Send OTP
+        const otpResponse = await Otp.sendOtp(email, 'REGISTER');
+        if (!otpResponse.status) {
+            return res.status(500).json({ message: otpResponse.message });
+        }
+        res.status(201).json({ message: 'User registered successfully. Please verify email!' });
     }
-    res.status(201).json({ message: 'User registered successfully. Please verify email!' });
 });
 
 // Verify OTP
 module.exports.verifyOtpRegister = controllerHandler(async (req, res) => {
-    const { email, code } = req.body;
+    let { email, code } = req.body;
 
     // Validate input
     if (!email || !code) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
+
+    email = email.toLowerCase();
 
     // Verify OTP
     const otpResponse = await Otp.verifyOtp(email, code, 'REGISTER');
@@ -215,12 +237,14 @@ module.exports.verifyOtpRegister = controllerHandler(async (req, res) => {
 
 // Change password
 module.exports.changePassword = controllerHandler(async (req, res) => {
-    const { email, oldPassword, newPassword } = req.body;
+    let { email, oldPassword, newPassword } = req.body;
 
     // Validate input
     if (!email || !oldPassword || !newPassword) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
+
+    email = email.toLowerCase();
 
     // Check if user exists
     const user = await User.findOne({ email });
@@ -259,7 +283,7 @@ module.exports.forgotPassword = controllerHandler(async (req, res) => {
 
     // Check if user exists
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user || !user.isVerified) {
         return res.status(404).json({ message: 'Email not found' });
     }
 
@@ -273,8 +297,10 @@ module.exports.forgotPassword = controllerHandler(async (req, res) => {
 
 // Verify OTP for forgot password
 module.exports.verifyOtpForgotPassword = controllerHandler(async (req, res) => {
-    const { email, code } = req.body;
+    let { email, code } = req.body;
 
+    email = email.toLowerCase();
+    
     // Validate input
     if (!email || !code) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -289,7 +315,7 @@ module.exports.verifyOtpForgotPassword = controllerHandler(async (req, res) => {
     // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
     const resetSecretKey = process.env.JWT_RESET_SECRET || 'golden-crust-reset-default-secret-key';
     logger.info('Generating reset token for email', { email });
-    
+
     // Generate reset token
     const resetToken = jwt.sign({ email }, resetSecretKey, {
         expiresIn: '15m',
@@ -317,7 +343,7 @@ module.exports.resetPassword = controllerHandler(async (req, res) => {
         // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
         const resetSecretKey = process.env.JWT_RESET_SECRET || 'golden-crust-reset-default-secret-key';
         logger.info('Verifying reset token');
-        
+
         const decoded = jwt.verify(token, resetSecretKey);
         email = decoded.email;
     } catch (error) {
@@ -338,4 +364,85 @@ module.exports.resetPassword = controllerHandler(async (req, res) => {
     await User.updateOne({ email }, { password: hashedNewPassword });
 
     res.status(200).json({ message: 'Password reset successfully' });
+});
+
+// Refresh token
+module.exports.refreshToken = controllerHandler(async (req, res) => {
+    const { refreshToken } = req.cookies;
+
+    // Validate input
+    if (!refreshToken) {
+        return res.status(400).json({ message: 'Missing refresh token' });
+    }
+
+    // Check if token exists
+    const token = await Token.findOne({ token: refreshToken });
+    if (!token) {
+        return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    // Verify refresh token
+    let userId;
+    try {
+        // Kiểm tra và sử dụng giá trị mặc định nếu không có biến môi trường
+        const refreshSecretKey = process.env.JWT_REFRESH_SECRET || 'golden-crust-refresh-default-secret-key';
+        logger.info('Verifying refresh token');
+
+        const decoded = jwt.verify(refreshToken, refreshSecretKey);
+        userId = decoded.id;
+    } catch (error) {
+        logger.error('Token verification failed', { error });
+        return res.status(401).json({ message: 'Invalid or expired refresh token' });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate new tokens
+    const newRefreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
+        expiresIn: '7d',
+    });
+
+    // Revoke old refresh token
+    await Token.updateOne({ token: refreshToken }, {
+        isRevoked: true,
+        revokedAt: new Date(),
+        revokedByIp: req.ip,
+    });
+
+    // Create new refresh token record
+    await Token.create({
+        userId: user._id,
+        token: newRefreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        createdAt: new Date(),
+        createdByIp: req.ip,
+    });
+
+    // Set new refresh token in cookie
+    res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Generate new JWT token
+    const newToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: '1h',
+    });
+    logger.info('New tokens generated', { userId: user._id });
+    // Send response
+    res.status(200).json({
+        message: 'Token refreshed successfully',
+        token: newToken,
+        user: {
+            id: user._id,
+            email: user.email,
+            fullName: user.fullName,
+            role: user.role,
+        },
+    });
 });

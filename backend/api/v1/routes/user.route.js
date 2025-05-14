@@ -60,4 +60,7 @@ router.put('/profile/update',
 // Change User Password
 router.put('/profile/change-password', authMiddleware, userController.changeUserPassword);
 
+// Delete data
+router.delete('/delete-data', authMiddleware, userController.deleteUserData);
+
 module.exports = router;

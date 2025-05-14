@@ -1,5 +1,6 @@
 const Otp = require('../api/v1/models/otp.model');
 const nodemailer = require('nodemailer');
+const User = require('../api/v1/models/user.model');
 
 const transport = nodemailer.createTransport({
     service: 'Gmail',
@@ -15,11 +16,12 @@ const generateOtp = () => {
 
 const sendOtp = async (email, action) => {
     const existing = await Otp.findOne({email}).sort({ createdAt: -1 });
-    if (existing && action === 'REGISTER') {
+    const user = await User.findOne({ email });
+    if (existing && action === 'REGISTER' && user.isVerified) {
         return { status: false, message: 'Email already exists' };
     }
     if (existing && existing.createdAt.getTime() > Date.now() - 5 * 60 * 1000) {
-        return { status: false, message: 'OTP already sent' };
+        return { status: false, message: 'OTP already sent to this email. Please wait for 5 minutes before requesting again.' };
     }
     const code = generateOtp();
 
