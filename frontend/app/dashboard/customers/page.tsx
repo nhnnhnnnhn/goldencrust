@@ -15,72 +15,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useGetAllUsersQuery, useSearchUsersQuery, User } from "@/redux/api/userApi"
 
 export default function CustomersPage() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Mock customers data
-  const mockCustomers = [
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-      phone: "123-456-7890",
-      loyaltyPoints: 350,
-      joinDate: "2022-03-15",
-      lastOrder: "2023-04-10",
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      phone: "234-567-8901",
-      loyaltyPoints: 520,
-      joinDate: "2022-01-20",
-      lastOrder: "2023-04-05",
-      status: "active",
-    },
-    {
-      id: "3",
-      name: "Michael Johnson",
-      email: "michael.j@example.com",
-      phone: "345-678-9012",
-      loyaltyPoints: 120,
-      joinDate: "2022-06-10",
-      lastOrder: "2023-03-28",
-      status: "active",
-    },
-    {
-      id: "4",
-      name: "Emily Williams",
-      email: "emily.w@example.com",
-      phone: "456-789-0123",
-      loyaltyPoints: 780,
-      joinDate: "2021-11-05",
-      lastOrder: "2023-04-12",
-      status: "active",
-    },
-    {
-      id: "5",
-      name: "David Brown",
-      email: "david.b@example.com",
-      phone: "567-890-1234",
-      loyaltyPoints: 90,
-      joinDate: "2022-08-22",
-      lastOrder: "2023-03-15",
-      status: "inactive",
-    },
-  ]
+  // Real data from backend
+  const { 
+    data: customers, 
+    isLoading, 
+    error 
+  } = useGetAllUsersQuery(undefined)
 
-  // Filter customers based on search query
-  const filteredCustomers = mockCustomers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery),
-  )
+  // Search functionality using the API
+  const { 
+    data: searchResults,
+    isLoading: isSearching 
+  } = useSearchUsersQuery(searchQuery, {
+    skip: !searchQuery // Only search when there's a query
+  })
+
+  // Use either search results or all customers
+  const displayCustomers = searchQuery ? searchResults : customers
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  if (error) {
+    return <div>Error loading customers</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -89,20 +54,16 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
           <p className="text-gray-500">Manage and view customer information</p>
         </div>
-        <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add Customer
-        </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Total Customers</p>
-                <p className="mt-1 text-3xl font-semibold">{mockCustomers.length}</p>
+                <p className="mt-1 text-3xl font-semibold">{displayCustomers?.length || 0}</p>
               </div>
               <div className="rounded-full bg-blue-100 p-2 text-blue-800">
                 <UserPlus className="h-5 w-5" />
@@ -117,7 +78,7 @@ export default function CustomersPage() {
               <div>
                 <p className="text-sm font-medium text-gray-500">Active Customers</p>
                 <p className="mt-1 text-3xl font-semibold">
-                  {mockCustomers.filter((c) => c.status === "active").length}
+                  {displayCustomers?.filter((c: User) => c.isActive).length || 0}
                 </p>
               </div>
               <div className="rounded-full bg-green-100 p-2 text-green-800">
@@ -132,7 +93,14 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">New This Month</p>
-                <p className="mt-1 text-3xl font-semibold">12</p>
+                <p className="mt-1 text-3xl font-semibold">
+                  {displayCustomers?.filter((c: User) => {
+                    const joinDate = new Date(c.createdAt)
+                    const now = new Date()
+                    return joinDate.getMonth() === now.getMonth() && 
+                           joinDate.getFullYear() === now.getFullYear()
+                  }).length || 0}
+                </p>
               </div>
               <div className="rounded-full bg-purple-100 p-2 text-purple-800">
                 <UserPlus className="h-5 w-5" />
@@ -146,7 +114,9 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Loyalty Members</p>
-                <p className="mt-1 text-3xl font-semibold">{mockCustomers.filter((c) => c.loyaltyPoints > 0).length}</p>
+                <p className="mt-1 text-3xl font-semibold">
+                  {displayCustomers?.filter((c: User) => c.loyaltyPoints > 0).length || 0}
+                </p>
               </div>
               <div className="rounded-full bg-amber-100 p-2 text-amber-800">
                 <Award className="h-5 w-5" />
@@ -190,37 +160,36 @@ export default function CustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCustomers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell className="font-medium">{customer.name}</TableCell>
+              {displayCustomers?.map((customer: User) => (
+                <TableRow key={customer._id}>
+                  <TableCell className="font-medium">{customer.fullName}</TableCell>
                   <TableCell>{customer.email}</TableCell>
                   <TableCell>{customer.phone}</TableCell>
-                  <TableCell>{customer.loyaltyPoints}</TableCell>
-                  <TableCell>{customer.joinDate}</TableCell>
-                  <TableCell>{customer.lastOrder}</TableCell>
+                  <TableCell>{customer.loyaltyPoints || 0}</TableCell>
+                  <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>{customer.lastOrder ? new Date(customer.lastOrder).toLocaleDateString() : '-'}</TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        customer.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                        customer.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
                       }`}
                     >
-                      {customer.status}
+                      {customer.isActive ? 'active' : 'inactive'}
                     </span>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit customer</DropdownMenuItem>
+                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>Edit Customer</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">Delete customer</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">Delete Customer</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

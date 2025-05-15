@@ -1,5 +1,20 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
+// Define the User interface
+export interface User {
+    id: string;
+    email: string;
+    fullName: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    role: string;
+    isActive: boolean;
+    isSuspended: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export const userApi = createApi({
     reducerPath: 'userApi',
     baseQuery: fetchBaseQuery({
@@ -9,6 +24,8 @@ export const userApi = createApi({
             const token = localStorage.getItem('token');
             if (token) {
                 headers.set('authorization', `Bearer ${token}`);
+            } else {
+                console.warn('No authentication token found');
             }
             return headers;
         },
@@ -16,19 +33,19 @@ export const userApi = createApi({
     tagTypes: ['User'],
     endpoints: (builder) => ({
         // Get all users
-        getAllUsers: builder.query({
+        getAllUsers: builder.query<User[], void>({
             query: () => '/users/get-user',
             providesTags: ['User'],
         }),
 
         // Get user by ID
-        getUserById: builder.query({
+        getUserById: builder.query<User, string>({
             query: (id) => `/users/get-user/${id}`,
             providesTags: ['User'],
         }),
 
         // Create new user
-        createUser: builder.mutation({
+        createUser: builder.mutation<User, Partial<User>>({
             query: (userData) => ({
                 url: '/users/create',
                 method: 'POST',
@@ -38,7 +55,7 @@ export const userApi = createApi({
         }),
 
         // Update user
-        updateUser: builder.mutation({
+        updateUser: builder.mutation<User, { id: string; userData: Partial<User> }>({
             query: ({ id, userData }) => ({
                 url: `/users/update/${id}`,
                 method: 'PUT',
@@ -48,7 +65,7 @@ export const userApi = createApi({
         }),
 
         // Delete user
-        deleteUser: builder.mutation({
+        deleteUser: builder.mutation<void, string>({
             query: (id) => ({
                 url: `/users/delete/${id}`,
                 method: 'DELETE',
@@ -57,7 +74,7 @@ export const userApi = createApi({
         }),
 
         // Delete multiple users
-        deleteMultipleUsers: builder.mutation({
+        deleteMultipleUsers: builder.mutation<void, string[]>({
             query: (ids) => ({
                 url: '/users/delete-multiple',
                 method: 'DELETE',
@@ -67,13 +84,13 @@ export const userApi = createApi({
         }),
 
         // Search users
-        searchUsers: builder.query({
+        searchUsers: builder.query<User[], string>({
             query: (query) => `/users/search?query=${query}`,
             providesTags: ['User'],
         }),
 
         // Toggle user suspension
-        toggleUserSuspension: builder.mutation({
+        toggleUserSuspension: builder.mutation<User, string>({
             query: (id) => ({
                 url: `/users/suspend/${id}`,
                 method: 'PATCH',
@@ -82,7 +99,7 @@ export const userApi = createApi({
         }),
 
         // Toggle user activation
-        toggleUserActivation: builder.mutation({
+        toggleUserActivation: builder.mutation<User, string>({
             query: (id) => ({
                 url: `/users/activate/${id}`,
                 method: 'PATCH',
@@ -91,19 +108,43 @@ export const userApi = createApi({
         }),
 
         // Get user stats
-        getUserStats: builder.query({
+        getUserStats: builder.query<{
+            totalUsers: number;
+            activeUsers: number;
+            newUsersThisMonth: number;
+            loyaltyMembers: number;
+        }, void>({
             query: () => '/users/stats',
             providesTags: ['User'],
         }),
 
         // Get user profile
-        getUserProfile: builder.query({
-            query: () => '/users/profile',
+        getUserProfile: builder.query<User, void>({
+            query: () => ({
+                url: '/users/profile',
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }),
             providesTags: ['User'],
+            // Add error handling
+            async onQueryStarted(_, { queryFulfilled }) {
+                try {
+                    await queryFulfilled;
+                } catch (error: any) {
+                    console.error('Error fetching user profile:', error);
+                    if (error.error?.status === 401) {
+                        // Handle unauthorized error
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
+                    }
+                }
+            },
         }),
 
         // Update user profile
-        updateUserProfile: builder.mutation({
+        updateUserProfile: builder.mutation<User, Partial<User>>({
             query: (profileData) => ({
                 url: '/users/profile/update',
                 method: 'PUT',
@@ -113,7 +154,10 @@ export const userApi = createApi({
         }),
 
         // Change user password
-        changeUserPassword: builder.mutation({
+        changeUserPassword: builder.mutation<void, {
+            oldPassword: string;
+            newPassword: string;
+        }>({
             query: (passwordData) => ({
                 url: '/users/profile/change-password',
                 method: 'PUT',
@@ -121,4 +165,21 @@ export const userApi = createApi({
             }),
         }),
     }),
-}); 
+});
+
+// Export hooks for usage in components
+export const {
+    useGetAllUsersQuery,
+    useGetUserByIdQuery,
+    useCreateUserMutation,
+    useUpdateUserMutation,
+    useDeleteUserMutation,
+    useDeleteMultipleUsersMutation,
+    useSearchUsersQuery,
+    useToggleUserSuspensionMutation,
+    useToggleUserActivationMutation,
+    useGetUserStatsQuery,
+    useGetUserProfileQuery,
+    useUpdateUserProfileMutation,
+    useChangeUserPasswordMutation,
+} = userApi; 
