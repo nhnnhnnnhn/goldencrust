@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { ChevronLeft, Calendar, Clock, Users, MapPin } from "lucide-react"
 import { format } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
+import { useGetRestaurantsQuery } from '@/redux/api'
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,9 +19,13 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 
 import styles from "./styles.module.css"
 
+// Define restaurant status type
+type RestaurantStatus = 'open' | 'closed'
+
 export default function ReservationPage() {
   const router = useRouter()
   const { user, isLoading } = useAuth()
+  const { data: restaurants = [], isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
   const [date, setDate] = useState<Date>()
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
@@ -61,15 +66,6 @@ export default function ReservationPage() {
     setIsSubmitted(true)
   }
 
-  const locations = [
-    { id: "hcm-d1", name: "Ho Chi Minh - District 1", address: "8 Nguyễn Huệ, District 1" },
-    { id: "hcm-d2", name: "Ho Chi Minh - Thao Dien", address: "12 Thảo Điền, District 2" },
-    { id: "hcm-d3", name: "Ho Chi Minh - District 3", address: "45 Võ Văn Tần, District 3" },
-    { id: "hanoi-1", name: "Hanoi - Tay Ho", address: "28 Xuân Diệu, Tây Hồ" },
-    { id: "hanoi-2", name: "Hanoi - Hoan Kiem", address: "15 Hàng Bạc, Hoàn Kiếm" },
-    { id: "danang", name: "Da Nang", address: "10 Bạch Đằng, Hải Châu" },
-  ]
-
   const timeSlots = [
     "11:30",
     "12:00",
@@ -86,8 +82,8 @@ export default function ReservationPage() {
     "21:00",
   ]
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Show loading state while checking authentication or loading restaurants
+  if (isLoading || isLoadingRestaurants) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-900 border-t-transparent"></div>
@@ -114,7 +110,7 @@ export default function ReservationPage() {
         </div>
         <div className={styles.headerCenter}>
           <Link href="/" className={styles.logo}>
-            PIZZA LIÊM KHIẾT&apos;S
+            GOLDEN CRUST
           </Link>
         </div>
         <div className={styles.headerRight}></div>
@@ -149,20 +145,28 @@ export default function ReservationPage() {
                     <div className={styles.formSection}>
                       <h2 className={styles.sectionTitle}>Select a Location</h2>
                       <div className={styles.locationGrid}>
-                        {locations.map((location) => (
+                        {restaurants.map((restaurant) => (
                           <div
-                            key={location.id}
+                            key={restaurant._id}
                             className={`${styles.locationCard} ${
-                              formData.location === location.id ? styles.selectedLocation : ""
+                              formData.location === restaurant._id ? styles.selectedLocation : ""
                             }`}
-                            onClick={() => handleInputChange("location", location.id)}
+                            onClick={() => handleInputChange("location", restaurant._id)}
                           >
                             <div className={styles.locationIcon}>
                               <MapPin />
                             </div>
                             <div className={styles.locationInfo}>
-                              <h3>{location.name}</h3>
-                              <p>{location.address}</p>
+                              <h3>{restaurant.name}</h3>
+                              <p>{restaurant.address}</p>
+                              <div className={styles.locationDetails}>
+                                <span className={`${styles.statusBadge} ${(restaurant.status as RestaurantStatus) === 'closed' ? styles.statusClosed : styles.statusOpen}`}>
+                                  {(restaurant.status as RestaurantStatus) === 'closed' ? 'Closed' : 'Open'}
+                                </span>
+                                <span className={styles.tableCount}>
+                                  {restaurant.tableNumber} tables available
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -264,7 +268,7 @@ export default function ReservationPage() {
                         <div className={styles.summaryRow}>
                           <span className={styles.summaryLabel}>Location:</span>
                           <span className={styles.summaryValue}>
-                            {locations.find((loc) => loc.id === formData.location)?.name}
+                            {restaurants.find((restaurant) => restaurant._id === formData.location)?.name}
                           </span>
                         </div>
                         <div className={styles.summaryRow}>
@@ -371,7 +375,7 @@ export default function ReservationPage() {
                 <div className={styles.detailRow}>
                   <span className={styles.detailLabel}>Location:</span>
                   <span className={styles.detailValue}>
-                    {locations.find((loc) => loc.id === formData.location)?.name}
+                    {restaurants.find((restaurant) => restaurant._id === formData.location)?.name}
                   </span>
                 </div>
                 <div className={styles.detailRow}>
@@ -402,9 +406,9 @@ export default function ReservationPage() {
 
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
-          <div className={styles.footerLogo}>PIZZA LIÊM KHIẾT&apos;S</div>
+          <div className={styles.footerLogo}>GOLDEN CRUST</div>
           <div className={styles.footerDivider}></div>
-          <div className={styles.footerCopyright}>© 2023 Pizza Liêm Khiết. All rights reserved.</div>
+          <div className={styles.footerCopyright}>© 2023 Golden Crust. All rights reserved.</div>
         </div>
       </footer>
     </div>

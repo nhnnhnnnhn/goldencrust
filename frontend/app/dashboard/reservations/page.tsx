@@ -26,12 +26,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { format, addHours, isPast, formatDistanceToNow } from "date-fns"
+import { useGetRestaurantsQuery } from '@/redux/api'
 
 // Định nghĩa kiểu dữ liệu cho Restaurant
 interface Restaurant {
   _id: string
+  name: string
   address: string
+  phone: string
+  email: string
   tableNumber: number
+  status: 'open' | 'closed'
   deleted?: boolean
   deletedAt?: Date
   createdAt: Date
@@ -93,31 +98,6 @@ interface ReservedTable {
   createdAt: Date
   updatedAt: Date
 }
-
-// Dữ liệu mẫu cho các nhà hàng
-const initialRestaurants: Restaurant[] = [
-  {
-    _id: "rest1",
-    address: "123 Nguyễn Huệ, Quận 1, TP.HCM",
-    tableNumber: 15,
-    createdAt: new Date("2023-01-15"),
-    updatedAt: new Date("2023-01-15"),
-  },
-  {
-    _id: "rest2",
-    address: "456 Lê Lợi, Quận 1, TP.HCM",
-    tableNumber: 10,
-    createdAt: new Date("2023-02-20"),
-    updatedAt: new Date("2023-02-20"),
-  },
-  {
-    _id: "rest3",
-    address: "789 Đồng Khởi, Quận 1, TP.HCM",
-    tableNumber: 8,
-    createdAt: new Date("2023-03-10"),
-    updatedAt: new Date("2023-03-10"),
-  },
-]
 
 // Dữ liệu mẫu cho các bàn
 const initialTables: Table[] = [
@@ -249,91 +229,6 @@ const initialReservations: Reservation[] = [
     createdAt: new Date("2023-05-12"),
     updatedAt: new Date("2023-05-12"),
   },
-  {
-    _id: "res4",
-    customerName: "Phạm Thị D",
-    customerPhone: "0934567890",
-    reservationDate: new Date("2023-05-16"),
-    reservationTime: "18:00",
-    numberOfGuests: 3,
-    restaurantId: "rest3",
-    status: "cancelled",
-    createdBy: "user2",
-    updatedBy: "user1",
-    expiredAt: new Date("2023-05-16T20:00:00"),
-    createdAt: new Date("2023-05-13"),
-    updatedAt: new Date("2023-05-14"),
-  },
-  {
-    _id: "res5",
-    customerName: "Hoàng Văn E",
-    customerPhone: "0945678901",
-    reservationDate: new Date("2023-05-17"),
-    reservationTime: "19:30",
-    numberOfGuests: 8,
-    specialRequests: "Tiệc công ty, cần không gian riêng",
-    restaurantId: "rest2",
-    status: "confirmed",
-    createdBy: "user1",
-    updatedBy: "user1",
-    expiredAt: new Date("2023-05-17T21:30:00"),
-    createdAt: new Date("2023-05-14"),
-    updatedAt: new Date("2023-05-14"),
-  },
-]
-
-// Dữ liệu mẫu cho bàn đã đặt
-const initialReservedTables: ReservedTable[] = [
-  {
-    _id: "rt1",
-    tableId: "table1",
-    userId: "user1",
-    date: new Date("2023-05-15"),
-    time: "18:30",
-    status: "reserved",
-    createdAt: new Date("2023-05-10"),
-    updatedAt: new Date("2023-05-10"),
-  },
-  {
-    _id: "rt2",
-    tableId: "table2",
-    userId: "user2",
-    date: new Date("2023-05-15"),
-    time: "19:00",
-    status: "reserved",
-    createdAt: new Date("2023-05-11"),
-    updatedAt: new Date("2023-05-11"),
-  },
-  {
-    _id: "rt3",
-    tableId: "table4",
-    userId: "user1",
-    date: new Date("2023-05-16"),
-    time: "12:30",
-    status: "reserved",
-    createdAt: new Date("2023-05-12"),
-    updatedAt: new Date("2023-05-12"),
-  },
-  {
-    _id: "rt4",
-    tableId: "table6",
-    userId: "user2",
-    date: new Date("2023-05-16"),
-    time: "18:00",
-    status: "cancelled",
-    createdAt: new Date("2023-05-13"),
-    updatedAt: new Date("2023-05-14"),
-  },
-  {
-    _id: "rt5",
-    tableId: "table5",
-    userId: "user1",
-    date: new Date("2023-05-17"),
-    time: "19:30",
-    status: "reserved",
-    createdAt: new Date("2023-05-14"),
-    updatedAt: new Date("2023-05-14"),
-  },
 ]
 
 // Danh sách trạng thái đặt bàn
@@ -370,8 +265,8 @@ const reservedTableStatusColors = {
 export default function ReservationsManagement() {
   const { toast } = useToast()
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations)
-  const [reservedTables, setReservedTables] = useState<ReservedTable[]>(initialReservedTables)
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants)
+  const [reservedTables, setReservedTables] = useState<ReservedTable[]>([])
+  const { data: restaurants = [], isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
   const [tables, setTables] = useState<Table[]>(initialTables)
   const [users, setUsers] = useState<UserType[]>(initialUsers)
   const [searchTerm, setSearchTerm] = useState("")
@@ -665,10 +560,11 @@ export default function ReservationsManagement() {
     })
   }
 
-  // Định dạng ngày
+  // Helper function to format date
   const formatDate = (dateString: string | Date) => {
-    const options: Intl.DateTimeFormatOptions = { weekday: "long", year: "numeric", month: "long", day: "numeric" }
-    return new Date(dateString).toLocaleDateString("vi-VN", options)
+    if (!dateString) return "N/A"
+    const date = typeof dateString === "string" ? new Date(dateString) : dateString
+    return format(date, "dd/MM/yyyy")
   }
 
   // Chuyển đổi ngày
@@ -678,27 +574,27 @@ export default function ReservationsManagement() {
     setSelectedDate(newDate)
   }
 
-  // Kiểm tra xem đặt bàn đã hết hạn chưa
+  // Helper function to check if reservation is expired
   const isReservationExpired = (reservation: Reservation) => {
-    return isPast(new Date(reservation.expiredAt))
+    if (!reservation.expiredAt) return false
+    const expiryDate = typeof reservation.expiredAt === "string" ? new Date(reservation.expiredAt) : reservation.expiredAt
+    return isPast(expiryDate)
   }
 
-  // Lấy thời gian còn lại đến khi hết hạn
+  // Helper function to get time until expiry
   const getTimeUntilExpiry = (reservation: Reservation) => {
-    const expiryDate = new Date(reservation.expiredAt)
-    if (isPast(expiryDate)) {
-      return "Đã hết hạn"
-    }
+    if (!reservation.expiredAt) return "N/A"
+    const expiryDate = typeof reservation.expiredAt === "string" ? new Date(reservation.expiredAt) : reservation.expiredAt
     return formatDistanceToNow(expiryDate, { addSuffix: true })
   }
 
-  // Lấy thời gian còn lại đến khi hết hạn
-  const getTimeUntilExpiry2 = (reservation: Reservation) => {
-    const expiryDate = new Date(reservation.expiredAt)
-    if (isPast(expiryDate)) {
-      return "Đã hết hạn"
-    }
-    return formatDistanceToNow(expiryDate, { addSuffix: true })
+  // Show loading state while loading restaurants
+  if (isLoadingRestaurants) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-900 border-t-transparent"></div>
+      </div>
+    )
   }
 
   return (
@@ -780,7 +676,7 @@ export default function ReservationsManagement() {
                   Nhà hàng:{" "}
                   {selectedRestaurant === "Tất cả"
                     ? selectedRestaurant
-                    : restaurants.find((r) => r._id === selectedRestaurant)?.address}
+                    : restaurants.find((r) => r._id === selectedRestaurant)?.name}
                 </span>
                 <ChevronDown size={16} />
               </button>
@@ -805,7 +701,7 @@ export default function ReservationsManagement() {
                         setShowRestaurantDropdown(false)
                       }}
                     >
-                      {restaurant.address}
+                      {restaurant.name} - {restaurant.address}
                     </div>
                   ))}
                 </div>
@@ -869,7 +765,7 @@ export default function ReservationsManagement() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
-                          {restaurants.find((r) => r._id === reservation.restaurantId)?.address || "N/A"}
+                          {restaurants.find((r) => r._id === reservation.restaurantId)?.name || "N/A"}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -898,7 +794,7 @@ export default function ReservationsManagement() {
                         <div
                           className={`text-sm ${isReservationExpired(reservation) ? "text-red-600" : "text-gray-500"}`}
                         >
-                          {getTimeUntilExpiry2(reservation)}
+                          {getTimeUntilExpiry(reservation)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -1001,7 +897,7 @@ export default function ReservationsManagement() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">{restaurant ? restaurant.address : "N/A"}</div>
+                          <div className="text-sm text-gray-900">{restaurant ? restaurant.name : "N/A"}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center text-sm text-gray-500">
@@ -1120,7 +1016,7 @@ export default function ReservationsManagement() {
                 <div className="flex items-center gap-2">
                   <Building size={16} className="text-red-600" />
                   <p className="text-sm">
-                    {restaurants.find((r) => r._id === currentReservation.restaurantId)?.address || "N/A"}
+                    {restaurants.find((r) => r._id === currentReservation.restaurantId)?.name || "N/A"}
                   </p>
                 </div>
               </div>
@@ -1156,7 +1052,7 @@ export default function ReservationsManagement() {
                   }`}
                 >
                   <Clock3 size={16} />
-                  <p className="text-sm">{getTimeUntilExpiry2(currentReservation)}</p>
+                  <p className="text-sm">{getTimeUntilExpiry(currentReservation)}</p>
                 </div>
               </div>
             </div>
@@ -1370,7 +1266,7 @@ export default function ReservationsManagement() {
                     <SelectContent>
                       {restaurants.map((restaurant) => (
                         <SelectItem key={restaurant._id} value={restaurant._id}>
-                          {restaurant.address}
+                          {restaurant.name} - {restaurant.address}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1457,7 +1353,7 @@ export default function ReservationsManagement() {
                 {currentReservation.numberOfGuests} người
               </p>
               <p className="text-sm text-gray-600">
-                Nhà hàng: {restaurants.find((r) => r._id === currentReservation.restaurantId)?.address || "N/A"}
+                Nhà hàng: {restaurants.find((r) => r._id === currentReservation.restaurantId)?.name || "N/A"}
               </p>
             </div>
 

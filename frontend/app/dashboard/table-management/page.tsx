@@ -427,11 +427,11 @@ export default function TableManagement() {
           setSelectedRestaurant(response._id);
         }
 
-        toast({
+    toast({
           title: "Success",
           description: "Restaurant added successfully",
         });
-      }
+  }
 
       // Close modal and reset form
       setShowRestaurantModal(false);
@@ -454,7 +454,7 @@ export default function TableManagement() {
     if (confirm("Are you sure you want to delete this restaurant?")) {
       try {
         await deleteRestaurant(restaurant._id).unwrap()
-        toast({
+      toast({
           title: "Success",
           description: "Restaurant deleted successfully",
         })
@@ -646,8 +646,8 @@ export default function TableManagement() {
         <Button onClick={handleAddRestaurant}>
           <PlusCircle className="h-4 w-4 mr-2" />
           Add Restaurant
-        </Button>
-      </div>
+          </Button>
+        </div>
 
       {/* Selected Restaurant Info */}
       {selectedRestaurant && (
@@ -659,7 +659,7 @@ export default function TableManagement() {
                 <span className="font-medium">
                   {restaurants.find(r => r._id === selectedRestaurant)?.name}
                 </span>
-              </div>
+      </div>
               <div className="flex items-center space-x-2">
                 <MapPin className="h-5 w-5 text-gray-500" />
                 <span>
@@ -679,7 +679,7 @@ export default function TableManagement() {
               {currentRestaurant._id ? "Edit Restaurant" : "Add Restaurant"}
             </h2>
             <div className="space-y-4">
-              <div>
+                <div>
                 <label className="block text-sm font-medium mb-1">Name</label>
                 <Input
                   value={currentRestaurant.name}
@@ -687,7 +687,7 @@ export default function TableManagement() {
                     setCurrentRestaurant({ ...currentRestaurant, name: e.target.value })
                   }
                 />
-              </div>
+                  </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Address</label>
                 <Input
@@ -696,7 +696,7 @@ export default function TableManagement() {
                     setCurrentRestaurant({ ...currentRestaurant, address: e.target.value })
                   }
                 />
-              </div>
+                  </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Phone</label>
                 <Input
@@ -705,7 +705,7 @@ export default function TableManagement() {
                     setCurrentRestaurant({ ...currentRestaurant, phone: e.target.value })
                   }
                 />
-              </div>
+                </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
                 <Input
@@ -733,7 +733,7 @@ export default function TableManagement() {
                   onValueChange={(value: 'active' | 'inactive') =>
                     setCurrentRestaurant({ ...currentRestaurant, status: value })
                   }
-                >
+                  >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -742,16 +742,16 @@ export default function TableManagement() {
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+                </div>
               </div>
-            </div>
             <div className="flex justify-end space-x-2 mt-6">
               <Button variant="outline" onClick={() => setShowRestaurantModal(false)}>
                 Cancel
               </Button>
               <Button onClick={handleSaveRestaurant}>Save</Button>
             </div>
-          </div>
         </div>
+      </div>
       )}
 
       {/* Delete Restaurant Confirmation Dialog */}
@@ -1058,7 +1058,7 @@ export default function TableManagement() {
               </div>
               <div>
                 <span className="font-medium">Location:</span> {selectedTable.location}
-              </div>
+            </div>
               <div>
                 <span className="font-medium">Status:</span>
                 <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1071,80 +1071,80 @@ export default function TableManagement() {
               {selectedTable.customerName && (
                 <div>
                   <span className="font-medium">Customer:</span> {selectedTable.customerName}
-                </div>
+              </div>
               )}
-              {selectedTable.reservationTime && (
+                  {selectedTable.reservationTime && (
                 <div>
                   <span className="font-medium">Reservation Time:</span> {selectedTable.reservationTime}
-                </div>
-              )}
-            </div>
+                    </div>
+                  )}
+              </div>
 
             <div className="mt-6">
               <div className="mb-4">
                 <h3 className="font-medium mb-2">Update Status</h3>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleUpdateStatus(selectedTable._id, "available")}
-                    variant="outline"
-                    className={`flex-1 ${
-                      selectedTable.status === "available" ? "bg-green-100 text-green-800 border-green-300" : ""
-                    }`}
-                    disabled={selectedTable.status === "available"}
-                  >
-                    Available
-                  </Button>
-                  <Button
-                    onClick={() => handleUpdateStatus(selectedTable._id, "occupied")}
-                    variant="outline"
-                    className={`flex-1 ${
-                      selectedTable.status === "occupied" ? "bg-red-100 text-red-800 border-red-300" : ""
-                    }`}
-                    disabled={selectedTable.status === "occupied"}
-                  >
-                    Occupied
-                  </Button>
-                  <Button
-                    onClick={() => handleUpdateStatus(selectedTable._id, "reserved")}
-                    variant="outline"
-                    className={`flex-1 ${
-                      selectedTable.status === "reserved" ? "bg-yellow-100 text-yellow-800 border-yellow-300" : ""
-                    }`}
-                    disabled={selectedTable.status === "reserved"}
-                  >
-                    Reserved
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Link
-                  href={`/dashboard/table-order/${selectedTable._id}`}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] transition-colors"
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleUpdateStatus(selectedTable._id, "available")}
+                  variant="outline"
+                  className={`flex-1 ${
+                    selectedTable.status === "available" ? "bg-green-100 text-green-800 border-green-300" : ""
+                  }`}
+                  disabled={selectedTable.status === "available"}
                 >
-                  <Utensils size={18} />
-                  <span>Place Order for This Table</span>
-                </Link>
+                  Available
+                </Button>
+                <Button
+                  onClick={() => handleUpdateStatus(selectedTable._id, "occupied")}
+                  variant="outline"
+                  className={`flex-1 ${
+                    selectedTable.status === "occupied" ? "bg-red-100 text-red-800 border-red-300" : ""
+                  }`}
+                  disabled={selectedTable.status === "occupied"}
+                >
+                  Occupied
+                </Button>
+                <Button
+                  onClick={() => handleUpdateStatus(selectedTable._id, "reserved")}
+                  variant="outline"
+                  className={`flex-1 ${
+                    selectedTable.status === "reserved" ? "bg-yellow-100 text-yellow-800 border-yellow-300" : ""
+                  }`}
+                  disabled={selectedTable.status === "reserved"}
+                >
+                  Reserved
+                </Button>
+              </div>
+            </div>
 
-                <div className="flex justify-between">
-                  <Button
-                    onClick={() => {
-                      setShowTableDetails(false)
-                      handleEditTable(selectedTable)
-                    }}
-                    className="bg-[#003087] hover:bg-[#002266] text-white"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowTableDetails(false)
-                      handleDeleteClick(selectedTable)
-                    }}
-                    className="bg-[#003087] hover:bg-[#002266] text-white"
-                  >
-                    Delete
-                  </Button>
+            <div className="space-y-4">
+              <Link
+                  href={`/dashboard/table-order/${selectedTable._id}`}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] transition-colors"
+              >
+                <Utensils size={18} />
+                <span>Place Order for This Table</span>
+              </Link>
+
+              <div className="flex justify-between">
+                <Button
+                  onClick={() => {
+                    setShowTableDetails(false)
+                    handleEditTable(selectedTable)
+                  }}
+                  className="bg-[#003087] hover:bg-[#002266] text-white"
+                >
+                  Edit
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowTableDetails(false)
+                    handleDeleteClick(selectedTable)
+                  }}
+                  className="bg-[#003087] hover:bg-[#002266] text-white"
+                >
+                  Delete
+                </Button>
                 </div>
               </div>
             </div>

@@ -524,17 +524,17 @@ export default function Home() {
                   <p className="text-xl font-light">Loading restaurants...</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {restaurants.map((restaurant) => (
-                    <div
+                  <div
                       key={restaurant._id}
-                      className="border border-white/30 p-6 backdrop-blur-sm bg-black/20 hover:bg-black/30 transition-all"
-                    >
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-6 w-6 mt-1" />
-                        <div>
+                    className="border border-white/30 p-6 backdrop-blur-sm bg-black/20 hover:bg-black/30 transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-6 w-6 mt-1" />
+                      <div>
                           <h3 className="text-2xl font-light">{restaurant.name}</h3>
-                          <p className="text-white/70 mt-2">
+                        <p className="text-white/70 mt-2">
                             {restaurant.address}
                           </p>
                           <p className="text-white/70">
@@ -562,11 +562,11 @@ export default function Home() {
                               <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                           </div>
-                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
               )}
             </div>
           </section>

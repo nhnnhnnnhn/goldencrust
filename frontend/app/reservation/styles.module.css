@@ -594,3 +594,37 @@
     width: 60px;
   }
 }
+
+.locationDetails {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+}
+
+.statusOpen {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: rgb(34, 197, 94);
+}
+
+.statusClosed {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: rgb(239, 68, 68);
+}
+
+.tableCount {
+  font-size: 0.875rem;
+  color: #666;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
