@@ -9,6 +9,8 @@ import { ChevronLeft, Calendar, Clock, Users, MapPin } from "lucide-react"
 import { format } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
 import { useGetRestaurantsQuery } from '@/redux/api'
+import { useCreateReservationMutation } from '@/redux/api/reservationApi'
+import { useToast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +28,7 @@ export default function ReservationPage() {
   const router = useRouter()
   const { user, isLoading } = useAuth()
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
+  const [createReservation, { isLoading: isCreating }] = useCreateReservationMutation()
   const [date, setDate] = useState<Date>()
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
@@ -39,6 +42,7 @@ export default function ReservationPage() {
     specialRequests: "",
   })
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const { toast } = useToast()
 
   // Check if user is logged in
   useEffect(() => {
@@ -49,7 +53,7 @@ export default function ReservationPage() {
       setFormData((prev) => ({
         ...prev,
         name: user.name || prev.name,
-        email: user.email || prev.email,
+        email: user.email || prev.email
       }))
     }
   }, [user, isLoading, router])
@@ -61,9 +65,46 @@ export default function ReservationPage() {
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitted(true)
+    
+    try {
+      // Validate form data
+      if (!formData.location || !date || !formData.time || !formData.guests || !formData.name || !formData.phone) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Create reservation
+      const result = await createReservation({
+        customerName: formData.name,
+        customerPhone: formData.phone,
+        reservationDate: format(date, 'yyyy-MM-dd'),
+        reservationTime: formData.time,
+        numberOfGuests: parseInt(formData.guests),
+        specialRequests: formData.specialRequests,
+        restaurantId: formData.location,
+      }).unwrap()
+
+      // Show success message
+      toast({
+        title: "Success",
+        description: "Your reservation has been created successfully",
+      })
+
+      setIsSubmitted(true)
+    } catch (error: any) {
+      // Show error message
+      toast({
+        title: "Error",
+        description: error.data?.message || "Failed to create reservation",
+        variant: "destructive",
+      })
+    }
   }
 
   const timeSlots = [
@@ -83,7 +124,7 @@ export default function ReservationPage() {
   ]
 
   // Show loading state while checking authentication or loading restaurants
-  if (isLoading || isLoadingRestaurants) {
+  if (isLoading || isLoadingRestaurants || isCreating) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-900 border-t-transparent"></div>
