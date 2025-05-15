@@ -101,12 +101,9 @@ importers:
       '@stripe/stripe-js':
         specifier: ^7.3.0
         version: 7.3.0
-<<<<<<< HEAD
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-=======
->>>>>>> ed4b38f04ee1a68d347d7ea78155df5e33deb9a2
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.0.0)
