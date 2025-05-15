@@ -24,6 +24,11 @@ const orderSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    orderType:{
+        type:String,
+        enum:['Dine in','Takeaway','Delivery'],
+        default:'Dine-in'
+    },
     deletedAt: Date,
 }, {
     timestamps: true

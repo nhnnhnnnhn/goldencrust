@@ -25,7 +25,7 @@ module.exports.getRestaurant = controllerHandler(async (req, res) => {
 module.exports.createRestaurant = controllerHandler(async (req, res) => {
     try {
         const { name, address, phone, email, tableNumber, image } = req.body;
-        const restaurant = await Restaurant.create({ name, address, phone, email, tableNumber, image });
+        const restaurant = await Restaurant.create({ name, address, phone, email, tableNumber });
         res.status(201).json(
             {
                 success: true,
@@ -73,8 +73,8 @@ module.exports.getRestaurantById = controllerHandler(async (req, res) => {
 module.exports.updateRestaurant = controllerHandler(async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, address, phone, email, image } = req.body;
-        const restaurant = await Restaurant.findByIdAndUpdate(id, { name, address, phone, email, image }, { new: true });
+        const { name, address, phone, email, status } = req.body;
+        const restaurant = await Restaurant.findByIdAndUpdate(id, { name, address, phone, email, status }, { new: true });
         res.status(200).json(
             {
                 success: true,

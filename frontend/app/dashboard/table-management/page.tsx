@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   PlusCircle,
@@ -20,16 +20,33 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { 
+  useGetRestaurantsQuery, 
+  useCreateRestaurantMutation,
+  useUpdateRestaurantMutation,
+  useDeleteRestaurantMutation
+} from '@/redux/api'
 
 // Định nghĩa kiểu dữ liệu cho Restaurant
 interface Restaurant {
   _id: string
+  name: string
+  description?: string
   address: string
+  phone: string
+  email: string
+  openingHours?: {
+    open: string
+    close: string
+  }
+  status: 'active' | 'inactive'
+  rating?: number
+  cuisine?: string[]
+  images?: string[]
+  deleted: boolean
+  createdAt: string
+  updatedAt: string
   tableNumber: number
-  deleted?: boolean
-  deletedAt?: Date
-  createdAt: Date
-  updatedAt: Date
 }
 
 // Định nghĩa kiểu dữ liệu cho Table
@@ -48,30 +65,15 @@ interface Table {
   updatedAt: Date
 }
 
-// Dữ liệu mẫu cho các nhà hàng
-const initialRestaurants: Restaurant[] = [
-  {
-    _id: "rest1",
-    address: "123 Nguyễn Huệ, Quận 1, TP.HCM",
-    tableNumber: 15,
-    createdAt: new Date("2023-01-15"),
-    updatedAt: new Date("2023-01-15"),
-  },
-  {
-    _id: "rest2",
-    address: "456 Lê Lợi, Quận 1, TP.HCM",
-    tableNumber: 10,
-    createdAt: new Date("2023-02-20"),
-    updatedAt: new Date("2023-02-20"),
-  },
-  {
-    _id: "rest3",
-    address: "789 Đồng Khởi, Quận 1, TP.HCM",
-    tableNumber: 8,
-    createdAt: new Date("2023-03-10"),
-    updatedAt: new Date("2023-03-10"),
-  },
-]
+interface RestaurantFormData {
+  _id?: string; // Optional for new restaurants
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  status: 'active' | 'inactive';
+  tableNumber: number;
+}
 
 // Dữ liệu mẫu cho các bàn
 const initialTables: Table[] = [
@@ -189,11 +191,9 @@ const statusIcons = {
 export default function TableManagement() {
   const { toast } = useToast()
   const [tables, setTables] = useState<Table[]>(initialTables)
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("All")
   const [selectedLocation, setSelectedLocation] = useState("All")
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>(initialRestaurants[0]._id)
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [showAddEditModal, setShowAddEditModal] = useState(false)
@@ -203,9 +203,23 @@ export default function TableManagement() {
   const [showTableDetails, setShowTableDetails] = useState(false)
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [showRestaurantModal, setShowRestaurantModal] = useState(false)
-  const [currentRestaurant, setCurrentRestaurant] = useState<Partial<Restaurant> | null>(null)
+  const [currentRestaurant, setCurrentRestaurant] = useState<RestaurantFormData | null>(null)
   const [showDeleteRestaurantConfirm, setShowDeleteRestaurantConfirm] = useState(false)
   const [restaurantToDelete, setRestaurantToDelete] = useState<Restaurant | null>(null)
+
+  // Restaurant API hooks
+  const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useGetRestaurantsQuery()
+  const [createRestaurant] = useCreateRestaurantMutation()
+  const [updateRestaurant] = useUpdateRestaurantMutation()
+  const [deleteRestaurant] = useDeleteRestaurantMutation()
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
+
+  // Set initial selected restaurant when data is loaded
+  useEffect(() => {
+    if (restaurants.length > 0 && !selectedRestaurant) {
+      setSelectedRestaurant(restaurants[0]._id)
+    }
+  }, [restaurants])
 
   // Lọc các bàn dựa trên nhà hàng đã chọn, tìm kiếm, trạng thái và khu vực
   const filteredTables = tables.filter((table) => {
@@ -349,104 +363,116 @@ export default function TableManagement() {
     })
   }
 
-  // Xử lý thêm nhà hàng mới
   const handleAddRestaurant = () => {
+    // Reset form data when opening modal
     setCurrentRestaurant({
+      name: "",
       address: "",
-      tableNumber: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    setShowRestaurantModal(true)
-  }
+      phone: "",
+      email: "",
+      status: "active",
+      tableNumber: 0
+    });
+    setShowRestaurantModal(true);
+  };
 
-  // Xử lý chỉnh sửa nhà hàng
   const handleEditRestaurant = (restaurant: Restaurant) => {
-    setCurrentRestaurant({ ...restaurant })
-    setShowRestaurantModal(true)
-  }
+    setCurrentRestaurant({
+      _id: restaurant._id,
+      name: restaurant.name,
+      address: restaurant.address,
+      phone: restaurant.phone,
+      email: restaurant.email,
+      status: restaurant.status,
+      tableNumber: restaurant.tableNumber || 0
+    });
+    setShowRestaurantModal(true);
+  };
 
-  // Xử lý xóa nhà hàng
-  const handleDeleteRestaurantClick = (restaurant: Restaurant) => {
-    setRestaurantToDelete(restaurant)
-    setShowDeleteRestaurantConfirm(true)
-  }
+  const handleSaveRestaurant = async () => {
+    if (!currentRestaurant) return;
 
-  const confirmDeleteRestaurant = () => {
-    if (!restaurantToDelete) return
-
-    // Trong thực tế, đây sẽ là API call để soft delete
-    const updatedRestaurants = restaurants.map((restaurant) => {
-      if (restaurant._id === restaurantToDelete._id) {
-        return {
-          ...restaurant,
-          deleted: true,
-          deletedAt: new Date(),
-        }
-      }
-      return restaurant
-    })
-
-    // Lọc ra các nhà hàng chưa bị xóa để hiển thị
-    setRestaurants(updatedRestaurants.filter((restaurant) => !restaurant.deleted))
-
-    // Nếu nhà hàng bị xóa là nhà hàng đang được chọn, chọn nhà hàng khác
-    if (selectedRestaurant === restaurantToDelete._id) {
-      const availableRestaurants = updatedRestaurants.filter((restaurant) => !restaurant.deleted)
-      if (availableRestaurants.length > 0) {
-        setSelectedRestaurant(availableRestaurants[0]._id)
+    try {
+      let response;
+      if (currentRestaurant._id) {
+        // Update existing restaurant
+        response = await updateRestaurant({
+          id: currentRestaurant._id,
+          restaurant: {
+            name: currentRestaurant.name,
+            address: currentRestaurant.address,
+            phone: currentRestaurant.phone,
+            email: currentRestaurant.email,
+            status: currentRestaurant.status,
+            tableNumber: currentRestaurant.tableNumber
+          }
+        }).unwrap();
+        toast({
+          title: "Success",
+          description: "Restaurant updated successfully",
+        });
       } else {
-        setSelectedRestaurant("")
+        // Create new restaurant
+        response = await createRestaurant({
+          name: currentRestaurant.name,
+          address: currentRestaurant.address,
+          phone: currentRestaurant.phone,
+          email: currentRestaurant.email,
+          status: currentRestaurant.status,
+          tableNumber: currentRestaurant.tableNumber
+        }).unwrap();
+
+        // Set the newly created restaurant as selected
+        if (response?._id) {
+          setSelectedRestaurant(response._id);
+        }
+
+        toast({
+          title: "Success",
+          description: "Restaurant added successfully",
+        });
+      }
+
+      // Close modal and reset form
+      setShowRestaurantModal(false);
+      setCurrentRestaurant(null);
+
+      // Refetch restaurants list
+      await refetch();
+
+    } catch (err: any) {
+      const error = err?.data?.message || 'Failed to save restaurant. Please try again.';
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteRestaurantClick = async (restaurant: Restaurant) => {
+    if (confirm("Are you sure you want to delete this restaurant?")) {
+      try {
+        await deleteRestaurant(restaurant._id).unwrap()
+        toast({
+          title: "Success",
+          description: "Restaurant deleted successfully",
+        })
+        // If deleted restaurant was selected, select another one
+        if (selectedRestaurant === restaurant._id && restaurants.length > 1) {
+          const nextRestaurant = restaurants.find(r => r._id !== restaurant._id)
+          if (nextRestaurant) {
+            setSelectedRestaurant(nextRestaurant._id)
+          }
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete restaurant",
+          variant: "destructive",
+        })
       }
     }
-
-    setShowDeleteRestaurantConfirm(false)
-    setRestaurantToDelete(null)
-
-    toast({
-      title: "Xóa nhà hàng thành công",
-      description: `Nhà hàng tại ${restaurantToDelete.address} đã được xóa.`,
-    })
-  }
-
-  // Xử lý lưu nhà hàng (thêm mới hoặc cập nhật)
-  const handleSaveRestaurant = () => {
-    if (!currentRestaurant) return
-
-    const now = new Date()
-
-    if (currentRestaurant._id) {
-      // Cập nhật nhà hàng hiện có
-      setRestaurants(
-        restaurants.map((restaurant) =>
-          restaurant._id === currentRestaurant._id
-            ? ({ ...restaurant, ...currentRestaurant, updatedAt: now } as Restaurant)
-            : restaurant,
-        ),
-      )
-      toast({
-        title: "Cập nhật nhà hàng thành công",
-        description: `Nhà hàng tại ${currentRestaurant.address} đã được cập nhật.`,
-      })
-    } else {
-      // Thêm nhà hàng mới
-      const newRestaurant: Restaurant = {
-        _id: `rest${restaurants.length + 1}`,
-        ...(currentRestaurant as Omit<Restaurant, "_id">),
-        createdAt: now,
-        updatedAt: now,
-      } as Restaurant
-
-      setRestaurants([...restaurants, newRestaurant])
-      setSelectedRestaurant(newRestaurant._id)
-      toast({
-        title: "Thêm nhà hàng thành công",
-        description: `Nhà hàng tại ${newRestaurant.address} đã được thêm.`,
-      })
-    }
-
-    setShowRestaurantModal(false)
-    setCurrentRestaurant(null)
   }
 
   // Xử lý in hóa đơn cho bàn
@@ -598,105 +624,159 @@ export default function TableManagement() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Table Management</h1>
-        <div className="flex gap-2">
-          <Button
-            onClick={handleAddRestaurant}
-            className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
-          >
-            <Building size={20} />
-            <span>Add Restaurant</span>
-          </Button>
-          <Button
-            onClick={handleAddTable}
-            className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
-            disabled={!selectedRestaurant}
-          >
-            <PlusCircle size={20} />
-            <span>Add Table</span>
-          </Button>
-        </div>
+    <div className="space-y-6 p-6">
+      {/* Restaurant Selection */}
+      <div className="flex items-center space-x-4">
+        <Select
+          value={selectedRestaurant}
+          onValueChange={setSelectedRestaurant}
+          disabled={isLoadingRestaurants}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select Restaurant" />
+          </SelectTrigger>
+          <SelectContent>
+            {restaurants.map((restaurant) => (
+              <SelectItem key={restaurant._id} value={restaurant._id}>
+                {restaurant.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={handleAddRestaurant}>
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Add Restaurant
+        </Button>
       </div>
 
-      {/* Chọn nhà hàng */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Select Restaurant</label>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {restaurants.map((restaurant) => (
-            <div
-              key={restaurant._id}
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                selectedRestaurant === restaurant._id
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-blue-300"
-              }`}
-              onClick={() => setSelectedRestaurant(restaurant._id)}
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Building size={18} className="text-blue-600" />
-                    <span className="font-medium">Restaurant {restaurant._id.replace("rest", "#")}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
-                    <MapPin size={16} />
-                    <span>{restaurant.address}</span>
-                  </div>
-                  <div className="text-sm text-gray-600">Tables: {restaurant.tableNumber}</div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleEditRestaurant(restaurant)
-                    }}
-                    className="p-1 text-gray-500 hover:text-blue-600"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteRestaurantClick(restaurant)
-                    }}
-                    className="p-1 text-gray-500 hover:text-red-600"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M3 6h18"></path>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                  </button>
-                </div>
+      {/* Selected Restaurant Info */}
+      {selectedRestaurant && (
+        <div className="bg-white p-4 rounded-lg shadow">
+          {restaurants.find(r => r._id === selectedRestaurant) && (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Building className="h-5 w-5 text-gray-500" />
+                <span className="font-medium">
+                  {restaurants.find(r => r._id === selectedRestaurant)?.name}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-5 w-5 text-gray-500" />
+                <span>
+                  {restaurants.find(r => r._id === selectedRestaurant)?.address}
+                </span>
               </div>
             </div>
-          ))}
+          )}
         </div>
-      </div>
+      )}
+
+      {/* Restaurant Modal */}
+      {showRestaurantModal && currentRestaurant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">
+              {currentRestaurant._id ? "Edit Restaurant" : "Add Restaurant"}
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <Input
+                  value={currentRestaurant.name}
+                  onChange={(e) =>
+                    setCurrentRestaurant({ ...currentRestaurant, name: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Address</label>
+                <Input
+                  value={currentRestaurant.address}
+                  onChange={(e) =>
+                    setCurrentRestaurant({ ...currentRestaurant, address: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Phone</label>
+                <Input
+                  value={currentRestaurant.phone}
+                  onChange={(e) =>
+                    setCurrentRestaurant({ ...currentRestaurant, phone: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <Input
+                  value={currentRestaurant.email}
+                  onChange={(e) =>
+                    setCurrentRestaurant({ ...currentRestaurant, email: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Number of Tables</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={currentRestaurant.tableNumber}
+                  onChange={(e) =>
+                    setCurrentRestaurant({ ...currentRestaurant, tableNumber: parseInt(e.target.value) || 0 })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Status</label>
+                <Select
+                  value={currentRestaurant.status}
+                  onValueChange={(value: 'active' | 'inactive') =>
+                    setCurrentRestaurant({ ...currentRestaurant, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button variant="outline" onClick={() => setShowRestaurantModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveRestaurant}>Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Restaurant Confirmation Dialog */}
+      {showDeleteRestaurantConfirm && restaurantToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Delete Restaurant</h2>
+            <p>Are you sure you want to delete this restaurant?</p>
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button variant="outline" onClick={() => setShowDeleteRestaurantConfirm(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  handleDeleteRestaurantClick(restaurantToDelete);
+                  setShowDeleteRestaurantConfirm(false);
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Thanh tìm kiếm và lọc */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -732,7 +812,7 @@ export default function TableManagement() {
                     setShowStatusDropdown(false)
                   }}
                 >
-                  {status !== "All" && statusIcons[status]}
+                  {status !== "All" && statusIcons[status as keyof typeof statusIcons]}
                   {status}
                 </div>
               ))}
@@ -958,230 +1038,114 @@ export default function TableManagement() {
         </div>
       )}
 
-      {/* Modal thêm/sửa nhà hàng */}
-      {showRestaurantModal && currentRestaurant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{currentRestaurant._id ? "Edit Restaurant" : "Add New Restaurant"}</h2>
-              <button onClick={() => setShowRestaurantModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                <Input
-                  type="text"
-                  value={currentRestaurant.address || ""}
-                  onChange={(e) => setCurrentRestaurant({ ...currentRestaurant, address: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Tables</label>
-                <Input
-                  type="number"
-                  value={currentRestaurant.tableNumber || 0}
-                  onChange={(e) => setCurrentRestaurant({ ...currentRestaurant, tableNumber: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <Button variant="outline" onClick={() => setShowRestaurantModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveRestaurant} className="bg-[#003087] hover:bg-[#002266] text-white">
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal xác nhận xóa bàn */}
-      {showDeleteConfirm && tableToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Confirm Delete</h2>
-            <p className="mb-6">Are you sure you want to delete Table {tableToDelete.tableNumber}?</p>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-                Cancel
-              </Button>
-              <Button onClick={confirmDelete} className="bg-[#003087] hover:bg-[#002266] text-white">
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal xác nhận xóa nhà hàng */}
-      {showDeleteRestaurantConfirm && restaurantToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Confirm Delete Restaurant</h2>
-            <p className="mb-6">Are you sure you want to delete the restaurant at {restaurantToDelete.address}?</p>
-            <p className="mb-6 text-red-600">This will also delete all tables associated with this restaurant!</p>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowDeleteRestaurantConfirm(false)}>
-                Cancel
-              </Button>
-              <Button onClick={confirmDeleteRestaurant} className="bg-red-600 hover:bg-red-700 text-white">
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal chi tiết bàn */}
+      {/* Table Details Modal */}
       {showTableDetails && selectedTable && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Table {selectedTable.tableNumber} Details</h2>
+              <h2 className="text-xl font-bold">Table Details</h2>
               <button onClick={() => setShowTableDetails(false)} className="text-gray-500 hover:text-gray-700">
                 <X size={24} />
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status:</span>
-                <span
-                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[selectedTable.status]}`}
-                >
+            <div className="space-y-4">
+              <div>
+                <span className="font-medium">Table Number:</span> {selectedTable.tableNumber}
+              </div>
+              <div>
+                <span className="font-medium">Capacity:</span> {selectedTable.capacity} people
+              </div>
+              <div>
+                <span className="font-medium">Location:</span> {selectedTable.location}
+              </div>
+              <div>
+                <span className="font-medium">Status:</span>
+                <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  statusColors[selectedTable.status]
+                }`}>
                   {statusIcons[selectedTable.status]}
                   <span className="ml-1">{statusLabels[selectedTable.status]}</span>
                 </span>
               </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-600">Capacity:</span>
-                <span>{selectedTable.capacity} people</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-600">Location:</span>
-                <span>{selectedTable.location}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-600">Restaurant:</span>
-                <span>{restaurants.find((r) => r._id === selectedTable.restaurantId)?.address || "Unknown"}</span>
-              </div>
-
-              {selectedTable.status !== "available" && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Customer:</span>
-                    <span>{selectedTable.customerName}</span>
-                  </div>
-
-                  {selectedTable.reservationTime && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Time:</span>
-                      <span>{selectedTable.reservationTime}</span>
-                    </div>
-                  )}
-                </>
+              {selectedTable.customerName && (
+                <div>
+                  <span className="font-medium">Customer:</span> {selectedTable.customerName}
+                </div>
               )}
-
-              <div className="flex justify-between">
-                <span className="text-gray-600">Created:</span>
-                <span>{new Date(selectedTable.createdAt).toLocaleDateString()}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-600">Last Updated:</span>
-                <span>{new Date(selectedTable.updatedAt).toLocaleDateString()}</span>
-              </div>
+              {selectedTable.reservationTime && (
+                <div>
+                  <span className="font-medium">Reservation Time:</span> {selectedTable.reservationTime}
+                </div>
+              )}
             </div>
 
-            {selectedTable.status === "occupied" && (
-              <div className="space-y-2 mb-6">
-                <Button
-                  onClick={() => handlePrintTableReceipt(selectedTable)}
+            <div className="mt-6">
+              <div className="mb-4">
+                <h3 className="font-medium mb-2">Update Status</h3>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleUpdateStatus(selectedTable._id, "available")}
+                    variant="outline"
+                    className={`flex-1 ${
+                      selectedTable.status === "available" ? "bg-green-100 text-green-800 border-green-300" : ""
+                    }`}
+                    disabled={selectedTable.status === "available"}
+                  >
+                    Available
+                  </Button>
+                  <Button
+                    onClick={() => handleUpdateStatus(selectedTable._id, "occupied")}
+                    variant="outline"
+                    className={`flex-1 ${
+                      selectedTable.status === "occupied" ? "bg-red-100 text-red-800 border-red-300" : ""
+                    }`}
+                    disabled={selectedTable.status === "occupied"}
+                  >
+                    Occupied
+                  </Button>
+                  <Button
+                    onClick={() => handleUpdateStatus(selectedTable._id, "reserved")}
+                    variant="outline"
+                    className={`flex-1 ${
+                      selectedTable.status === "reserved" ? "bg-yellow-100 text-yellow-800 border-yellow-300" : ""
+                    }`}
+                    disabled={selectedTable.status === "reserved"}
+                  >
+                    Reserved
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Link
+                  href={`/dashboard/table-order/${selectedTable._id}`}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] transition-colors"
                 >
-                  <Printer size={18} />
-                  <span>Print Receipt</span>
-                </Button>
-              </div>
-            )}
+                  <Utensils size={18} />
+                  <span>Place Order for This Table</span>
+                </Link>
 
-            <div className="space-y-2 mb-6">
-              <h3 className="text-sm font-medium text-gray-700">Change Status</h3>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleUpdateStatus(selectedTable._id, "available")}
-                  variant="outline"
-                  className={`flex-1 ${
-                    selectedTable.status === "available" ? "bg-green-100 text-green-800 border-green-300" : ""
-                  }`}
-                  disabled={selectedTable.status === "available"}
-                >
-                  Available
-                </Button>
-                <Button
-                  onClick={() => handleUpdateStatus(selectedTable._id, "occupied")}
-                  variant="outline"
-                  className={`flex-1 ${
-                    selectedTable.status === "occupied" ? "bg-red-100 text-red-800 border-red-300" : ""
-                  }`}
-                  disabled={selectedTable.status === "occupied"}
-                >
-                  Occupied
-                </Button>
-                <Button
-                  onClick={() => handleUpdateStatus(selectedTable._id, "reserved")}
-                  variant="outline"
-                  className={`flex-1 ${
-                    selectedTable.status === "reserved" ? "bg-yellow-100 text-yellow-800 border-yellow-300" : ""
-                  }`}
-                  disabled={selectedTable.status === "reserved"}
-                >
-                  Reserved
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <Link
-                href={`/dashboard/table-order/${selectedTable._id}?tableNumber=${selectedTable.tableNumber}`}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] transition-colors"
-              >
-                <Utensils size={18} />
-                <span>Place Order for This Table</span>
-              </Link>
-
-              <div className="flex justify-between">
-                <Button
-                  onClick={() => {
-                    setShowTableDetails(false)
-                    handleEditTable(selectedTable)
-                  }}
-                  className="bg-[#003087] hover:bg-[#002266] text-white"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowTableDetails(false)
-                    handleDeleteClick(selectedTable)
-                  }}
-                  className="bg-[#003087] hover:bg-[#002266] text-white"
-                >
-                  Delete
-                </Button>
+                <div className="flex justify-between">
+                  <Button
+                    onClick={() => {
+                      setShowTableDetails(false)
+                      handleEditTable(selectedTable)
+                    }}
+                    className="bg-[#003087] hover:bg-[#002266] text-white"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowTableDetails(false)
+                      handleDeleteClick(selectedTable)
+                    }}
+                    className="bg-[#003087] hover:bg-[#002266] text-white"
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

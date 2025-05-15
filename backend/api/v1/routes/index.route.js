@@ -19,7 +19,7 @@ module.exports = (app) => {
     
     // Protected routes
     app.use(version + '/users', authMiddleware, userRoute);
-    app.use(version + '/restaurants', authMiddleware, restaurantRoute);
+    app.use(version + '/restaurants', restaurantRoute);
     app.use(version + '/menu-items', authMiddleware, menuItemRoute);
     app.use(version + '/reservations', authMiddleware, reservationRoute);
     app.use(version + '/reserved-tables', authMiddleware, reservedTableRoute);

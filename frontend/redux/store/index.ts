@@ -13,7 +13,7 @@ import {
 import storage from 'redux-persist/lib/storage';
 // Import từ file index thay vì trực tiếp từ file module
 import authReducer from '../slices';
-import { authApi, stripeApi } from '../api';
+import { authApi, stripeApi, restaurantApi } from '../api';
 import { userApi } from '../api/userApi';
 import { orderApi } from '../api/order';
 import userReducer from '../slices/userSlice';
@@ -30,6 +30,7 @@ const rootReducer = combineReducers({
   [stripeApi.reducerPath]: stripeApi.reducer,
   [userApi.reducerPath]: userApi.reducer,
   [orderApi.reducerPath]: orderApi.reducer,
+  [restaurantApi.reducerPath]: restaurantApi.reducer,
   user: userReducer,
 });
 
@@ -42,7 +43,13 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }).concat(authApi.middleware, stripeApi.middleware, userApi.middleware, orderApi.middleware),
+    }).concat(
+      authApi.middleware, 
+      stripeApi.middleware, 
+      userApi.middleware, 
+      orderApi.middleware,
+      restaurantApi.middleware
+    ),
   devTools: process.env.NODE_ENV !== 'production',
 });
 

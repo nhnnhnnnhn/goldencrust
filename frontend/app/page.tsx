@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -39,6 +39,10 @@ import {
 
 // Thêm import cho translations
 import { getTranslation } from "@/utils/translations"
+import { useGetRestaurantsQuery } from '@/redux/api'
+
+// Define sections for navigation
+const sections = ["home", "about", "concept", "locations", "restaurant", "menu", "gallery", "contact"] as const
 
 export default function Home() {
   const { user, logout } = useAuth()
@@ -47,18 +51,14 @@ export default function Home() {
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const { data: restaurants = [] } = useGetRestaurantsQuery()
 
   const sectionRefs = useRef<(HTMLElement | null)[]>([])
 
-  // Define sections for navigation
-  const sections = ["home", "about", "concept", "locations", "restaurant", "menu", "gallery", "contact"]
-
-  // Thay đổi nút chuyển đổi ngôn ngữ và thêm state cho ngôn ngữ
   // Thêm state language và hàm toggleLanguage
   const [language, setLanguage] = useState<"en" | "vi">("en")
 
   // Thêm biến t để lấy các chuỗi văn bản theo ngôn ngữ hiện tại
-  // Thêm sau dòng const [language, setLanguage] = useState<"en" | "vi">("en");
   const t = getTranslation(language)
 
   // Dashboard menu items based on user role
@@ -177,7 +177,6 @@ export default function Home() {
   }, [menuOpen])
 
   // Thêm useEffect để lưu trữ và khôi phục ngôn ngữ đã chọn
-  // Thêm sau các useEffect hiện có
   useEffect(() => {
     // Khôi phục ngôn ngữ đã chọn từ localStorage khi trang được tải
     const savedLanguage = localStorage.getItem("language")
@@ -208,6 +207,10 @@ export default function Home() {
     logout()
   }
 
+  const setRef = useCallback((index: number) => (el: HTMLElement | null) => {
+    sectionRefs.current[index] = el
+  }, [])
+
   return (
     <>
       {/* Loading overlay */}
@@ -222,7 +225,7 @@ export default function Home() {
       <div className="relative">
         {/* Navigation dots */}
         <div className="fixed right-6 top-1/2 z-30 -translate-y-1/2 space-y-3">
-          {sections.map((_, index) => (
+          {sections.map((section: string, index: number) => (
             <button
               key={index}
               onClick={() => scrollToSection(index)}
@@ -412,7 +415,7 @@ export default function Home() {
         <main className="relative z-10">
           {/* Home Section */}
           <section
-            ref={(el) => (sectionRefs.current[0] = el)}
+            ref={setRef(0)}
             id="home"
             className="relative min-h-screen flex flex-col justify-end"
           >
@@ -433,7 +436,7 @@ export default function Home() {
 
           {/* About Section */}
           <section
-            ref={(el) => (sectionRefs.current[1] = el)}
+            ref={setRef(1)}
             id="about"
             className="relative min-h-screen flex items-center"
           >
@@ -466,7 +469,7 @@ export default function Home() {
 
           {/* Concept Section */}
           <section
-            ref={(el) => (sectionRefs.current[2] = el)}
+            ref={setRef(2)}
             id="concept"
             className="relative min-h-screen flex items-center"
           >
@@ -499,7 +502,7 @@ export default function Home() {
 
           {/* Locations Section */}
           <section
-            ref={(el) => (sectionRefs.current[3] = el)}
+            ref={setRef(3)}
             id="locations"
             className="relative min-h-screen flex items-center"
           >
@@ -514,44 +517,63 @@ export default function Home() {
             </div>
 
             <div className="relative z-10 container mx-auto px-6 py-20 text-white">
-              {/* Thay đổi text trong locations section */}
               <h2 className="text-5xl font-light mb-12">{t.locations.title}</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[
-                  { city: "Ho Chi Minh City", locations: 12 },
-                  { city: "Hanoi", locations: 5 },
-                  { city: "Da Nang", locations: 2 },
-                  { city: "Nha Trang", locations: 1 },
-                  { city: "Phu Quoc", locations: 1 },
-                ].map((region, index) => (
-                  <div
-                    key={index}
-                    className="border border-white/30 p-6 backdrop-blur-sm bg-black/20 hover:bg-black/30 transition-all"
-                  >
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-6 w-6 mt-1" />
-                      <div>
-                        <h3 className="text-2xl font-light">{region.city}</h3>
-                        {/* Thay đổi text trong locations items */}
-                        <p className="text-white/70 mt-2">
-                          {region.locations} {t.locations.locations}
-                        </p>
-                        <Button variant="link" className="text-white p-0 mt-4 group">
-                          {t.locations.viewAll}
-                          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                        </Button>
+              {restaurants.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-xl font-light">Loading restaurants...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {restaurants.map((restaurant) => (
+                    <div
+                      key={restaurant._id}
+                      className="border border-white/30 p-6 backdrop-blur-sm bg-black/20 hover:bg-black/30 transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-6 w-6 mt-1" />
+                        <div>
+                          <h3 className="text-2xl font-light">{restaurant.name}</h3>
+                          <p className="text-white/70 mt-2">
+                            {restaurant.address}
+                          </p>
+                          <p className="text-white/70">
+                            {restaurant.phone}
+                          </p>
+                          <p className="text-white/70 mb-4">
+                            {restaurant.email}
+                          </p>
+                          <div className="flex items-center gap-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              restaurant.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {restaurant.status === 'open' ? t.locations.statusOpen : t.locations.statusClosed}
+                            </span>
+                            <span className="text-sm text-white/70">
+                              {restaurant.tableNumber} {t.locations.tables}
+                            </span>
+                          </div>
+                          <div className="mt-4">
+                            <Link
+                              href="/reservation"
+                              className="inline-flex items-center text-sm text-white hover:text-white/80 transition-colors"
+                            >
+                              {t.locations.makeReservation}
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
           {/* Restaurant Section */}
           <section
-            ref={(el) => (sectionRefs.current[4] = el)}
+            ref={setRef(4)}
             id="restaurant"
             className="relative min-h-screen flex items-center"
           >
@@ -593,7 +615,7 @@ export default function Home() {
 
           {/* Menu Section */}
           <section
-            ref={(el) => (sectionRefs.current[5] = el)}
+            ref={setRef(5)}
             id="menu"
             className="relative min-h-screen flex items-center"
           >
@@ -684,7 +706,7 @@ export default function Home() {
 
           {/* Gallery Section */}
           <section
-            ref={(el) => (sectionRefs.current[6] = el)}
+            ref={setRef(6)}
             id="gallery"
             className="relative min-h-screen flex items-center"
           >
@@ -736,7 +758,7 @@ export default function Home() {
 
           {/* Contact Section */}
           <section
-            ref={(el) => (sectionRefs.current[7] = el)}
+            ref={setRef(7)}
             id="contact"
             className="relative min-h-screen flex items-center"
           >

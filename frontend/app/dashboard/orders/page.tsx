@@ -599,7 +599,7 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Failed to update order status:', error)
     }
-  }
+    }
 
   // Filter orders based on search term and status
   const filteredOrders = orders.filter((order) => {
@@ -793,7 +793,7 @@ export default function OrdersPage() {
 
       {/* Order Details Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        {selectedOrder && (
+          {selectedOrder && (
           <OrderDetails
             order={selectedOrder}
             onClose={() => setSelectedOrder(null)}

@@ -5,6 +5,7 @@ type TranslationKeys = {
     career: string
     login: string
     logout: string
+    register: string
   }
   dashboard: {
     dashboard: string
@@ -66,6 +67,10 @@ type TranslationKeys = {
     title: string
     viewAll: string
     locations: string
+    statusOpen: string
+    statusClosed: string
+    tables: string
+    makeReservation: string
   }
   restaurant: {
     title: string
@@ -113,6 +118,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       career: "CAREER",
       login: "LOGIN",
       logout: "Logout",
+      register: "REGISTER"
     },
     dashboard: {
       dashboard: "Dashboard",
@@ -178,6 +184,10 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       title: "Our Locations",
       viewAll: "View All",
       locations: "locations",
+      statusOpen: "Open",
+      statusClosed: "Closed",
+      tables: "tables available",
+      makeReservation: "Make a Reservation"
     },
     restaurant: {
       title: "Our Restaurant",
@@ -227,6 +237,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       career: "TUYỂN DỤNG",
       login: "ĐĂNG NHẬP",
       logout: "Đăng xuất",
+      register: "ĐĂNG KÝ"
     },
     dashboard: {
       dashboard: "Bảng điều khiển",
@@ -292,6 +303,10 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       title: "Địa điểm của chúng tôi",
       viewAll: "Xem tất cả",
       locations: "chi nhánh",
+      statusOpen: "Đang mở cửa",
+      statusClosed: "Đã đóng cửa",
+      tables: "bàn trống",
+      makeReservation: "Đặt bàn ngay"
     },
     restaurant: {
       title: "Nhà hàng của chúng tôi",
