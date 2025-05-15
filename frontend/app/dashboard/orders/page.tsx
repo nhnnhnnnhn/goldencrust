@@ -20,9 +20,10 @@ import {
   Home,
   Utensils,
   Plus,
+  Eye,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
@@ -39,6 +40,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { useGetOrdersQuery, useUpdateOrderStatusMutation, useCreateOrderMutation } from '@/redux/api'
+import { DataTable } from '@/components/ui/data-table'
+import { format } from 'date-fns'
+import { Loader2 } from 'lucide-react'
 
 // Định nghĩa các kiểu dữ liệu
 interface MenuItem {
@@ -64,6 +69,7 @@ interface Restaurant {
   name: string
   address: string
   phone: string
+  email: string
 }
 
 interface User {
@@ -71,14 +77,17 @@ interface User {
   name: string
   email: string
   phone: string
+  role: string
+  loyaltyPoints: number
+  joinDate: string
 }
 
 interface Reservation {
   _id: string
-  customerName: string
-  reservationDate: string
-  reservationTime: string
-  numberOfGuests: number
+  date: string
+  time: string
+  partySize: number
+  specialRequests?: string
 }
 
 interface OrderDetail {
@@ -117,24 +126,15 @@ interface Payment {
 }
 
 interface Order {
-  _id: string
-  reservationId?: string
-  userId: string
-  restaurantId: string
-  totalAmount: number
-  status: "pending" | "completed" | "cancelled"
-  paymentMethod: "cash" | "card" | "QR"
-  paymentStatus: "paid" | "pending" | "failed"
-  deleted: boolean
-  deletedAt?: Date
-  createdAt: Date
-  updatedAt: Date
-  // Thông tin bổ sung từ các bảng liên quan
-  user?: User
-  restaurant?: Restaurant
-  reservation?: Reservation
-  orderDetail?: OrderDetail
-  payment?: Payment
+  _id: string;
+  restaurantId: string;
+  totalAmount: number;
+  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  paymentMethod: 'cash' | 'card' | 'QR';
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Dữ liệu mẫu cho nhà hàng
@@ -144,12 +144,14 @@ const MOCK_RESTAURANTS: Restaurant[] = [
     name: "Pizza Liêm Khiết - Quận 1",
     address: "123 Nguyễn Huệ, Quận 1, TP.HCM",
     phone: "028-1234-5678",
+    email: "rest1@example.com",
   },
   {
     _id: "rest2",
     name: "Pizza Liêm Khiết - Quận 3",
     address: "456 Lê Lợi, Quận 3, TP.HCM",
     phone: "028-8765-4321",
+    email: "rest2@example.com",
   },
 ]
 
@@ -160,12 +162,18 @@ const MOCK_USERS: User[] = [
     name: "Nguyễn Văn A",
     email: "nguyenvana@example.com",
     phone: "0901234567",
+    role: "customer",
+    loyaltyPoints: 1000,
+    joinDate: "2023-05-01",
   },
   {
     _id: "user2",
     name: "Trần Thị B",
     email: "tranthib@example.com",
     phone: "0912345678",
+    role: "customer",
+    loyaltyPoints: 500,
+    joinDate: "2023-05-05",
   },
 ]
 
@@ -173,10 +181,10 @@ const MOCK_USERS: User[] = [
 const MOCK_RESERVATIONS: Reservation[] = [
   {
     _id: "res1",
-    customerName: "Nguyễn Văn A",
-    reservationDate: "2023-05-15",
-    reservationTime: "19:00",
-    numberOfGuests: 4,
+    date: "2023-05-15",
+    time: "19:00",
+    partySize: 4,
+    specialRequests: "No onions, extra cheese",
   },
 ]
 
@@ -323,56 +331,7 @@ const MOCK_PAYMENTS: Payment[] = [
 ]
 
 // Dữ liệu mẫu cho đơn hàng
-const MOCK_ORDERS: Order[] = [
-  {
-    _id: "ord1",
-    reservationId: "res1",
-    userId: "user1",
-    restaurantId: "rest1",
-    totalAmount: 23.96,
-    status: "completed",
-    paymentMethod: "card",
-    paymentStatus: "paid",
-    deleted: false,
-    createdAt: new Date("2023-05-15T19:30:00"),
-    updatedAt: new Date("2023-05-15T19:30:00"),
-    user: MOCK_USERS.find((user) => user._id === "user1"),
-    restaurant: MOCK_RESTAURANTS.find((restaurant) => restaurant._id === "rest1"),
-    reservation: MOCK_RESERVATIONS.find((reservation) => reservation._id === "res1"),
-    orderDetail: MOCK_ORDER_DETAILS.find((orderDetail) => orderDetail.orderId === "ord1"),
-    payment: MOCK_PAYMENTS.find((payment) => payment.orderId === "ord1"),
-  },
-  {
-    _id: "ord2",
-    userId: "user2",
-    restaurantId: "rest1",
-    totalAmount: 17.98,
-    status: "pending",
-    paymentMethod: "cash",
-    paymentStatus: "pending",
-    deleted: false,
-    createdAt: new Date("2023-05-14T12:45:00"),
-    updatedAt: new Date("2023-05-14T12:45:00"),
-    user: MOCK_USERS.find((user) => user._id === "user2"),
-    restaurant: MOCK_RESTAURANTS.find((restaurant) => restaurant._id === "rest1"),
-    orderDetail: MOCK_ORDER_DETAILS.find((orderDetail) => orderDetail.orderId === "ord2"),
-    payment: MOCK_PAYMENTS.find((payment) => payment.orderId === "ord2"),
-  },
-  {
-    _id: "ord3",
-    userId: "user1",
-    restaurantId: "rest2",
-    totalAmount: 32.97,
-    status: "cancelled",
-    paymentMethod: "card",
-    paymentStatus: "failed",
-    deleted: false,
-    createdAt: new Date("2023-05-13T18:15:00"),
-    updatedAt: new Date("2023-05-13T18:30:00"),
-    user: MOCK_USERS.find((user) => user._id === "user1"),
-    restaurant: MOCK_RESTAURANTS.find((restaurant) => restaurant._id === "rest2"),
-  },
-]
+const MOCK_ORDERS: Order[] = []
 
 // Status mapping for visual elements
 const STATUS_MAP = {
@@ -380,6 +339,11 @@ const STATUS_MAP = {
     label: "Pending",
     color: "bg-blue-100 text-blue-800",
     icon: <Clock className="h-4 w-4" />,
+  },
+  processing: {
+    label: "Processing",
+    color: "bg-yellow-100 text-yellow-800",
+    icon: <Package className="h-4 w-4" />,
   },
   completed: {
     label: "Completed",
@@ -457,283 +421,212 @@ const PAYMENT_METHOD_MAP = {
   },
 }
 
+interface OrderDetailsProps {
+  order: Order;
+  onClose: () => void;
+}
+
+const OrderDetails = ({ order, onClose }: OrderDetailsProps) => {
+  return (
+    <DialogContent className="max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>Order Details</DialogTitle>
+        <DialogDescription>
+          Order ID: {order._id}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h3 className="font-semibold">Order Information</h3>
+            <p>Restaurant ID: {order.restaurantId}</p>
+            <p>Total Amount: ${order.totalAmount.toFixed(2)}</p>
+            <p>Status: {order.status}</p>
+            <p>Payment Method: {order.paymentMethod}</p>
+            <p>Payment Status: {order.paymentStatus}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold">Dates</h3>
+            <p>Created: {format(new Date(order.createdAt), 'PPp')}</p>
+            <p>Updated: {format(new Date(order.updatedAt), 'PPp')}</p>
+          </div>
+        </div>
+      </div>
+    </DialogContent>
+  );
+};
+
+const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
+  const statusColors = {
+    pending: 'bg-yellow-100 text-yellow-800',
+    processing: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+    cancelled: 'bg-red-100 text-red-800',
+  };
+
+  return (
+    <Badge className={statusColors[status]}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </Badge>
+  );
+};
+
 export default function OrdersPage() {
   const { user } = useAuth()
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS)
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-  const [isOrderDetailsDialogOpen, setIsOrderDetailsDialogOpen] = useState(false)
-  const [isPaymentDetailsDialogOpen, setIsPaymentDetailsDialogOpen] = useState(false)
-  const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [restaurantFilter, setRestaurantFilter] = useState("all")
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showRestaurantDropdown, setShowRestaurantDropdown] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isOrderDetailsDialogOpen, setIsOrderDetailsDialogOpen] = useState(false)
+  const [isPaymentDetailsDialogOpen, setIsPaymentDetailsDialogOpen] = useState(false)
+  const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState<Order['status'] | 'all'>('all')
   const [newOrder, setNewOrder] = useState<Partial<Order>>({
-    userId: "",
     restaurantId: "",
-    paymentMethod: "cash",
-    status: "pending",
-    paymentStatus: "pending",
+    totalAmount: 0,
+    status: "pending" as const,
+    paymentMethod: "cash" as const,
+    paymentStatus: "pending" as const,
+    deleted: false,
   })
-  const [orderItems, setOrderItems] = useState<Partial<OrderItem>[]>([
+  
+  const { data: orders = [], isLoading, error } = useGetOrdersQuery()
+  const [updateOrderStatus] = useUpdateOrderStatusMutation()
+  const [createOrder] = useCreateOrderMutation()
+
+  console.log('Orders from API:', orders) // Add this line for debugging
+
+  const columns = [
     {
-      menuItemId: "",
-      quantity: 1,
-      price: 0,
-      discountPercentage: 0,
+      accessorKey: '_id',
+      header: 'Order ID',
     },
-  ])
+    {
+      accessorKey: 'restaurantId',
+      header: 'Restaurant ID',
+    },
+    {
+      accessorKey: 'totalAmount',
+      header: 'Total Amount',
+      cell: ({ row }: { row: any }) => (
+        <span>${row.original.totalAmount.toFixed(2)}</span>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }: { row: any }) => (
+        <OrderStatusBadge status={row.original.status} />
+      ),
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created At',
+      cell: ({ row }: { row: any }) => (
+        <span>{format(new Date(row.original.createdAt), 'PPp')}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }: { row: any }) => {
+        const order = row.original;
+        return (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedOrder(order)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            {order.status === 'pending' && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleStatusUpdate(order._id, 'processing')}
+                >
+                  Process
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => handleStatusUpdate(order._id, 'cancelled')}
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
+            {order.status === 'processing' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleStatusUpdate(order._id, 'completed')}
+              >
+                Complete
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
 
-  // Lọc đơn hàng dựa trên tìm kiếm, trạng thái và nhà hàng
+  const handleCreateOrder = async () => {
+    try {
+      await createOrder(newOrder).unwrap()
+      setIsCreateOrderDialogOpen(false)
+      setNewOrder({
+        restaurantId: "",
+        totalAmount: 0,
+        status: "pending" as const,
+        paymentMethod: "cash" as const,
+        paymentStatus: "pending" as const,
+        deleted: false,
+      })
+    } catch (error) {
+      console.error('Failed to create order:', error)
+    }
+  }
+
+  const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
+    try {
+      await updateOrderStatus({ id: orderId, status: newStatus }).unwrap()
+    } catch (error) {
+      console.error('Failed to update order status:', error)
+    }
+  }
+
+  // Filter orders based on search term and status
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.user?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.restaurant?.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = searchTerm
+      ? order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.restaurantId.toLowerCase().includes(searchTerm.toLowerCase())
+      : true
 
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter
-    const matchesRestaurant = restaurantFilter === "all" || order.restaurantId === restaurantFilter
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "dine-in" && order.orderDetail?.orderType === "dine-in") ||
-      (activeTab === "takeaway" && order.orderDetail?.orderType === "takeaway") ||
-      (activeTab === "delivery" && order.orderDetail?.orderType === "delivery")
+    const matchesStatus = selectedStatus === 'all' ? true : order.status === selectedStatus
 
-    return matchesSearch && matchesStatus && matchesRestaurant && matchesTab
+    return matchesSearch && matchesStatus
   })
 
-  // Xử lý xem chi tiết đơn hàng
-  const handleViewOrderDetails = (order: Order) => {
-    setSelectedOrder(order)
-    setIsOrderDetailsDialogOpen(true)
-  }
-
-  // Xử lý xem chi tiết thanh toán
-  const handleViewPaymentDetails = (order: Order) => {
-    setSelectedOrder(order)
-    setIsPaymentDetailsDialogOpen(true)
-  }
-
-  // Xử lý cập nhật trạng thái đơn hàng
-  const handleUpdateOrderStatus = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order._id === orderId
-          ? {
-              ...order,
-              status: newStatus,
-              updatedAt: new Date(),
-            }
-          : order,
-      ),
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
     )
-
-    if (selectedOrder && selectedOrder._id === orderId) {
-      setSelectedOrder({
-        ...selectedOrder,
-        status: newStatus,
-        updatedAt: new Date(),
-      })
-    }
-
-    // Đóng dialog sau khi cập nhật
-    setIsOrderDetailsDialogOpen(false)
   }
 
-  // Xử lý cập nhật trạng thái thanh toán
-  const handleUpdatePaymentStatus = (orderId: string, newStatus: "paid" | "pending" | "failed") => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order._id === orderId
-          ? {
-              ...order,
-              paymentStatus: newStatus,
-              updatedAt: new Date(),
-            }
-          : order,
-      ),
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full text-red-500">
+        Error loading orders. Please try again later.
+      </div>
     )
-
-    if (selectedOrder && selectedOrder._id === orderId) {
-      setSelectedOrder({
-        ...selectedOrder,
-        paymentStatus: newStatus,
-        updatedAt: new Date(),
-      })
-    }
-
-    // Đóng dialog sau khi cập nhật
-    setIsPaymentDetailsDialogOpen(false)
-  }
-
-  // Xử lý xóa đơn hàng (soft delete)
-  const handleDeleteOrder = (orderId: string) => {
-    if (window.confirm("Are you sure you want to delete this order?")) {
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order._id === orderId
-            ? {
-                ...order,
-                deleted: true,
-                deletedAt: new Date(),
-                updatedAt: new Date(),
-              }
-            : order,
-        ),
-      )
-    }
-  }
-
-  // Xử lý thêm món vào đơn hàng mới
-  const handleAddOrderItem = () => {
-    setOrderItems([...orderItems, { menuItemId: "", quantity: 1, price: 0, discountPercentage: 0 }])
-  }
-
-  // Xử lý xóa món khỏi đơn hàng mới
-  const handleRemoveOrderItem = (index: number) => {
-    setOrderItems(orderItems.filter((_, i) => i !== index))
-  }
-
-  // Xử lý thay đổi thông tin món trong đơn hàng mới
-  const handleOrderItemChange = (index: number, field: string, value: any) => {
-    const updatedItems = [...orderItems]
-    updatedItems[index] = { ...updatedItems[index], [field]: value }
-
-    // Nếu thay đổi menuItemId, cập nhật giá
-    if (field === "menuItemId") {
-      const selectedItem = MOCK_MENU_ITEMS.find((item) => item._id === value)
-      if (selectedItem) {
-        updatedItems[index].price = selectedItem.price
-        updatedItems[index].name = selectedItem.name
-      }
-    }
-
-    // Tính toán tổng tiền cho món
-    if (field === "menuItemId" || field === "quantity" || field === "price" || field === "discountPercentage") {
-      const quantity = updatedItems[index].quantity || 0
-      const price = updatedItems[index].price || 0
-      const discountPercentage = updatedItems[index].discountPercentage || 0
-      const discountAmount = (price * quantity * discountPercentage) / 100
-      updatedItems[index].total = price * quantity - discountAmount
-    }
-
-    setOrderItems(updatedItems)
-  }
-
-  // Tính tổng tiền đơn hàng mới
-  const calculateOrderTotal = () => {
-    return orderItems.reduce((total, item) => total + (item.total || 0), 0)
-  }
-
-  // Xử lý tạo đơn hàng mới
-  const handleCreateOrder = () => {
-    // Kiểm tra dữ liệu đầu vào
-    if (!newOrder.userId || !newOrder.restaurantId || orderItems.length === 0) {
-      alert("Please fill in all required fields")
-      return
-    }
-
-    // Tạo ID mới cho đơn hàng
-    const newOrderId = `ord${Math.floor(Math.random() * 1000)}`
-    const now = new Date()
-    const totalAmount = calculateOrderTotal()
-
-    // Tạo chi tiết đơn hàng
-    const orderDetail: OrderDetail = {
-      _id: `od${Math.floor(Math.random() * 1000)}`,
-      orderId: newOrderId,
-      restaurantId: newOrder.restaurantId as string,
-      items: orderItems.map((item) => ({
-        menuItemId: item.menuItemId as string,
-        name: item.name as string,
-        quantity: item.quantity as number,
-        price: item.price as number,
-        discountPercentage: item.discountPercentage as number,
-        total: item.total as number,
-      })),
-      totalAmount,
-      status: "pending",
-      orderType: (newOrder.orderType as "dine-in" | "takeaway" | "delivery") || "dine-in",
-      deleted: false,
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    // Tạo thanh toán
-    const payment: Payment = {
-      _id: `pay${Math.floor(Math.random() * 1000)}`,
-      amount: totalAmount,
-      userId: newOrder.userId as string,
-      paymentMethod: (newOrder.paymentMethod as "cash") || "cash",
-      orderId: newOrderId,
-      currency: "usd",
-      status: "pending",
-      createdBy: user?._id,
-      deleted: false,
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    // Tạo đơn hàng mới
-    const order: Order = {
-      _id: newOrderId,
-      reservationId: newOrder.reservationId,
-      userId: newOrder.userId as string,
-      restaurantId: newOrder.restaurantId as string,
-      totalAmount,
-      status: "pending",
-      paymentMethod: (newOrder.paymentMethod as "cash") || "cash",
-      paymentStatus: "pending",
-      deleted: false,
-      createdAt: now,
-      updatedAt: now,
-      user: MOCK_USERS.find((u) => u._id === newOrder.userId),
-      restaurant: MOCK_RESTAURANTS.find((r) => r._id === newOrder.restaurantId),
-      reservation: newOrder.reservationId ? MOCK_RESERVATIONS.find((r) => r._id === newOrder.reservationId) : undefined,
-      orderDetail,
-      payment,
-    }
-
-    // Thêm đơn hàng mới vào danh sách
-    setOrders([order, ...orders])
-
-    // Reset form
-    setNewOrder({
-      userId: "",
-      restaurantId: "",
-      paymentMethod: "cash",
-      status: "pending",
-      paymentStatus: "pending",
-    })
-    setOrderItems([
-      {
-        menuItemId: "",
-        quantity: 1,
-        price: 0,
-        discountPercentage: 0,
-      },
-    ])
-
-    // Đóng dialog
-    setIsCreateOrderDialogOpen(false)
-  }
-
-  // Format giá tiền
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price)
-  }
-
-  // Format ngày giờ
-  const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
   }
 
   return (
@@ -785,17 +678,16 @@ export default function OrdersPage() {
                 >
                   All
                 </div>
-                {Object.keys(STATUS_MAP).map((status) => (
+                {Object.entries(STATUS_MAP).map(([key, value]) => (
                   <div
-                    key={status}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                    key={key}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                     onClick={() => {
-                      setStatusFilter(status)
+                      setStatusFilter(key)
                       setShowStatusDropdown(false)
                     }}
                   >
-                    {STATUS_MAP[status as keyof typeof STATUS_MAP].icon}
-                    {STATUS_MAP[status as keyof typeof STATUS_MAP].label}
+                    {value.label}
                   </div>
                 ))}
               </div>
@@ -865,91 +757,10 @@ export default function OrdersPage() {
         <TabsContent value={activeTab} className="space-y-4">
           {filteredOrders.length > 0 ? (
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Restaurant</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order._id} className={order.deleted ? "bg-gray-50 text-gray-500" : ""}>
-                      <TableCell className="font-medium">{order._id}</TableCell>
-                      <TableCell>{formatDateTime(order.createdAt)}</TableCell>
-                      <TableCell>{order.user?.name || "Unknown"}</TableCell>
-                      <TableCell>{order.restaurant?.name || "Unknown"}</TableCell>
-                      <TableCell>
-                        {order.orderDetail?.orderType ? (
-                          <div className="flex items-center gap-1">
-                            {ORDER_TYPE_MAP[order.orderDetail.orderType].icon}
-                            <span>{ORDER_TYPE_MAP[order.orderDetail.orderType].label}</span>
-                          </div>
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                      <TableCell>{formatPrice(order.totalAmount)}</TableCell>
-                      <TableCell>
-                        <Badge className={`${STATUS_MAP[order.status].color} flex items-center gap-1 px-2 py-1`}>
-                          {STATUS_MAP[order.status].icon}
-                          <span>{STATUS_MAP[order.status].label}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={`${PAYMENT_STATUS_MAP[order.paymentStatus].color} flex items-center gap-1 px-2 py-1`}
-                        >
-                          {PAYMENT_STATUS_MAP[order.paymentStatus].icon}
-                          <span>{PAYMENT_STATUS_MAP[order.paymentStatus].label}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewOrderDetails(order)}
-                            disabled={order.deleted}
-                            className="h-8 w-8"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span className="sr-only">View details</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewPaymentDetails(order)}
-                            disabled={order.deleted}
-                            className="h-8 w-8"
-                          >
-                            <CreditCard className="h-4 w-4" />
-                            <span className="sr-only">Payment details</span>
-                          </Button>
-                          {!order.deleted && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteOrder(order._id)}
-                              className="h-8 w-8 text-red-500 hover:text-red-700"
-                            >
-                              <XCircle className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={columns}
+                data={filteredOrders}
+              />
             </div>
           ) : (
             <Card>
@@ -981,331 +792,13 @@ export default function OrdersPage() {
       </Tabs>
 
       {/* Order Details Dialog */}
-      <Dialog open={isOrderDetailsDialogOpen} onOpenChange={setIsOrderDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
-            <DialogDescription>Order {selectedOrder?._id}</DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Order Information</h3>
-                    <div className="mt-2 bg-gray-50 p-3 rounded-md space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Order ID:</span>
-                        <span className="text-sm font-medium">{selectedOrder._id}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Date & Time:</span>
-                        <span className="text-sm">{formatDateTime(selectedOrder.createdAt)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Status:</span>
-                        <Badge
-                          className={`${STATUS_MAP[selectedOrder.status].color} flex items-center gap-1 px-2 py-1`}
-                        >
-                          {STATUS_MAP[selectedOrder.status].icon}
-                          <span>{STATUS_MAP[selectedOrder.status].label}</span>
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Order Type:</span>
-                        {selectedOrder.orderDetail?.orderType ? (
-                          <div className="flex items-center gap-1">
-                            {ORDER_TYPE_MAP[selectedOrder.orderDetail.orderType].icon}
-                            <span className="text-sm">{ORDER_TYPE_MAP[selectedOrder.orderDetail.orderType].label}</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm">N/A</span>
-                        )}
-                      </div>
-                      {selectedOrder.reservation && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-500">Reservation:</span>
-                          <span className="text-sm">
-                            {selectedOrder.reservation.customerName} - {selectedOrder.reservation.reservationDate}{" "}
-                            {selectedOrder.reservation.reservationTime}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Customer Information</h3>
-                    <div className="mt-2 bg-gray-50 p-3 rounded-md space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Name:</span>
-                        <span className="text-sm">{selectedOrder.user?.name || "Unknown"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Email:</span>
-                        <span className="text-sm">{selectedOrder.user?.email || "Unknown"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Phone:</span>
-                        <span className="text-sm">{selectedOrder.user?.phone || "Unknown"}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Restaurant Information</h3>
-                    <div className="mt-2 bg-gray-50 p-3 rounded-md space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Name:</span>
-                        <span className="text-sm">{selectedOrder.restaurant?.name || "Unknown"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Address:</span>
-                        <span className="text-sm">{selectedOrder.restaurant?.address || "Unknown"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Phone:</span>
-                        <span className="text-sm">{selectedOrder.restaurant?.phone || "Unknown"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Payment Information</h3>
-                    <div className="mt-2 bg-gray-50 p-3 rounded-md space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Payment Method:</span>
-                        <div className="flex items-center gap-1">
-                          {PAYMENT_METHOD_MAP[selectedOrder.paymentMethod as keyof typeof PAYMENT_METHOD_MAP].icon}
-                          <span className="text-sm">
-                            {PAYMENT_METHOD_MAP[selectedOrder.paymentMethod as keyof typeof PAYMENT_METHOD_MAP].label}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Payment Status:</span>
-                        <Badge
-                          className={`${PAYMENT_STATUS_MAP[selectedOrder.paymentStatus].color} flex items-center gap-1 px-2 py-1`}
-                        >
-                          {PAYMENT_STATUS_MAP[selectedOrder.paymentStatus].icon}
-                          <span>{PAYMENT_STATUS_MAP[selectedOrder.paymentStatus].label}</span>
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Total Amount:</span>
-                        <span className="text-sm font-medium">{formatPrice(selectedOrder.totalAmount)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Order Items</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Discount</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrder.orderDetail?.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">{formatPrice(item.price)}</TableCell>
-                        <TableCell className="text-right">{item.discountPercentage}%</TableCell>
-                        <TableCell className="text-right">{formatPrice(item.total)}</TableCell>
-                      </TableRow>
-                    ))}
-                    {!selectedOrder.orderDetail?.items.length && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4">
-                          No items found for this order
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <DialogFooter className="flex justify-between sm:justify-between">
-                <div className="flex gap-2">
-                  {!selectedOrder.deleted && (
-                    <>
-                      {selectedOrder.status !== "completed" && (
-                        <Button
-                          onClick={() => handleUpdateOrderStatus(selectedOrder._id, "completed")}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Mark as Completed
-                        </Button>
-                      )}
-                      {selectedOrder.status !== "cancelled" && (
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleUpdateOrderStatus(selectedOrder._id, "cancelled")}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Cancel Order
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-                <Button variant="outline" onClick={() => setIsOrderDetailsDialogOpen(false)}>
-                  Close
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Payment Details Dialog */}
-      <Dialog open={isPaymentDetailsDialogOpen} onOpenChange={setIsPaymentDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Payment Details</DialogTitle>
-            <DialogDescription>Order {selectedOrder?._id}</DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-md space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Payment ID:</span>
-                  <span className="font-medium">{selectedOrder.payment?._id || "N/A"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Amount:</span>
-                  <span className="font-medium">
-                    {formatPrice(selectedOrder.payment?.amount || selectedOrder.totalAmount)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Method:</span>
-                  <div className="flex items-center gap-1">
-                    {selectedOrder.payment?.paymentMethod ? (
-                      <>
-                        {
-                          PAYMENT_METHOD_MAP[selectedOrder.payment.paymentMethod as keyof typeof PAYMENT_METHOD_MAP]
-                            .icon
-                        }
-                        <span>
-                          {
-                            PAYMENT_METHOD_MAP[selectedOrder.payment.paymentMethod as keyof typeof PAYMENT_METHOD_MAP]
-                              .label
-                          }
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        {PAYMENT_METHOD_MAP[selectedOrder.paymentMethod as keyof typeof PAYMENT_METHOD_MAP].icon}
-                        <span>
-                          {PAYMENT_METHOD_MAP[selectedOrder.paymentMethod as keyof typeof PAYMENT_METHOD_MAP].label}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Status:</span>
-                  <Badge
-                    className={`${PAYMENT_STATUS_MAP[selectedOrder.paymentStatus].color} flex items-center gap-1 px-2 py-1`}
-                  >
-                    {PAYMENT_STATUS_MAP[selectedOrder.paymentStatus].icon}
-                    <span>{PAYMENT_STATUS_MAP[selectedOrder.paymentStatus].label}</span>
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Date:</span>
-                  <span>
-                    {selectedOrder.payment
-                      ? formatDateTime(selectedOrder.payment.createdAt)
-                      : formatDateTime(selectedOrder.createdAt)}
-                  </span>
-                </div>
-                {selectedOrder.payment?.transactionId && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Transaction ID:</span>
-                    <span>{selectedOrder.payment.transactionId}</span>
-                  </div>
-                )}
-                {selectedOrder.payment?.currency && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Currency:</span>
-                    <span>{selectedOrder.payment.currency.toUpperCase()}</span>
-                  </div>
-                )}
-              </div>
-
-              {selectedOrder.payment?.paymentMethod === "stripe" && (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Stripe Information</h3>
-                  <div className="bg-gray-50 p-4 rounded-md space-y-3">
-                    {selectedOrder.payment.stripePaymentIntentId && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Payment Intent ID:</span>
-                        <span className="text-sm font-mono">{selectedOrder.payment.stripePaymentIntentId}</span>
-                      </div>
-                    )}
-                    {selectedOrder.payment.stripeCustomerId && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Customer ID:</span>
-                        <span className="text-sm font-mono">{selectedOrder.payment.stripeCustomerId}</span>
-                      </div>
-                    )}
-                    {selectedOrder.payment.stripeChargeId && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Charge ID:</span>
-                        <span className="text-sm font-mono">{selectedOrder.payment.stripeChargeId}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <DialogFooter className="flex justify-between sm:justify-between">
-                <div className="flex gap-2">
-                  {!selectedOrder.deleted && (
-                    <>
-                      {selectedOrder.paymentStatus !== "paid" && (
-                        <Button
-                          onClick={() => handleUpdatePaymentStatus(selectedOrder._id, "paid")}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Mark as Paid
-                        </Button>
-                      )}
-                      {selectedOrder.paymentStatus !== "failed" && (
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleUpdatePaymentStatus(selectedOrder._id, "failed")}
-                        >
-                          <AlertCircle className="h-4 w-4 mr-2" />
-                          Mark as Failed
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-                <Button variant="outline" onClick={() => setIsPaymentDetailsDialogOpen(false)}>
-                  Close
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        {selectedOrder && (
+          <OrderDetails
+            order={selectedOrder}
+            onClose={() => setSelectedOrder(null)}
+          />
+        )}
       </Dialog>
 
       {/* Create Order Dialog */}
@@ -1320,87 +813,33 @@ export default function OrdersPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="userId">Customer</Label>
-                  <Select
-                    value={newOrder.userId}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, userId: value })}
-                  >
-                    <SelectTrigger id="userId">
-                      <SelectValue placeholder="Select a customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOCK_USERS.map((user) => (
-                        <SelectItem key={user._id} value={user._id}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="restaurantId">Restaurant</Label>
-                  <Select
+                  <Label htmlFor="restaurantId">Restaurant ID</Label>
+                  <Input
+                    id="restaurantId"
                     value={newOrder.restaurantId}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, restaurantId: value })}
-                  >
-                    <SelectTrigger id="restaurantId">
-                      <SelectValue placeholder="Select a restaurant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOCK_RESTAURANTS.map((restaurant) => (
-                        <SelectItem key={restaurant._id} value={restaurant._id}>
-                          {restaurant.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(e) => setNewOrder({ ...newOrder, restaurantId: e.target.value })}
+                    placeholder="Enter restaurant ID"
+                  />
                 </div>
 
                 <div>
-                  <Label htmlFor="reservationId">Reservation (Optional)</Label>
-                  <Select
-                    value={newOrder.reservationId}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, reservationId: value })}
-                  >
-                    <SelectTrigger id="reservationId">
-                      <SelectValue placeholder="Select a reservation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No Reservation</SelectItem>
-                      {MOCK_RESERVATIONS.map((reservation) => (
-                        <SelectItem key={reservation._id} value={reservation._id}>
-                          {reservation.customerName} - {reservation.reservationDate} {reservation.reservationTime}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="totalAmount">Total Amount</Label>
+                  <Input
+                    id="totalAmount"
+                    type="number"
+                    value={newOrder.totalAmount}
+                    onChange={(e) => setNewOrder({ ...newOrder, totalAmount: parseFloat(e.target.value) })}
+                    placeholder="Enter total amount"
+                  />
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="orderType">Order Type</Label>
-                  <Select
-                    value={newOrder.orderType}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, orderType: value })}
-                  >
-                    <SelectTrigger id="orderType">
-                      <SelectValue placeholder="Select order type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dine-in">Dine-in</SelectItem>
-                      <SelectItem value="takeaway">Takeaway</SelectItem>
-                      <SelectItem value="delivery">Delivery</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <Label htmlFor="paymentMethod">Payment Method</Label>
                   <Select
                     value={newOrder.paymentMethod}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, paymentMethod: value })}
+                    onValueChange={(value: 'cash' | 'card' | 'QR') => setNewOrder({ ...newOrder, paymentMethod: value })}
                   >
                     <SelectTrigger id="paymentMethod">
                       <SelectValue placeholder="Select payment method" />
@@ -1412,125 +851,7 @@ export default function OrdersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div>
-                  <Label htmlFor="notes">Notes (Optional)</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Any special instructions or notes"
-                    value={newOrder.notes || ""}
-                    onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
-                  />
-                </div>
               </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-sm font-medium text-gray-700">Order Items</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddOrderItem}
-                  className="h-8 px-2 text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add Item
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {orderItems.map((item, index) => (
-                  <div key={index} className="flex flex-wrap gap-2 items-end p-3 bg-gray-50 rounded-md">
-                    <div className="flex-1 min-w-[200px]">
-                      <Label htmlFor={`item-${index}`} className="text-xs">
-                        Item
-                      </Label>
-                      <Select
-                        value={item.menuItemId || ""}
-                        onValueChange={(value) => handleOrderItemChange(index, "menuItemId", value)}
-                      >
-                        <SelectTrigger id={`item-${index}`}>
-                          <SelectValue placeholder="Select an item" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {MOCK_MENU_ITEMS.map((menuItem) => (
-                            <SelectItem key={menuItem._id} value={menuItem._id}>
-                              {menuItem.name} - {formatPrice(menuItem.price)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="w-20">
-                      <Label htmlFor={`quantity-${index}`} className="text-xs">
-                        Quantity
-                      </Label>
-                      <Input
-                        id={`quantity-${index}`}
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => handleOrderItemChange(index, "quantity", Number.parseInt(e.target.value) || 1)}
-                      />
-                    </div>
-
-                    <div className="w-24">
-                      <Label htmlFor={`price-${index}`} className="text-xs">
-                        Price
-                      </Label>
-                      <Input
-                        id={`price-${index}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.price}
-                        onChange={(e) => handleOrderItemChange(index, "price", Number.parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-
-                    <div className="w-24">
-                      <Label htmlFor={`discount-${index}`} className="text-xs">
-                        Discount %
-                      </Label>
-                      <Input
-                        id={`discount-${index}`}
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={item.discountPercentage}
-                        onChange={(e) =>
-                          handleOrderItemChange(index, "discountPercentage", Number.parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </div>
-
-                    <div className="w-24">
-                      <Label className="text-xs">Total</Label>
-                      <div className="h-10 px-3 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-900">
-                        {formatPrice(item.total || 0)}
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveOrderItem(index)}
-                      className="h-10 w-10 text-red-500 hover:text-red-700"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center pt-4 border-t">
-              <div className="text-lg font-semibold">Total: {formatPrice(calculateOrderTotal())}</div>
             </div>
 
             <DialogFooter>

@@ -15,6 +15,7 @@ import storage from 'redux-persist/lib/storage';
 import authReducer from '../slices';
 import { authApi, stripeApi } from '../api';
 import { userApi } from '../api/userApi';
+import { orderApi } from '../api/order';
 import userReducer from '../slices/userSlice';
 
 const persistConfig = {
@@ -28,6 +29,7 @@ const rootReducer = combineReducers({
   [authApi.reducerPath]: authApi.reducer,
   [stripeApi.reducerPath]: stripeApi.reducer,
   [userApi.reducerPath]: userApi.reducer,
+  [orderApi.reducerPath]: orderApi.reducer,
   user: userReducer,
 });
 
@@ -40,7 +42,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }).concat(authApi.middleware, stripeApi.middleware, userApi.middleware),
+    }).concat(authApi.middleware, stripeApi.middleware, userApi.middleware, orderApi.middleware),
   devTools: process.env.NODE_ENV !== 'production',
 });
 
