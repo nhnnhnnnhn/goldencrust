@@ -17,6 +17,7 @@ import { authApi, stripeApi, restaurantApi } from '../api';
 import { userApi } from '../api/userApi';
 import { orderApi } from '../api/order';
 import userReducer from '../slices/userSlice';
+import validateTokenApi from '../api/validateTokenApi';
 
 const persistConfig = {
   key: 'root',
@@ -31,6 +32,7 @@ const rootReducer = combineReducers({
   [userApi.reducerPath]: userApi.reducer,
   [orderApi.reducerPath]: orderApi.reducer,
   [restaurantApi.reducerPath]: restaurantApi.reducer,
+  [validateTokenApi.reducerPath]: validateTokenApi.reducer,
   user: userReducer,
 });
 
@@ -48,7 +50,8 @@ export const store = configureStore({
       stripeApi.middleware, 
       userApi.middleware, 
       orderApi.middleware,
-      restaurantApi.middleware
+      restaurantApi.middleware,
+      validateTokenApi.middleware
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });
