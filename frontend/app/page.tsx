@@ -426,10 +426,28 @@ export default function Home() {
             </div>
 
             <div className="relative z-10 px-6 pb-20 md:px-12">
-              {/* Country display */}
-              <div className="mb-8 flex flex-col gap-2 text-white">
-                {/* Thay đổi text trong home section */}
-                <h1 className="text-left text-4xl font-light md:text-6xl">{t.home.country}</h1>
+              {/* Restaurants display */}
+              <div className="mb-8 flex flex-col gap-4 text-white">
+                {restaurants.length === 0 ? (
+                  <h1 className="text-left text-4xl font-light md:text-6xl">{t.home.country}</h1>
+                ) : (
+                  <div className="flex flex-col gap-8">
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                      {restaurants.map((restaurant) => (
+                        <div key={restaurant._id} className="flex-none">
+                          <h2 className="text-left text-3xl font-light md:text-5xl hover:text-blue-300 transition-colors cursor-pointer">
+                            {restaurant.name}
+                          </h2>
+                          {restaurant.description && (
+                            <p className="text-lg font-light text-white/70 mt-2 max-w-md">
+                              {restaurant.description}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>

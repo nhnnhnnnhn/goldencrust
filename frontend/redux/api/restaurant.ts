@@ -12,7 +12,7 @@ interface Restaurant {
     open: string;
     close: string;
   };
-  status: 'active' | 'inactive';
+  status: 'open' | 'closed';
   rating?: number;
   cuisine?: string[];
   images?: string[];

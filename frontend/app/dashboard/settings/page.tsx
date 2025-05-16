@@ -567,13 +567,12 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(section)}
                 >
                   <span className="capitalize">{section}</span>
-                  <Switch
-                    checked={pageData[section as keyof typeof pageData].visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange(section, checked)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-7"
-                    thumbClassName="h-3 w-3"
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData[section as keyof typeof pageData].visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange(section, checked)}
+                    />
+                  </div>
                 </button>
               ))}
             </div>
@@ -607,10 +606,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần giới thiệu (Hero)</h2>
-                  <Switch
-                    checked={pageData.hero.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("hero", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.hero.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("hero", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="mb-6 overflow-hidden rounded-md border border-gray-200">
@@ -682,10 +683,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần giới thiệu (About)</h2>
-                  <Switch
-                    checked={pageData.about.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("about", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.about.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("about", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="mb-6 grid gap-6 md:grid-cols-2">
@@ -756,10 +759,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần Concept</h2>
-                  <Switch
-                    checked={pageData.concept.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("concept", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.concept.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("concept", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="mb-6 grid gap-6 md:grid-cols-2">
@@ -830,10 +835,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần Địa điểm</h2>
-                  <Switch
-                    checked={pageData.locations.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("locations", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.locations.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("locations", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -934,10 +941,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần Nhà hàng</h2>
-                  <Switch
-                    checked={pageData.restaurant.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("restaurant", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.restaurant.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("restaurant", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="mb-6 grid gap-6 md:grid-cols-2">
@@ -1078,10 +1087,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần Menu</h2>
-                  <Switch
-                    checked={pageData.menu.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("menu", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.menu.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("menu", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -1208,10 +1219,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần Thư viện ảnh</h2>
-                  <Switch
-                    checked={pageData.gallery.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("gallery", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.gallery.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("gallery", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -1237,26 +1250,16 @@ export default function SettingsPage() {
                     <Label>Hình ảnh</Label>
                     <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                       {pageData.gallery.images.map((image, index) => (
-                        <div key={index} className="overflow-hidden rounded-md border border-gray-200">
-                          <div className="relative h-40 w-full">
-                            <Image
-                              src={image.src || "/placeholder.svg"}
-                              alt={image.alt}
-                              className="object-cover"
-                              fill
-                            />
-                          </div>
-                          <div className="flex justify-between bg-gray-50 p-2">
-                            <span className="text-sm text-gray-500 truncate max-w-[120px]">{image.alt}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleEditItem("galleryImage", image, index)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                              <span className="sr-only">Chỉnh sửa</span>
-                            </Button>
+                        <div key={index} className="group relative aspect-square overflow-hidden rounded-lg">
+                          <Image
+                            src={image.src || "/placeholder.svg"}
+                            alt={image.alt}
+                            className="object-cover transition-transform duration-300 group-hover:scale-110"
+                            fill
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                          <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                            <span>{image.alt}</span>
                           </div>
                         </div>
                       ))}
@@ -1292,10 +1295,12 @@ export default function SettingsPage() {
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Phần Liên hệ</h2>
-                  <Switch
-                    checked={pageData.contact.visible}
-                    onCheckedChange={(checked) => handleSectionVisibilityChange("contact", checked)}
-                  />
+                  <div className="flex items-center">
+                    <Switch
+                      checked={pageData.contact.visible}
+                      onCheckedChange={(checked) => handleSectionVisibilityChange("contact", checked)}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
