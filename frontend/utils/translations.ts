@@ -108,6 +108,26 @@ type TranslationKeys = {
     facebook: string
     copyright: string
   }
+  auth: {
+    login: string
+    register: string
+    email: string
+    password: string
+    forgotPassword: string
+    dontHaveAccount: string
+    registerHere: string
+    loggingIn: string
+    loginWithGoogle: string
+    or: string
+    termsOfService: string
+    privacyPolicy: string
+    bySigningIn: string
+    loginError: string
+    googleLoginError: string
+    emailRequired: string
+    passwordRequired: string
+    connectError: string
+  }
 }
 
 export const translations: Record<"en" | "vi", TranslationKeys> = {
@@ -227,7 +247,27 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       press: "Press",
       instagram: "Instagram",
       facebook: "Facebook",
-      copyright: "© 2023 Pizza 4P's. All rights reserved.",
+      copyright: " 2023 Pizza 4P's. All rights reserved.",
+    },
+    auth: {
+      login: "Login",
+      register: "Register",
+      email: "Email",
+      password: "Password",
+      forgotPassword: "Forgot password?",
+      dontHaveAccount: "Don't have an account?",
+      registerHere: "Register here",
+      loggingIn: "Logging in...",
+      loginWithGoogle: "Login with Google",
+      or: "or",
+      termsOfService: "Terms of Service",
+      privacyPolicy: "Privacy Policy",
+      bySigningIn: "By signing in, you agree to our",
+      loginError: "Please enter both email and password",
+      googleLoginError: "Cannot connect to Google login service. Please try again later.",
+      emailRequired: "Email is required",
+      passwordRequired: "Password is required",
+      connectError: "Failed to connect to the server. Please check your internet connection."
     },
   },
   vi: {
@@ -347,6 +387,26 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       instagram: "Instagram",
       facebook: "Facebook",
       copyright: "© 2023 Pizza 4P's. Bản quyền thuộc về chúng tôi.",
+    },
+    auth: {
+      login: "Đăng nhập",
+      register: "Đăng ký",
+      email: "Email",
+      password: "Mật khẩu",
+      forgotPassword: "Quên mật khẩu?",
+      dontHaveAccount: "Chưa có tài khoản?",
+      registerHere: "Đăng ký tại đây",
+      loggingIn: "Đang đăng nhập...",
+      loginWithGoogle: "Đăng nhập bằng Google",
+      or: "hoặc",
+      termsOfService: "Điều khoản dịch vụ",
+      privacyPolicy: "Chính sách bảo mật",
+      bySigningIn: "Bằng cách đăng nhập, bạn đồng ý với",
+      loginError: "Vui lòng nhập đầy đủ email và mật khẩu",
+      googleLoginError: "Không thể kết nối đến dịch vụ đăng nhập Google. Vui lòng thử lại sau.",
+      emailRequired: "Email là bắt buộc",
+      passwordRequired: "Mật khẩu là bắt buộc",
+      connectError: "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối internet của bạn."
     },
   },
 }
