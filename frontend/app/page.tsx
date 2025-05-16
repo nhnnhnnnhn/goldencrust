@@ -254,9 +254,6 @@ export default function Home() {
               <Link href="/delivery" className="hover:underline">
                 {t.navigation.delivery}
               </Link>
-              <Link href="#" className="hover:underline">
-                {t.navigation.career}
-              </Link>
 
               {user ? (
                 <DropdownMenu>
