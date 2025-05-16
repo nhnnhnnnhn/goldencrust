@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const passport = require('passport');
 const authController = require('../controllers/auth.controller');
+const googleAuthController = require('../controllers/google-auth.controller');
 const validateTokenController = require('../controllers/validateToken');
 
 // Login route
@@ -29,5 +31,9 @@ router.post('/verify-otp-forgot-password', authController.verifyOtpForgotPasswor
 
 // Validate token route
 router.get('/validate-token', validateTokenController.validateToken);
+
+// Google OAuth routes
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google/callback', passport.authenticate('google', { session: false, failureRedirect: '/login' }), googleAuthController.googleCallback);
 
 module.exports = router;

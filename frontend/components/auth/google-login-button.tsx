@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { useEffect, useState } from "react"
+import { getTranslation } from "@/utils/translations"
 
 interface GoogleLoginButtonProps {
   onClick?: () => void
@@ -14,6 +16,17 @@ export function GoogleLoginButton({
   isLoading = false,
   className = "",
 }: GoogleLoginButtonProps) {
+  const [language, setLanguage] = useState<"en" | "vi">("en")
+  
+  // Lấy ngôn ngữ từ localStorage khi component được tạo
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+  }, [])
+  
+  const t = getTranslation(language)
   return (
     <Button
       type="button"
@@ -35,7 +48,7 @@ export function GoogleLoginButton({
           />
         </div>
       )}
-      <span>Đăng nhập bằng Google</span>
+      <span>{t.auth.loginWithGoogle}</span>
     </Button>
   )
 }
