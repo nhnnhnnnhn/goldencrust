@@ -744,11 +744,6 @@ export default function Home() {
                   </Button>
                 </div>
               </div>
-
-              {/* Thay đổi text trong footer */}
-              <footer className="absolute bottom-0 left-0 right-0 border-t border-white/20 py-4 text-white/60 text-center text-sm backdrop-blur-sm bg-black/20">
-                <div className="container mx-auto">{t.contact.copyright}</div>
-              </footer>
             </div>
           </section>
         </main>
