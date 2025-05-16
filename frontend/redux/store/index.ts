@@ -16,12 +16,16 @@ import authReducer from '../slices';
 import { authApi, stripeApi, restaurantApi } from '../api';
 import { userApi } from '../api/userApi';
 import { orderApi } from '../api/order';
+import { reservationApi } from '../api/reservationApi';
+import { tableApi } from '../api/tableApi';
+import { reservedTableApi } from '../api/reservedTableApi';
 import userReducer from '../slices/userSlice';
+import validateTokenApi from '../api/validateTokenApi';
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'] // chỉ persist auth state
+  whitelist: ['auth', 'cart'], // only auth and cart will be persisted
 };
 
 const rootReducer = combineReducers({
@@ -31,6 +35,10 @@ const rootReducer = combineReducers({
   [userApi.reducerPath]: userApi.reducer,
   [orderApi.reducerPath]: orderApi.reducer,
   [restaurantApi.reducerPath]: restaurantApi.reducer,
+  [validateTokenApi.reducerPath]: validateTokenApi.reducer,
+  [reservationApi.reducerPath]: reservationApi.reducer,
+  [tableApi.reducerPath]: tableApi.reducer,
+  [reservedTableApi.reducerPath]: reservedTableApi.reducer,
   user: userReducer,
 });
 
@@ -48,7 +56,11 @@ export const store = configureStore({
       stripeApi.middleware, 
       userApi.middleware, 
       orderApi.middleware,
-      restaurantApi.middleware
+      restaurantApi.middleware,
+      validateTokenApi.middleware,
+      reservationApi.middleware,
+      tableApi.middleware,
+      reservedTableApi.middleware,
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });

@@ -5,6 +5,7 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Providers } from "./providers"
+import TokenValidator from "./TokenValidator"
 
 const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "700"] })
 
@@ -24,6 +25,7 @@ export default function RootLayout({
         <Providers>
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+              <TokenValidator />
               {children}
             </ThemeProvider>
           </AuthProvider>

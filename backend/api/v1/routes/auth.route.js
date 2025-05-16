@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const validateTokenController = require('../controllers/validateToken');
 
 // Login route
 router.post('/login', authController.loginUser);
@@ -25,5 +26,8 @@ router.post('/reset-password', authController.resetPassword);
 
 // Verify OTP for forgot password route
 router.post('/verify-otp-forgot-password', authController.verifyOtpForgotPassword);
+
+// Validate token route
+router.get('/validate-token', validateTokenController.validateToken);
 
 module.exports = router;

@@ -344,9 +344,7 @@ export default function Home() {
               <Link href="/delivery" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
                 {t.navigation.delivery}
               </Link>
-              <Link href="#" className="text-2xl font-light hover:underline" onClick={() => setMenuOpen(false)}>
-                {t.navigation.career}
-              </Link>
+
 
               {user ? (
                 <>
@@ -383,14 +381,7 @@ export default function Home() {
                     className="text-2xl font-light hover:underline"
                     onClick={() => setMenuOpen(false)}
                   >
-                    {t.navigation.login}
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="text-2xl font-light hover:underline"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    {t.navigation.register || "Register"}
+                    LOGIN/REGISTER
                   </Link>
                 </>
               )}
