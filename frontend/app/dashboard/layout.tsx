@@ -74,7 +74,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/dashboard/menu-management", label: t.dashboard.menu, icon: <MenuIcon className="h-5 w-5" /> },
     { href: "/dashboard/reservations", label: t.dashboard.reservations, icon: <Calendar className="h-5 w-5" /> },
     { href: "/dashboard/delivery", label: t.dashboard.delivery, icon: <Truck className="h-5 w-5" /> },
-    { href: "/dashboard/statistics", label: t.dashboard.statistics, icon: <BarChart2 className="h-5 w-5" /> },
     { href: "/dashboard/table-management", label: t.dashboard.table, icon: <Settings className="h-5 w-5" /> },
     { href: "/dashboard/payment", label: t.dashboard.payment, icon: <CreditCard className="h-5 w-5" /> },
     { href: "/dashboard/settings", label: t.dashboard.settings, icon: <Settings className="h-5 w-5" /> },
