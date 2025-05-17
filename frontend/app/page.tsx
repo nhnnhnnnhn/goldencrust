@@ -462,13 +462,15 @@ export default function Home() {
                 <h2 className="text-5xl font-light mb-8">{t.about.title}</h2>
                 <p className="text-xl font-light mb-6">{t.about.paragraph1}</p>
                 <p className="text-xl font-light mb-10">{t.about.paragraph2}</p>
-                <Button
-                  variant="outline"
-                  className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
-                >
-                  {t.about.learnMore}
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
+                <Link href="/our-story">
+                  <Button
+                    variant="outline"
+                    className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
+                  >
+                    {t.about.learnMore}
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
               </div>
             </div>
           </section>
@@ -495,13 +497,15 @@ export default function Home() {
                 <h2 className="text-5xl font-light mb-8">{t.concept.title}</h2>
                 <p className="text-xl font-light mb-6">{t.concept.paragraph1}</p>
                 <p className="text-xl font-light mb-10">{t.concept.paragraph2}</p>
-                <Button
-                  variant="outline"
-                  className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
-                >
-                  {t.concept.discoverIngredients}
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
+                <Link href="/farm-to-table">
+                  <Button
+                    variant="outline"
+                    className="border-white text-white bg-black/30 hover:bg-white hover:text-black group"
+                  >
+                    {t.concept.discoverIngredients}
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
               </div>
             </div>
           </section>
@@ -700,7 +704,7 @@ export default function Home() {
               <div className="text-center mt-12">
                 {/* Thay đổi text trong view full menu button */}
                 <Link
-                  href="/delivery"
+                  href="/menu"
                   className="inline-flex items-center border border-white px-6 py-3 rounded-full text-lg font-light bg-black/30 hover:bg-white/20 transition-all"
                 >
                   {t.menu.viewFullMenu}

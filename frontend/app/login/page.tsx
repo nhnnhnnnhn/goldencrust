@@ -20,7 +20,7 @@ import { clearError } from "@/redux/slices/authSlice"
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get("redirect") || "/dashboard"
+  const redirect = searchParams.get("redirect") || "/"
   const { login: contextLogin } = useAuth() // Keep auth context for now as we transition
   const [login, { isLoading }] = useLoginMutation()
   const { error } = useAppSelector((state: any) => state.auth || {})
@@ -58,7 +58,7 @@ const handleGoogleLogin = () => {
   try {
     setIsGoogleLoading(true);
     // Lưu URL redirect sau khi đăng nhập thành công (nếu có)
-    const redirect = searchParams.get("redirect") || "/dashboard";
+    const redirect = searchParams.get("redirect") || "/";
     localStorage.setItem("redirectAfterLogin", redirect);
     
     // Chuyển hướng đến endpoint backend xử lý OAuth Google
