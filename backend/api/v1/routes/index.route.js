@@ -9,9 +9,11 @@ const paymentRoute = require('./payment.route');
 const orderRoute = require('./order.route');
 const orderDetailRoute = require('./orderDetail.route');
 const stripeRoute = require('./stripe.routes');
+const deliveryRoute = require('./delivery.route');
 const categoryRoute = require('./category.route');
 const chatRoute = require('./chat.routes');
 const authMiddleware = require('../middlewares/auth.middleware');
+
 
 module.exports = (app) => {
     const version = '/api/v1';
@@ -25,8 +27,9 @@ module.exports = (app) => {
     app.use(version + '/reservations', authMiddleware, reservationRoute);
     app.use(version + '/reserved-tables', authMiddleware, reservedTableRoute);
     app.use(version + '/tables', authMiddleware, tableRoute);
-    app.use(version + '/orders', orderRoute);
-    app.use(version + '/order-details', orderDetailRoute);
+    app.use(version + '/orders', authMiddleware, orderRoute);
+    app.use(version + '/order-details', authMiddleware, orderDetailRoute);
+    app.use(version + '/deliveries', authMiddleware, deliveryRoute);
     // app.use(version + '/payments', authMiddleware, paymentRoute);
     app.use(version + '/stripe', stripeRoute);
     app.use(version + '/categories', categoryRoute);
