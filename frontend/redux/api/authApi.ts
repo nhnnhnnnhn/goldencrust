@@ -15,6 +15,9 @@ interface RegisterRequest {
   fullName: string;
   phone: string;
   address: string;
+  googleId?: string;
+  googleToken?: string;
+  isGoogleSignup?: boolean;
 }
 
 interface VerifyOtpRequest {

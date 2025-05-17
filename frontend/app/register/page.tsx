@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ChevronLeft, Eye, EyeOff, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,16 +15,27 @@ import { useRegisterMutation } from "@/redux/api/authApi"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [register, { isLoading }] = useRegisterMutation()
   const [showPassword, setShowPassword] = useState(false)
   const [registerError, setRegisterError] = useState<string | null>(null)
+  
+  // Kiểm tra xem có phải đang đăng ký từ Google OAuth không
+  const isGoogleSignup = searchParams.get('google_signup') === 'true'
+  const googleEmail = searchParams.get('email') || ''
+  const googleFullName = searchParams.get('fullName') || ''
+  const googleToken = searchParams.get('token') || ''
+  const googleId = searchParams.get('googleId') || ''
+  
   const [registerData, setRegisterData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+    fullName: isGoogleSignup ? googleFullName : "",
+    email: isGoogleSignup ? googleEmail : "",
+    password: isGoogleSignup ? Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10) : "", // Random password if Google signup
+    confirmPassword: isGoogleSignup ? Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10) : "",
     phone: "",
     address: "",
+    googleId: isGoogleSignup ? googleId : "",
+    googleToken: isGoogleSignup ? googleToken : "",
   })
   const [language, setLanguage] = useState<"en" | "vi">("en")
   const [registerErrors, setRegisterErrors] = useState<{
@@ -33,6 +44,7 @@ export default function RegisterPage() {
     password?: string
     confirmPassword?: string
     phone?: string
+    address?: string
   }>({})
 
   // Get language from localStorage
@@ -65,16 +77,19 @@ export default function RegisterPage() {
       errors.email = "Email không hợp lệ"
     }
 
-    if (!registerData.password) {
-      errors.password = "Mật khẩu là bắt buộc"
-    } else if (registerData.password.length < 8) {
-      errors.password = "Mật khẩu phải có ít nhất 8 ký tự"
-    }
+    // Bỏ qua kiểm tra mật khẩu nếu đăng ký từ Google
+    if (!isGoogleSignup) {
+      if (!registerData.password) {
+        errors.password = "Mật khẩu là bắt buộc"
+      } else if (registerData.password.length < 8) {
+        errors.password = "Mật khẩu phải có ít nhất 8 ký tự"
+      }
 
-    if (!registerData.confirmPassword) {
-      errors.confirmPassword = "Vui lòng xác nhận mật khẩu"
-    } else if (registerData.password !== registerData.confirmPassword) {
-      errors.confirmPassword = "Mật khẩu không khớp"
+      if (!registerData.confirmPassword) {
+        errors.confirmPassword = "Vui lòng xác nhận mật khẩu"
+      } else if (registerData.password !== registerData.confirmPassword) {
+        errors.confirmPassword = "Mật khẩu không khớp"
+      }
     }
 
     if (!registerData.phone) {
@@ -101,25 +116,43 @@ export default function RegisterPage() {
 
     try {
       // Gọi API đăng ký từ backend thông qua Redux Toolkit
+      // Thêm thông tin Google nếu đăng ký từ Google
       await register({
         email: registerData.email,
         password: registerData.password,
         fullName: registerData.fullName,
         phone: registerData.phone,
         address: registerData.address,
+        googleId: registerData.googleId || undefined,
+        googleToken: registerData.googleToken || undefined,
+        isGoogleSignup: isGoogleSignup,
       }).unwrap()
 
-      // Lưu email để sử dụng trong trang xác thực OTP
-      localStorage.setItem(
-        "pendingRegistration",
-        JSON.stringify({
-          email: registerData.email,
-          fullName: registerData.fullName,
-        }),
-      )
+      // Nếu đăng ký từ Google, chuyển thẳng về trang chủ vì email đã được xác minh
+      if (isGoogleSignup) {
+        // Lấy token trả về từ API (nếu có)
+        const token = localStorage.getItem('googleToken') || registerData.googleToken
+        
+        if (token) {
+          // Lưu token vào localStorage để duy trì đăng nhập
+          localStorage.setItem('accessToken', token)
+        }
+        
+        // Chuyển về trang chủ
+        router.push('/')
+      } else {
+        // Đối với đăng ký thông thường, lưu email để sử dụng trong trang xác thực OTP
+        localStorage.setItem(
+          "pendingRegistration",
+          JSON.stringify({
+            email: registerData.email,
+            fullName: registerData.fullName,
+          }),
+        )
 
-      // Chuyển hướng đến trang xác thực OTP
-      router.push("/verify-otp?action=register")
+        // Chuyển hướng đến trang xác thực OTP
+        router.push("/verify-otp?action=register")
+      }
     } catch (err: any) {
       console.error('Registration error:', err)
       if (err.status === 'FETCH_ERROR') {
@@ -164,12 +197,13 @@ export default function RegisterPage() {
               <form onSubmit={handleRegisterSubmit}>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="register-name">Full Name</Label>
+                    <Label htmlFor="register-fullname">Full Name</Label>
                     <Input
-                      id="register-name"
+                      id="register-fullname"
                       placeholder="John Doe"
                       value={registerData.fullName}
                       onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
+                      disabled={isGoogleSignup} // Vô hiệu hóa nếu là đăng ký từ Google
                       required
                     />
                     {registerErrors.fullName && <p className="text-sm text-red-600">{registerErrors.fullName}</p>}
@@ -180,9 +214,10 @@ export default function RegisterPage() {
                     <Input
                       id="register-email"
                       type="email"
-                      placeholder="your.email@example.com"
+                      placeholder="john.doe@example.com"
                       value={registerData.email}
                       onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                      disabled={isGoogleSignup} // Vô hiệu hóa nếu là đăng ký từ Google
                       required
                     />
                     {registerErrors.email && <p className="text-sm text-red-600">{registerErrors.email}</p>}
@@ -218,42 +253,55 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="register-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={registerData.password}
-                        onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {registerErrors.password && <p className="text-sm text-red-600">{registerErrors.password}</p>}
-                  </div>
+                  {!isGoogleSignup && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="register-password">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="register-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={registerData.password}
+                            onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        {registerErrors.password && <p className="text-sm text-red-600">{registerErrors.password}</p>}
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={registerData.confirmPassword}
-                      onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                      required
-                    />
-                    {registerErrors.confirmPassword && (
-                      <p className="text-sm text-red-600">{registerErrors.confirmPassword}</p>
-                    )}
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-password">Confirm Password</Label>
+                        <Input
+                          id="confirm-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={registerData.confirmPassword}
+                          onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                          required
+                        />
+                        {registerErrors.confirmPassword && (
+                          <p className="text-sm text-red-600">{registerErrors.confirmPassword}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  
+                  {isGoogleSignup && (
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-800">
+                        Bạn đang đăng ký tài khoản với Google. Email và họ tên đã được điền sẵn từ tài khoản Google của bạn.
+                        Vui lòng cung cấp thêm số điện thoại và địa chỉ để hoàn tất đăng ký.
+                      </p>
+                    </div>
+                  )}
 
                   <Button 
                     type="submit" 

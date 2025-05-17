@@ -5,6 +5,12 @@ const userSchema = new mongoose.Schema(
         fullName: String,
         email: String,
         password: String,
+        googleId: String, // ID nhận diện người dùng Google
+        source: { // Nguồn đăng ký tài khoản
+            type: String,
+            enum: ['local', 'google', 'facebook'],
+            default: 'local'
+        },
         role: {
             type: String,
             enum: ['admin', 'employee', 'user'],
