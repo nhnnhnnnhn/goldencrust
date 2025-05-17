@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookie = require('cookie-parser');
 const database = require('./config/database');
+const passport = require('./config/passport');
 const routes = require('./api/v1/routes/index.route');
 const logger = require('./helpers/logger');
 const httpLogger = require('./middlewares/httpLogger.middleware');
@@ -32,6 +34,8 @@ app.use(cors({
 app.use(requestTime); // Đo thời gian xử lý request
 app.use(httpLogger); // Log tất cả HTTP requests
 app.use(express.json());
+app.use(cookie()); // Parse cookies
+app.use(passport.initialize()); // Khởi tạo Passport
 
 // Health check endpoint
 app.get('/health', (req, res) => {

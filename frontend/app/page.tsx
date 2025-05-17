@@ -254,9 +254,6 @@ export default function Home() {
               <Link href="/delivery" className="hover:underline">
                 {t.navigation.delivery}
               </Link>
-              <Link href="#" className="hover:underline">
-                {t.navigation.career}
-              </Link>
 
               {user ? (
                 <DropdownMenu>
@@ -451,7 +448,7 @@ export default function Home() {
           >
             <div className="absolute inset-0 z-0">
               <Image
-                src="/placeholder.svg?height=1080&width=1920&text=About"
+                src="/images/shutterstock_1218150229.jpg"
                 alt="About background"
                 fill
                 className="object-cover"
@@ -484,7 +481,7 @@ export default function Home() {
           >
             <div className="absolute inset-0 z-0">
               <Image
-                src="/placeholder.svg?height=1080&width=1920&text=Farm+to+Table"
+                src="/images/143352-2.webp"
                 alt="Farm to Table concept"
                 fill
                 className="object-cover"
@@ -517,7 +514,7 @@ export default function Home() {
           >
             <div className="absolute inset-0 z-0">
               <Image
-                src="/placeholder.svg?height=1080&width=1920&text=Locations"
+                src="/images/Hanoi.webp"
                 alt="Locations background"
                 fill
                 className="object-cover"
@@ -588,7 +585,7 @@ export default function Home() {
           >
             <div className="absolute inset-0 z-0">
               <Image
-                src="/placeholder.svg?height=1080&width=1920&text=Our+Restaurant"
+                src="/images/atmosphere.jpg"
                 alt="Restaurant interior"
                 fill
                 className="object-cover"
@@ -630,7 +627,7 @@ export default function Home() {
           >
             <div className="absolute inset-0 z-0">
               <Image
-                src="/placeholder.svg?height=1080&width=1920&text=Our+Menu"
+                src="/images/meal.jpg"
                 alt="Menu background"
                 fill
                 className="object-cover"
@@ -713,58 +710,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Gallery Section */}
-          <section
-            ref={setRef(6)}
-            id="gallery"
-            className="relative min-h-screen flex items-center"
-          >
-            <div className="absolute inset-0 z-0">
-              <Image
-                src="/placeholder.svg?height=1080&width=1920&text=Gallery"
-                alt="Gallery background"
-                fill
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-black/70" />
-            </div>
-
-            <div className="relative z-10 container mx-auto px-6 py-20 text-white">
-              <div className="text-center mb-16">
-                {/* Thay đổi text trong gallery section */}
-                <h2 className="text-5xl font-light mb-4">{t.gallery.title}</h2>
-                <div className="w-20 h-1 bg-white/50 mx-auto mb-6"></div>
-                <p className="text-xl font-light max-w-2xl mx-auto">{t.gallery.description}</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[
-                  { src: "/placeholder.svg?height=600&width=600&text=Restaurant+Interior", alt: "Restaurant Interior" },
-                  {
-                    src: "/placeholder.svg?height=600&width=600&text=Chef+Preparing+Pizza",
-                    alt: "Chef Preparing Pizza",
-                  },
-                  { src: "/placeholder.svg?height=600&width=600&text=Wood+Fired+Oven", alt: "Wood Fired Oven" },
-                  { src: "/placeholder.svg?height=600&width=600&text=Dining+Experience", alt: "Dining Experience" },
-                  { src: "/placeholder.svg?height=600&width=600&text=Signature+Dish", alt: "Signature Dish" },
-                  { src: "/placeholder.svg?height=600&width=600&text=Wine+Selection", alt: "Wine Selection" },
-                ].map((image, index) => (
-                  <div key={index} className="relative aspect-square overflow-hidden rounded-lg group">
-                    <Image
-                      src={image.src || "/placeholder.svg"}
-                      alt={image.alt}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                      <span className="text-white font-light text-lg">{image.alt}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
           {/* Contact Section */}
           <section
             ref={setRef(7)}
@@ -773,7 +718,7 @@ export default function Home() {
           >
             <div className="absolute inset-0 z-0">
               <Image
-                src="/placeholder.svg?height=1080&width=1920&text=Contact"
+                src="/images/contact.jpg"
                 alt="Contact background"
                 fill
                 className="object-cover"
@@ -789,15 +734,15 @@ export default function Home() {
                 <div className="grid gap-8 mb-12">
                   {/* Thay đổi text trong contact section */}
                   <h3 className="text-2xl font-light mb-2">{t.contact.generalInquiries}</h3>
-                  <p className="text-white/70">info@pizza4ps.com</p>
+                  <p className="text-white/70">info@goldencrust.com</p>
 
                   {/* Thay đổi text trong contact section */}
                   <h3 className="text-2xl font-light mb-2">{t.contact.careers}</h3>
-                  <p className="text-white/70">careers@pizza4ps.com</p>
+                  <p className="text-white/70">careers@goldencrust.com</p>
 
                   {/* Thay đổi text trong contact section */}
                   <h3 className="text-2xl font-light mb-2">{t.contact.press}</h3>
-                  <p className="text-white/70">press@pizza4ps.com</p>
+                  <p className="text-white/70">press@goldencrust.com</p>
                 </div>
 
                 <div className="flex gap-6">
@@ -817,11 +762,6 @@ export default function Home() {
                   </Button>
                 </div>
               </div>
-
-              {/* Thay đổi text trong footer */}
-              <footer className="absolute bottom-0 left-0 right-0 border-t border-white/20 py-4 text-white/60 text-center text-sm backdrop-blur-sm bg-black/20">
-                <div className="container mx-auto">{t.contact.copyright}</div>
-              </footer>
             </div>
           </section>
         </main>
