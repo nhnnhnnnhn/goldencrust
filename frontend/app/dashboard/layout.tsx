@@ -20,6 +20,7 @@ import {
   LogOut,
   BarChart2,
   CreditCard,
+  LayoutList,
 } from "lucide-react"
 import { getTranslation } from "@/utils/translations"
 
@@ -69,6 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const adminNavItems = [
     { href: "/dashboard", label: t.dashboard.dashboard, icon: <Home className="h-5 w-5" /> },
     { href: "/dashboard/customers", label: t.dashboard.customers, icon: <Users className="h-5 w-5" /> },
+    { href: "/dashboard/categories", label: t.dashboard.categories, icon: <LayoutList className="h-5 w-5" /> },
     { href: "/dashboard/menu-management", label: t.dashboard.menu, icon: <MenuIcon className="h-5 w-5" /> },
     { href: "/dashboard/reservations", label: t.dashboard.reservations, icon: <Calendar className="h-5 w-5" /> },
     { href: "/dashboard/delivery", label: t.dashboard.delivery, icon: <Truck className="h-5 w-5" /> },

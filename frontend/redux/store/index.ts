@@ -21,6 +21,7 @@ import { tableApi } from '../api/tableApi';
 import { reservedTableApi } from '../api/reservedTableApi';
 import userReducer from '../slices/userSlice';
 import validateTokenApi from '../api/validateTokenApi';
+import { categoryApi } from '../api/categoryApi';
 
 const persistConfig = {
   key: 'root',
@@ -40,6 +41,7 @@ const rootReducer = combineReducers({
   [tableApi.reducerPath]: tableApi.reducer,
   [reservedTableApi.reducerPath]: reservedTableApi.reducer,
   user: userReducer,
+  [categoryApi.reducerPath]: categoryApi.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -61,6 +63,7 @@ export const store = configureStore({
       reservationApi.middleware,
       tableApi.middleware,
       reservedTableApi.middleware,
+      categoryApi.middleware,
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });

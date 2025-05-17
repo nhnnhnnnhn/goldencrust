@@ -46,6 +46,21 @@ type TranslationKeys = {
     recentActivity: string
     latestUpdates: string
     you: string
+    categories: string
+    categoryManagement: string
+    allCategories: string
+    categoryDescription: string
+    addNewCategory: string
+    editCategory: string
+    createCategory: string
+    categoryName: string
+    categoryDesc: string
+    categoryStatus: string
+    activateCategory: string
+    categoryCreated: string
+    categoryUpdated: string
+    categoryDeleted: string
+    categoryError: string
   }
   home: {
     loading: string
@@ -179,6 +194,21 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       recentActivity: "Recent Activity",
       latestUpdates: "Latest updates and activities",
       you: "You",
+      categories: "Categories",
+      categoryManagement: "Categories Management",
+      allCategories: "All Categories",
+      categoryDescription: "Manage your menu categories here. You can add, edit, or delete categories.",
+      addNewCategory: "Add New Category",
+      editCategory: "Edit Category",
+      createCategory: "Create Category",
+      categoryName: "Category Name",
+      categoryDesc: "Category Description",
+      categoryStatus: "Category Status",
+      activateCategory: "Activate or deactivate this category",
+      categoryCreated: "Category created successfully",
+      categoryUpdated: "Category updated successfully",
+      categoryDeleted: "Category deleted successfully",
+      categoryError: "Something went wrong",
     },
     home: {
       loading: "Loading...",
@@ -318,6 +348,21 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       recentActivity: "Hoạt động gần đây",
       latestUpdates: "Cập nhật và hoạt động mới nhất",
       you: "Bạn",
+      categories: "Danh mục",
+      categoryManagement: "Quản lý danh mục",
+      allCategories: "Tất cả danh mục",
+      categoryDescription: "Quản lý danh mục thực đơn tại đây. Bạn có thể thêm, sửa hoặc xóa danh mục.",
+      addNewCategory: "Thêm danh mục mới",
+      editCategory: "Sửa danh mục",
+      createCategory: "Tạo danh mục",
+      categoryName: "Tên danh mục",
+      categoryDesc: "Mô tả danh mục",
+      categoryStatus: "Trạng thái",
+      activateCategory: "Kích hoạt hoặc vô hiệu hóa danh mục này",
+      categoryCreated: "Tạo danh mục thành công",
+      categoryUpdated: "Cập nhật danh mục thành công",
+      categoryDeleted: "Xóa danh mục thành công",
+      categoryError: "Đã xảy ra lỗi",
     },
     home: {
       loading: "Đang tải...",
