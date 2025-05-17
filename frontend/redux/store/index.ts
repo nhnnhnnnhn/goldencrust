@@ -19,6 +19,7 @@ import { orderApi } from '../api/order';
 import { reservationApi } from '../api/reservationApi';
 import { tableApi } from '../api/tableApi';
 import { reservedTableApi } from '../api/reservedTableApi';
+import { deliveryApi } from '../api/deliveryApi';
 import userReducer from '../slices/userSlice';
 import validateTokenApi from '../api/validateTokenApi';
 
@@ -39,6 +40,7 @@ const rootReducer = combineReducers({
   [reservationApi.reducerPath]: reservationApi.reducer,
   [tableApi.reducerPath]: tableApi.reducer,
   [reservedTableApi.reducerPath]: reservedTableApi.reducer,
+  [deliveryApi.reducerPath]: deliveryApi.reducer,
   user: userReducer,
 });
 
@@ -61,6 +63,7 @@ export const store = configureStore({
       reservationApi.middleware,
       tableApi.middleware,
       reservedTableApi.middleware,
+      deliveryApi.middleware,
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });

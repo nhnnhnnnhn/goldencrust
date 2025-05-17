@@ -62,6 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/dashboard/profile", label: t.dashboard.profile, icon: <User className="h-5 w-5" /> },
     { href: "/dashboard/reservations", label: t.dashboard.myReservations, icon: <Calendar className="h-5 w-5" /> },
     { href: "/dashboard/orders", label: t.dashboard.myOrders, icon: <ShoppingBag className="h-5 w-5" /> },
+    { href: "/dashboard/my-delivery", label: t.dashboard.myDelivery, icon: <Truck className="h-5 w-5" /> },
     { href: "/dashboard/history", label: t.dashboard.orderHistory, icon: <Clock className="h-5 w-5" /> },
     { href: "/dashboard/loyalty", label: t.dashboard.loyaltyProgram, icon: <Award className="h-5 w-5" /> },
   ]

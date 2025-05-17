@@ -100,6 +100,11 @@ export default function LoginPage() {
         password: loginData.password
       }).unwrap()
       
+      // Store the token in localStorage
+      if (result.token) {
+        localStorage.setItem('token', result.token)
+      }
+      
       // Cập nhật login qua context cho các phần cũ
       if (contextLogin) {
         contextLogin(

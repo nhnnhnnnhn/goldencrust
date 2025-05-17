@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import type { ReactElement } from "react"
 import {
   Search,
   Filter,
@@ -14,154 +15,175 @@ import {
   XCircle,
   RefreshCw,
   Printer,
+  AlertTriangle,
 } from "lucide-react"
+import { useGetAllDeliveriesQuery, useUpdateDeliveryStatusMutation } from "@/redux/api/deliveryApi"
 
-// Dữ liệu mẫu cho đơn giao hàng
-const initialDeliveries = [
-  {
-    id: 1,
-    customerName: "Nguyễn Văn A",
-    phone: "0901234567",
-    address: "123 Nguyễn Huệ, Quận 1, TP.HCM",
-    orderTime: "10:30",
-    estimatedDelivery: "11:15",
-    status: "preparing",
-    items: [
-      { name: "Pizza Hải Sản Đặc Biệt", quantity: 1, price: 189000 },
-      { name: "Nước Ép Cam Tươi", quantity: 2, price: 45000 },
-    ],
-    total: 279000,
-    paymentMethod: "cash",
-    notes: "Gọi trước khi giao",
-  },
-  {
-    id: 2,
-    customerName: "Trần Thị B",
-    phone: "0912345678",
-    address: "456 Lê Lợi, Quận 3, TP.HCM",
-    orderTime: "11:45",
-    estimatedDelivery: "12:30",
-    status: "out_for_delivery",
-    items: [
-      { name: "Pizza Thịt Xông Khói", quantity: 1, price: 159000 },
-      { name: "Mỳ Ý Hải Sản", quantity: 1, price: 120000 },
-    ],
-    total: 279000,
-    paymentMethod: "card",
-    notes: "",
-  },
-  {
-    id: 3,
-    customerName: "Lê Văn C",
-    phone: "0923456789",
-    address: "789 Võ Văn Tần, Quận 10, TP.HCM",
-    orderTime: "12:15",
-    estimatedDelivery: "13:00",
-    status: "delivered",
-    items: [
-      { name: "Salad Cá Hồi", quantity: 1, price: 110000 },
-      { name: "Pizza Hải Sản Đặc Biệt", quantity: 1, price: 189000 },
-    ],
-    total: 299000,
-    paymentMethod: "cash",
-    notes: "Không cần chuông cửa",
-  },
-  {
-    id: 4,
-    customerName: "Phạm Thị D",
-    phone: "0934567890",
-    address: "101 Nguyễn Đình Chiểu, Quận 3, TP.HCM",
-    orderTime: "18:30",
-    estimatedDelivery: "19:15",
-    status: "preparing",
-    items: [{ name: "Pizza Thịt Xông Khói", quantity: 2, price: 159000 }],
-    total: 318000,
-    paymentMethod: "card",
-    notes: "",
-  },
-  {
-    id: 5,
-    customerName: "Hoàng Văn E",
-    phone: "0945678901",
-    address: "202 Điện Biên Phủ, Quận Bình Thạnh, TP.HCM",
-    orderTime: "19:00",
-    estimatedDelivery: "19:45",
-    status: "cancelled",
-    items: [
-      { name: "Mỳ Ý Hải Sản", quantity: 1, price: 120000 },
-      { name: "Nước Ép Cam Tươi", quantity: 1, price: 45000 },
-    ],
-    total: 165000,
-    paymentMethod: "cash",
-    notes: "Khách hàng hủy đơn",
-  },
-]
+interface DeliveryItem {
+  menuItemId: string;
+  menuItemName: string;
+  quantity: number;
+  price: number;
+  discountPercentage: number;
+  total: number;
+}
+
+interface Delivery {
+  _id: string;
+  deliveryStatus: 'preparing' | 'on the way' | 'delivered' | 'cancelled';
+  userId: string;
+  customerName: string;
+  items: DeliveryItem[];
+  totalAmount: number;
+  expectedDeliveryTime: Date;
+  notes: string;
+  deliveryAddress: string;
+  deliveryPhone: string;
+  paymentMethod: 'cash on delivery' | 'online payment';
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Danh sách trạng thái
-const statuses = ["Tất cả", "preparing", "out_for_delivery", "delivered", "cancelled"]
-const statusLabels = {
+const statuses = ["Tất cả", "preparing", "on the way", "delivered", "cancelled"] as const
+const statusLabels: Record<Delivery['deliveryStatus'], string> = {
   preparing: "Đang chuẩn bị",
-  out_for_delivery: "Đang giao hàng",
+  "on the way": "Đang giao hàng",
   delivered: "Đã giao hàng",
   cancelled: "Đã hủy",
 }
-const statusColors = {
+const statusColors: Record<Delivery['deliveryStatus'], string> = {
   preparing: "bg-blue-100 text-blue-800",
-  out_for_delivery: "bg-yellow-100 text-yellow-800",
+  "on the way": "bg-yellow-100 text-yellow-800",
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
 }
-const statusIcons = {
+const statusIcons: Record<Delivery['deliveryStatus'], ReactElement> = {
   preparing: <Package size={16} className="text-blue-600" />,
-  out_for_delivery: <TruckIcon size={16} className="text-yellow-600" />,
+  "on the way": <TruckIcon size={16} className="text-yellow-600" />,
   delivered: <CheckCircle size={16} className="text-green-600" />,
   cancelled: <XCircle size={16} className="text-red-600" />,
 }
 
 export default function DeliveryManagement() {
-  const [deliveries, setDeliveries] = useState(initialDeliveries)
+  const { data: deliveries = [], isLoading, error, refetch } = useGetAllDeliveriesQuery()
+  const [updateDeliveryStatus] = useUpdateDeliveryStatusMutation()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("Tất cả")
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false)
-  const [currentDelivery, setCurrentDelivery] = useState(null)
+  const [currentDelivery, setCurrentDelivery] = useState<Delivery | null>(null)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [pendingUpdate, setPendingUpdate] = useState<{ id: string; status: Delivery['deliveryStatus'] } | null>(null)
+
+  // Add error logging
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching deliveries:', error)
+    }
+  }, [error])
+
+  // Add data logging
+  useEffect(() => {
+    console.log('Deliveries data:', deliveries)
+  }, [deliveries])
+
+  // Clear update error after 5 seconds
+  useEffect(() => {
+    if (updateError) {
+      const timer = setTimeout(() => {
+        setUpdateError(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [updateError])
 
   // Lọc đơn giao hàng dựa trên tìm kiếm và trạng thái
   const filteredDeliveries = deliveries.filter((delivery) => {
-    const matchesSearch =
-      delivery.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      delivery.phone.includes(searchTerm) ||
-      delivery.address.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!delivery || typeof delivery !== 'object') return false;
 
-    const matchesStatus = selectedStatus === "Tất cả" || delivery.status === selectedStatus
+    const matchesSearch =
+      (delivery.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (delivery.deliveryPhone || '').includes(searchTerm) ||
+      (delivery.deliveryAddress?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+
+    const matchesStatus = selectedStatus === "Tất cả" || delivery.deliveryStatus === selectedStatus
 
     return matchesSearch && matchesStatus
   })
 
   // Xử lý xem chi tiết đơn giao hàng
-  const handleViewDetails = (delivery) => {
+  const handleViewDetails = (delivery: Delivery) => {
+    if (!delivery) return;
     setCurrentDelivery(delivery)
     setShowDeliveryDetails(true)
   }
 
   // Xử lý cập nhật trạng thái đơn giao hàng
-  const handleUpdateStatus = (id, newStatus) => {
-    setDeliveries(deliveries.map((delivery) => (delivery.id === id ? { ...delivery, status: newStatus } : delivery)))
+  const handleUpdateStatus = async (id: string, newStatus: Delivery['deliveryStatus']) => {
+    if (!id || !newStatus) {
+      setUpdateError('Invalid delivery ID or status')
+      return
+    }
 
-    if (currentDelivery && currentDelivery.id === id) {
-      setCurrentDelivery({ ...currentDelivery, status: newStatus })
+    // Set pending update and show confirmation modal
+    setPendingUpdate({ id, status: newStatus })
+    setShowConfirmModal(true)
+  }
+
+  // Handle confirmed update
+  const handleConfirmedUpdate = async () => {
+    if (!pendingUpdate) return
+
+    try {
+      setUpdateError(null)
+      const result = await updateDeliveryStatus(pendingUpdate).unwrap()
+      console.log('Update result:', result)
+      
+      if (currentDelivery && currentDelivery._id === pendingUpdate.id) {
+        setCurrentDelivery({ ...currentDelivery, deliveryStatus: pendingUpdate.status })
+      }
+      
+      // Refresh the deliveries list
+      refetch()
+    } catch (error: any) {
+      console.error('Failed to update delivery status:', error)
+      setUpdateError(error?.data?.message || 'Failed to update delivery status')
+    } finally {
+      setShowConfirmModal(false)
+      setPendingUpdate(null)
+    }
+  }
+
+  // Get confirmation message based on status
+  const getConfirmMessage = (status: Delivery['deliveryStatus']) => {
+    switch (status) {
+      case 'on the way':
+        return 'Bạn có chắc chắn muốn bắt đầu giao hàng?'
+      case 'delivered':
+        return 'Bạn có chắc chắn muốn xác nhận đã giao hàng?'
+      case 'cancelled':
+        return 'Bạn có chắc chắn muốn hủy đơn hàng này?'
+      default:
+        return 'Bạn có chắc chắn muốn cập nhật trạng thái đơn hàng?'
     }
   }
 
   // Format giá tiền
-  const formatPrice = (price) => {
+  const formatPrice = (price: number) => {
+    if (typeof price !== 'number') return '0 ₫';
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price)
   }
 
   // Xử lý in hóa đơn
-  const handlePrintReceipt = (delivery) => {
+  const handlePrintReceipt = (delivery: Delivery) => {
+    if (!delivery) return;
+
     // Tạo cửa sổ mới để in
     const printWindow = window.open("", "_blank")
+    if (!printWindow) return
 
     // Tạo nội dung hóa đơn
     const receiptContent = `
@@ -171,57 +193,158 @@ export default function DeliveryManagement() {
         <title>Hóa đơn - Pizza Liêm Khiết</title>
         <meta charset="UTF-8">
         <style>
+          @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+          
           body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
             margin: 0;
             padding: 20px;
             max-width: 80mm;
             margin: 0 auto;
+            background: #fff;
+            color: #333;
           }
+          
           .receipt {
-            padding: 10px;
+            padding: 15px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
           }
+          
           .header {
             text-align: center;
             margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px dashed #e0e0e0;
           }
+          
           .logo {
             font-size: 24px;
-            font-weight: bold;
+            font-weight: 700;
+            color: #003087;
             margin-bottom: 5px;
+            letter-spacing: 1px;
           }
+          
+          .header p {
+            margin: 3px 0;
+            color: #666;
+            font-size: 12px;
+          }
+          
           .info {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
           }
+          
           .info p {
-            margin: 5px 0;
+            margin: 8px 0;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
           }
+          
+          .info p strong {
+            color: #555;
+            font-weight: 500;
+          }
+          
           .items {
-            border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
-            padding: 10px 0;
-            margin-bottom: 15px;
+            border-top: 2px dashed #e0e0e0;
+            border-bottom: 2px dashed #e0e0e0;
+            padding: 15px 0;
+            margin-bottom: 20px;
           }
+          
           .item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            font-size: 13px;
           }
+          
+          .item-name {
+            flex: 1;
+            margin-right: 10px;
+          }
+          
+          .item-quantity {
+            color: #666;
+            margin: 0 5px;
+          }
+          
+          .item-price {
+            font-weight: 500;
+          }
+          
           .total {
-            font-weight: bold;
             text-align: right;
-            margin-bottom: 15px;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
           }
+          
+          .total p {
+            margin: 5px 0;
+            font-size: 14px;
+          }
+          
+          .total-amount {
+            font-size: 18px !important;
+            font-weight: 700;
+            color: #003087;
+          }
+          
           .footer {
             text-align: center;
-            font-size: 12px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px dashed #e0e0e0;
           }
+          
+          .footer p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #666;
+          }
+          
+          .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 5px;
+          }
+          
+          .status-paid {
+            background: #e6f4ea;
+            color: #1e7e34;
+          }
+          
+          .status-pending {
+            background: #fff3cd;
+            color: #856404;
+          }
+          
+          .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+          }
+          
           @media print {
             body {
               width: 80mm;
             }
             .no-print {
               display: none;
+            }
+            .receipt {
+              box-shadow: none;
+              border: none;
             }
           }
         </style>
@@ -230,49 +353,47 @@ export default function DeliveryManagement() {
         <div class="receipt">
           <div class="header">
             <div class="logo">Pizza Liêm Khiết</div>
-            <div>123 Nguyễn Huệ, Quận 1, TP.HCM</div>
-            <div>SĐT: 028-1234-5678</div>
+            <p>123 Nguyễn Huệ, Quận 1, TP.HCM</p>
+            <p>SĐT: 028-1234-5678</p>
+            <p>MST: 0123456789</p>
           </div>
           
           <div class="info">
-            <p><strong>Mã đơn hàng:</strong> #${delivery.id}</p>
-            <p><strong>Ngày:</strong> ${new Date().toLocaleDateString("vi-VN")}</p>
-            <p><strong>Khách hàng:</strong> ${delivery.customerName}</p>
-            <p><strong>SĐT:</strong> ${delivery.phone}</p>
-            <p><strong>Địa chỉ:</strong> ${delivery.address}</p>
-            <p><strong>Phương thức thanh toán:</strong> ${delivery.paymentMethod === "cash" ? "Tiền mặt" : "Thẻ"}</p>
+            <p><strong>Mã đơn hàng:</strong> <span>#${delivery._id.slice(-6)}</span></p>
+            <p><strong>Ngày:</strong> <span>${new Date(delivery.createdAt).toLocaleDateString("vi-VN")}</span></p>
+            <p><strong>Giờ:</strong> <span>${new Date(delivery.createdAt).toLocaleTimeString("vi-VN")}</span></p>
+            <p><strong>Khách hàng:</strong> <span>${delivery.customerName || 'N/A'}</span></p>
+            <p><strong>SĐT:</strong> <span>${delivery.deliveryPhone || 'N/A'}</span></p>
+            <p><strong>Địa chỉ:</strong> <span>${delivery.deliveryAddress || 'N/A'}</span></p>
+            <p><strong>Phương thức:</strong> <span>${delivery.paymentMethod === "cash on delivery" ? "Tiền mặt" : "Thanh toán online"}</span></p>
+            <p><strong>Trạng thái:</strong> <span class="status-badge status-${delivery.paymentStatus}">${
+              delivery.paymentStatus === "paid" ? "Đã thanh toán" : 
+              delivery.paymentStatus === "pending" ? "Chờ thanh toán" : 
+              "Thanh toán thất bại"
+            }</span></p>
           </div>
           
           <div class="items">
-            ${delivery.items
-              .map(
-                (item) => `
+            ${(delivery.items || []).map(
+              (item) => `
               <div class="item">
-                <span>${item.quantity}x ${item.name}</span>
-                <span>${formatPrice(item.price * item.quantity)}</span>
+                <span class="item-name">${item.menuItemName || 'Unknown Item'}</span>
+                <span class="item-quantity">x${item.quantity || 0}</span>
+                <span class="item-price">${formatPrice(item.total || 0)}</span>
               </div>
-            `,
-              )
-              .join("")}
+            `
+            ).join("")}
           </div>
           
           <div class="total">
-            <div>Tổng cộng: ${formatPrice(delivery.total)}</div>
+            <p>Tổng cộng: <span class="total-amount">${formatPrice(delivery.totalAmount || 0)}</span></p>
           </div>
           
           <div class="footer">
-            <p>Cảm ơn quý khách đã sử dụng dịch vụ của chúng tôi!</p>
-            <p>www.pizzaliemkhiet.com</p>
+            <p>Cảm ơn quý khách đã sử dụng dịch vụ!</p>
+            <p>Hẹn gặp lại quý khách!</p>
+            <p>Hotline: 1900-1234</p>
           </div>
-        </div>
-        
-        <div class="no-print" style="text-align: center; margin-top: 20px;">
-          <button onclick="window.print();" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            In hóa đơn
-          </button>
-          <button onclick="window.close();" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
-            Đóng
-          </button>
         </div>
       </body>
       </html>
@@ -294,18 +415,54 @@ export default function DeliveryManagement() {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#003087]"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col items-center justify-center h-64">
+          <XCircle size={48} className="text-red-500 mb-4" />
+          <p className="text-red-500 mb-2">Error loading deliveries</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-[#003087] text-white rounded-md hover:bg-[#002266]"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Quản Lý Giao Hàng</h1>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => refetch()}
           className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white px-4 py-2 rounded-md transition-colors"
         >
           <RefreshCw size={18} />
           <span>Làm mới</span>
         </button>
       </div>
+
+      {updateError && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          <div className="flex items-center gap-2">
+            <XCircle size={20} />
+            <span>{updateError}</span>
+          </div>
+        </div>
+      )}
 
       {/* Thanh tìm kiếm và lọc */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -326,7 +483,7 @@ export default function DeliveryManagement() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
           >
             <Filter size={20} />
-            <span>Trạng thái: {selectedStatus === "Tất cả" ? selectedStatus : statusLabels[selectedStatus]}</span>
+            <span>Trạng thái: {selectedStatus === "Tất cả" ? selectedStatus : statusLabels[selectedStatus as Delivery['deliveryStatus']]}</span>
             <ChevronDown size={16} />
           </button>
 
@@ -341,8 +498,8 @@ export default function DeliveryManagement() {
                     setShowStatusDropdown(false)
                   }}
                 >
-                  {status !== "Tất cả" && statusIcons[status]}
-                  {status === "Tất cả" ? status : statusLabels[status]}
+                  {status !== "Tất cả" && statusIcons[status as Delivery['deliveryStatus']]}
+                  {status === "Tất cả" ? status : statusLabels[status as Delivery['deliveryStatus']]}
                 </div>
               ))}
             </div>
@@ -352,9 +509,9 @@ export default function DeliveryManagement() {
 
       {/* Danh sách đơn giao hàng */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDeliveries.map((delivery) => (
+        {filteredDeliveries.map((delivery, index) => (
           <div
-            key={delivery.id}
+            key={delivery._id}
             className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
             onClick={() => handleViewDetails(delivery)}
           >
@@ -362,21 +519,21 @@ export default function DeliveryManagement() {
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-medium">{delivery.customerName}</h3>
                 <span
-                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[delivery.status]}`}
+                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[delivery.deliveryStatus]}`}
                 >
-                  {statusIcons[delivery.status]}
-                  <span className="ml-1">{statusLabels[delivery.status]}</span>
+                  {statusIcons[delivery.deliveryStatus]}
+                  <span className="ml-1">{statusLabels[delivery.deliveryStatus]}</span>
                 </span>
               </div>
 
               <div className="flex items-start gap-2 text-sm text-gray-600 mb-2">
                 <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                <span className="line-clamp-2">{delivery.address}</span>
+                <span className="line-clamp-2">{delivery.deliveryAddress}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Phone size={16} />
-                <span>{delivery.phone}</span>
+                <span>{delivery.deliveryPhone}</span>
               </div>
             </div>
 
@@ -384,13 +541,13 @@ export default function DeliveryManagement() {
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Clock size={16} className="text-red-600" />
-                  <span>Đặt lúc: {delivery.orderTime}</span>
+                  <span>Đặt lúc: {new Date(delivery.createdAt).toLocaleTimeString("vi-VN")}</span>
                 </div>
-                <div className="text-sm font-medium">{formatPrice(delivery.total)}</div>
+                <div className="text-sm font-medium">{formatPrice(delivery.totalAmount)}</div>
               </div>
 
               <div className="text-sm text-gray-600">
-                {delivery.items.length} món · {delivery.paymentMethod === "cash" ? "Tiền mặt" : "Thẻ"}
+                {delivery.items.length} món · {delivery.paymentMethod === "cash on delivery" ? "Tiền mặt" : "Thanh toán online"}
               </div>
             </div>
           </div>
@@ -409,7 +566,7 @@ export default function DeliveryManagement() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Chi Tiết Đơn Giao Hàng #{currentDelivery.id}</h2>
+              <h2 className="text-xl font-bold">Chi Tiết Đơn Giao Hàng #{currentDelivery._id.slice(-6)}</h2>
               <button onClick={() => setShowDeliveryDetails(false)} className="text-gray-500 hover:text-gray-700">
                 <XCircle size={24} />
               </button>
@@ -421,11 +578,11 @@ export default function DeliveryManagement() {
                 <p className="text-lg font-medium">{currentDelivery.customerName}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
                   <Phone size={16} />
-                  <span>{currentDelivery.phone}</span>
+                  <span>{currentDelivery.deliveryPhone}</span>
                 </div>
                 <div className="flex items-start gap-2 mt-2 text-sm text-gray-600">
                   <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                  <span>{currentDelivery.address}</span>
+                  <span>{currentDelivery.deliveryAddress}</span>
                 </div>
               </div>
 
@@ -433,18 +590,18 @@ export default function DeliveryManagement() {
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Thông tin đơn hàng</h3>
                 <div className="flex items-center gap-2 mb-1 text-sm">
                   <Clock size={16} className="text-red-600" />
-                  <p>Đặt lúc: {currentDelivery.orderTime}</p>
+                  <p>Đặt lúc: {new Date(currentDelivery.createdAt).toLocaleTimeString("vi-VN")}</p>
                 </div>
                 <div className="flex items-center gap-2 mb-1 text-sm">
                   <TruckIcon size={16} className="text-red-600" />
-                  <p>Dự kiến giao: {currentDelivery.estimatedDelivery}</p>
+                  <p>Dự kiến giao: {new Date(currentDelivery.expectedDeliveryTime).toLocaleTimeString("vi-VN")}</p>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span
-                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[currentDelivery.status]}`}
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[currentDelivery.deliveryStatus]}`}
                   >
-                    {statusIcons[currentDelivery.status]}
-                    <span className="ml-1">{statusLabels[currentDelivery.status]}</span>
+                    {statusIcons[currentDelivery.deliveryStatus]}
+                    <span className="ml-1">{statusLabels[currentDelivery.deliveryStatus]}</span>
                   </span>
                 </div>
               </div>
@@ -457,14 +614,14 @@ export default function DeliveryManagement() {
                   <div key={index} className="flex justify-between py-2 border-b last:border-0">
                     <div>
                       <span className="font-medium">{item.quantity}x </span>
-                      <span>{item.name}</span>
+                      <span>{item.menuItemName}</span>
                     </div>
-                    <div>{formatPrice(item.price * item.quantity)}</div>
+                    <div>{formatPrice(item.total)}</div>
                   </div>
                 ))}
                 <div className="flex justify-between pt-3 font-bold">
                   <div>Tổng cộng</div>
-                  <div>{formatPrice(currentDelivery.total)}</div>
+                  <div>{formatPrice(currentDelivery.totalAmount)}</div>
                 </div>
               </div>
             </div>
@@ -472,7 +629,7 @@ export default function DeliveryManagement() {
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Phương thức thanh toán</h3>
               <p className="text-sm">
-                {currentDelivery.paymentMethod === "cash" ? "Tiền mặt khi nhận hàng" : "Thanh toán bằng thẻ"}
+                {currentDelivery.paymentMethod === "cash on delivery" ? "Tiền mặt khi nhận hàng" : "Thanh toán online"}
               </p>
             </div>
 
@@ -494,28 +651,31 @@ export default function DeliveryManagement() {
             </div>
 
             <div className="flex justify-end gap-2">
-              {currentDelivery.status === "preparing" && (
+              {currentDelivery.deliveryStatus === "preparing" && (
                 <button
-                  onClick={() => handleUpdateStatus(currentDelivery.id, "out_for_delivery")}
-                  className="px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266]"
+                  onClick={() => handleUpdateStatus(currentDelivery._id, "on the way")}
+                  className="px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
                   Bắt đầu giao hàng
                 </button>
               )}
 
-              {currentDelivery.status === "out_for_delivery" && (
+              {currentDelivery.deliveryStatus === "on the way" && (
                 <button
-                  onClick={() => handleUpdateStatus(currentDelivery.id, "delivered")}
-                  className="px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266]"
+                  onClick={() => handleUpdateStatus(currentDelivery._id, "delivered")}
+                  className="px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
                   Xác nhận đã giao
                 </button>
               )}
 
-              {(currentDelivery.status === "preparing" || currentDelivery.status === "out_for_delivery") && (
+              {(currentDelivery.deliveryStatus === "preparing" || currentDelivery.deliveryStatus === "on the way") && (
                 <button
-                  onClick={() => handleUpdateStatus(currentDelivery.id, "cancelled")}
-                  className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50"
+                  onClick={() => handleUpdateStatus(currentDelivery._id, "cancelled")}
+                  className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
                   Hủy đơn hàng
                 </button>
@@ -526,6 +686,40 @@ export default function DeliveryManagement() {
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && pendingUpdate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle size={24} className="text-yellow-500" />
+              <h3 className="text-lg font-semibold">Xác nhận</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              {getConfirmMessage(pendingUpdate.status)}
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false)
+                  setPendingUpdate(null)
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmedUpdate}
+                className="px-4 py-2 bg-[#003087] text-white rounded-md hover:bg-[#002266]"
+              >
+                Xác nhận
               </button>
             </div>
           </div>

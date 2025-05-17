@@ -18,6 +18,7 @@ type TranslationKeys = {
     menu: string
     reservations: string
     delivery: string
+    myDelivery: string
     statistics: string
     table: string
     payment: string
@@ -131,6 +132,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       menu: "Menu",
       reservations: "Reservations",
       delivery: "Delivery",
+      myDelivery: "My Delivery",
       statistics: "Statistics",
       table: "Table",
       payment: "Payment",
@@ -250,6 +252,7 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       menu: "Thực đơn",
       reservations: "Đặt bàn",
       delivery: "Giao hàng",
+      myDelivery: "Giao hàng của tôi",
       statistics: "Thống kê",
       table: "Quản lý bàn",
       payment: "Thanh toán",
