@@ -53,7 +53,7 @@ interface Restaurant {
     open: string
     close: string
   }
-  status: 'active' | 'inactive'
+  status: 'open' | 'closed'
   rating?: number
   cuisine?: string[]
   images?: string[]
@@ -80,7 +80,7 @@ interface RestaurantFormData {
   address: string;
   phone: string;
   email: string;
-  status: 'active' | 'inactive';
+  status: 'open' | 'closed';
   tableNumber: number;
 }
 
@@ -205,8 +205,8 @@ export default function TableManagement() {
       address: "",
       phone: "",
       email: "",
-      status: "active",
-      tableNumber: 0
+      status: "closed",
+      tableNumber: 0,
     })
     setShowAddRestaurantModal(true)
   }
@@ -397,16 +397,27 @@ export default function TableManagement() {
     if (!currentRestaurant) return
 
     try {
-      const response = await createRestaurant(currentRestaurant).unwrap()
+      const restaurantData: Partial<Restaurant> = {
+        name: currentRestaurant.name,
+        address: currentRestaurant.address,
+        phone: currentRestaurant.phone,
+        email: currentRestaurant.email,
+        status: currentRestaurant.status,
+        tableNumber: currentRestaurant.tableNumber,
+      }
+      
+      const response = await createRestaurant(restaurantData).unwrap()
       toast({
         title: "Success",
         description: "Restaurant added successfully",
       })
+      
       // Tự động chọn nhà hàng mới tạo
       if (response?._id) {
         setSelectedRestaurantId(response._id)
       }
       setShowAddRestaurantModal(false)
+      setCurrentRestaurant(null)
     } catch (error: any) {
       toast({
         title: "Error",
@@ -502,7 +513,7 @@ export default function TableManagement() {
                   <SelectContent>
                     {restaurants.map((restaurant) => (
                       <SelectItem key={restaurant._id} value={restaurant._id}>
-                        {restaurant.address}
+                        {restaurant.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -621,7 +632,7 @@ export default function TableManagement() {
       )}
 
       {/* Add Restaurant Modal */}
-      {showAddRestaurantModal && currentRestaurant && (
+      {showAddRestaurantModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
@@ -633,11 +644,11 @@ export default function TableManagement() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant Name</label>
                 <Input
                   type="text"
-                  value={currentRestaurant.name}
-                  onChange={(e) => setCurrentRestaurant({ ...currentRestaurant, name: e.target.value })}
+                  value={currentRestaurant?.name || ""}
+                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, name: e.target.value }))}
                   className="w-full"
                 />
               </div>
@@ -646,8 +657,8 @@ export default function TableManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                 <Input
                   type="text"
-                  value={currentRestaurant.address}
-                  onChange={(e) => setCurrentRestaurant({ ...currentRestaurant, address: e.target.value })}
+                  value={currentRestaurant?.address || ""}
+                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, address: e.target.value }))}
                   className="w-full"
                 />
               </div>
@@ -656,8 +667,8 @@ export default function TableManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <Input
                   type="text"
-                  value={currentRestaurant.phone}
-                  onChange={(e) => setCurrentRestaurant({ ...currentRestaurant, phone: e.target.value })}
+                  value={currentRestaurant?.phone || ""}
+                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, phone: e.target.value }))}
                   className="w-full"
                 />
               </div>
@@ -666,18 +677,8 @@ export default function TableManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <Input
                   type="email"
-                  value={currentRestaurant.email}
-                  onChange={(e) => setCurrentRestaurant({ ...currentRestaurant, email: e.target.value })}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Tables</label>
-                <Input
-                  type="number"
-                  value={currentRestaurant.tableNumber}
-                  onChange={(e) => setCurrentRestaurant({ ...currentRestaurant, tableNumber: parseInt(e.target.value) || 0 })}
+                  value={currentRestaurant?.email || ""}
+                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, email: e.target.value }))}
                   className="w-full"
                 />
               </div>
@@ -685,26 +686,38 @@ export default function TableManagement() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <Select
-                  value={currentRestaurant.status}
-                  onValueChange={(value: 'active' | 'inactive') => setCurrentRestaurant({ ...currentRestaurant, status: value })}
+                  value={currentRestaurant?.status || "closed"}
+                  onValueChange={(value: 'open' | 'closed') => 
+                    setCurrentRestaurant(prev => ({ ...prev!, status: value }))
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Tables</label>
+                <Input
+                  type="number"
+                  value={currentRestaurant?.tableNumber || 0}
+                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, tableNumber: parseInt(e.target.value) }))}
+                  className="w-full"
+                />
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="mt-6 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowAddRestaurantModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveRestaurant} className="bg-[#003087] hover:bg-[#002266] text-white">
-                Save
+              <Button onClick={handleSaveRestaurant}>
+                Save Restaurant
               </Button>
             </div>
           </div>
