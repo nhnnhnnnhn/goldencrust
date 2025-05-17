@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-interface Restaurant {
+export interface Restaurant {
   _id: string;
   name: string;
   description?: string;
@@ -12,7 +12,7 @@ interface Restaurant {
     open: string;
     close: string;
   };
-  status: 'active' | 'inactive';
+  status: 'open' | 'closed';
   rating?: number;
   cuisine?: string[];
   images?: string[];
@@ -64,7 +64,7 @@ export const restaurantApi = createApi({
     }),
 
     // Update restaurant status
-    updateRestaurantStatus: builder.mutation<Restaurant, { id: string; status: 'active' | 'inactive' }>({
+    updateRestaurantStatus: builder.mutation<Restaurant, { id: string; status: 'open' | 'closed' }>({
       query: ({ id, status }) => ({
         url: `/restaurants/${id}/status`,
         method: 'PATCH',

@@ -13,7 +13,7 @@ import {
 import storage from 'redux-persist/lib/storage';
 // Import từ file index thay vì trực tiếp từ file module
 import authReducer from '../slices';
-import { authApi, stripeApi, restaurantApi } from '../api';
+import { authApi, stripeApi, restaurantApi, chatApi } from '../api';
 import { userApi } from '../api/userApi';
 import { orderApi } from '../api/order';
 import { reservationApi } from '../api/reservationApi';
@@ -22,6 +22,7 @@ import { reservedTableApi } from '../api/reservedTableApi';
 import { deliveryApi } from '../api/deliveryApi';
 import userReducer from '../slices/userSlice';
 import validateTokenApi from '../api/validateTokenApi';
+import { categoryApi } from '../api/categoryApi';
 
 const persistConfig = {
   key: 'root',
@@ -42,6 +43,8 @@ const rootReducer = combineReducers({
   [reservedTableApi.reducerPath]: reservedTableApi.reducer,
   [deliveryApi.reducerPath]: deliveryApi.reducer,
   user: userReducer,
+  [categoryApi.reducerPath]: categoryApi.reducer,
+  [chatApi.reducerPath]: chatApi.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -64,6 +67,8 @@ export const store = configureStore({
       tableApi.middleware,
       reservedTableApi.middleware,
       deliveryApi.middleware,
+      categoryApi.middleware,
+      chatApi.middleware,
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });

@@ -54,34 +54,22 @@ export default function LoginPage() {
 
   const t = getTranslation(language)
 
-  const handleGoogleLogin = async () => {
-    try {
-      setIsGoogleLoading(true)
-      setLoginError(null)
-      
-      // Backend chưa được triển khai, đây chỉ là mẫu
-      console.log('Đang cố gắng đăng nhập bằng Google...')
-      
-      // TODO: Gọi API đăng nhập bằng Google khi backend được triển khai
-      // const result = await googleLogin().unwrap()
-      // if (contextLogin) {
-      //   contextLogin(result.token, result.user)
-      // }
-      // router.push(redirect)
-      
-      // Giả lập delay để hiển thị trạng thái loading
-      setTimeout(() => {
-        setIsGoogleLoading(false)
-        setLoginError('Tính năng đăng nhập bằng Google đang được phát triển.')
-      }, 2000)
-    } catch (err: any) {
-      setIsGoogleLoading(false)
-      console.error('Google login failed:', err)
-      setLoginError(
-        err?.data?.message || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại sau.'
-      )
-    }
+const handleGoogleLogin = () => {
+  try {
+    setIsGoogleLoading(true);
+    // Lưu URL redirect sau khi đăng nhập thành công (nếu có)
+    const redirect = searchParams.get("redirect") || "/dashboard";
+    localStorage.setItem("redirectAfterLogin", redirect);
+    
+    // Chuyển hướng đến endpoint backend xử lý OAuth Google
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    window.location.href = `${backendUrl}/auth/google`;
+  } catch (error) {
+    setIsGoogleLoading(false);
+    console.error('Failed to redirect to Google login:', error);
+    setLoginError(t.auth.googleLoginError);
   }
+};
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,7 +78,7 @@ export default function LoginPage() {
     try {
       // Kiểm tra các trường nhập liệu
       if (!loginData.email || !loginData.password) {
-        setLoginError("Vui lòng nhập đầy đủ email và mật khẩu")
+        setLoginError(t.auth.loginError)
         return
       }
 
@@ -160,7 +148,7 @@ export default function LoginPage() {
               <form onSubmit={handleLoginSubmit}>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t.auth.email}</Label>
                     <Input
                       id="email"
                       type="email"
@@ -173,9 +161,9 @@ export default function LoginPage() {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">{t.auth.password}</Label>
                       <Link href="/forgot-password" className="text-xs text-blue-900 hover:underline">
-                        Forgot password?
+                        {t.auth.forgotPassword}
                       </Link>
                     </div>
                     <div className="relative">
@@ -205,13 +193,13 @@ export default function LoginPage() {
                     {isLoading ? (
                       <>
                         <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
-                        Đang đăng nhập...
+                        {t.auth.loggingIn}
                       </>
-                    ) : 'Đăng nhập'}
+                    ) : t.auth.login}
                   </Button>
                   
                   <div className="my-4 flex items-center before:mt-0.5 before:flex-1 before:border-t before:border-gray-300 after:mt-0.5 after:flex-1 after:border-t after:border-gray-300">
-                    <p className="mx-4 mb-0 text-center text-sm text-gray-500">hoặc</p>
+                    <p className="mx-4 mb-0 text-center text-sm text-gray-500">{t.auth.or}</p>
                   </div>
                   
                   <GoogleLoginButton 
@@ -224,20 +212,20 @@ export default function LoginPage() {
             </div>
 
             <div className="border-t border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-600">
-              Don't have an account?{" "}
+              {t.auth.dontHaveAccount}{" "}
               <Link href="/register" className="text-blue-900 hover:underline">
-                Register here
+                {t.auth.registerHere}
               </Link>
             </div>
 
             <div className="border-t border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-600">
-              By signing in, you agree to our{" "}
+              {t.auth.bySigningIn}{" "}
               <Link href="#" className="text-blue-900 hover:underline">
-                Terms of Service
+                {t.auth.termsOfService}
               </Link>{" "}
               and{" "}
               <Link href="#" className="text-blue-900 hover:underline">
-                Privacy Policy
+                {t.auth.privacyPolicy}
               </Link>
               .
             </div>

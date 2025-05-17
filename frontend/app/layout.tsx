@@ -3,7 +3,8 @@ import "@/app/globals.css"
 import { Inter } from "next/font/google"
 
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/contexts/auth-context"
+import { AuthProvider as AuthContextProvider } from "@/contexts/auth-context"
+import { AuthProvider } from "./auth-provider"
 import { Providers } from "./providers"
 import TokenValidator from "./TokenValidator"
 
@@ -23,12 +24,14 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <Providers>
-          <AuthProvider>
-            <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-              <TokenValidator />
-              {children}
-            </ThemeProvider>
-          </AuthProvider>
+          <AuthContextProvider>
+            <AuthProvider>
+              <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+                <TokenValidator />
+                {children}
+              </ThemeProvider>
+            </AuthProvider>
+          </AuthContextProvider>
         </Providers>
       </body>
     </html>
