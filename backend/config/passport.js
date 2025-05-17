@@ -33,7 +33,7 @@ passport.use(
           googleId: profile.id,
           isVerified: true, // Người dùng Google đã được xác minh email
           isActive: true,
-          role: 'customer',
+          role: 'user',
           source: 'google',
           lastLogin: new Date(),
         });

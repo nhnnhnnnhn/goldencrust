@@ -139,16 +139,12 @@ module.exports.logoutUser = controllerHandler(async (req, res) => {
 
 // Register user
 module.exports.registerUser = controllerHandler(async (req, res) => {
-    let { email, password, fullName, address, phone } = req.body;
+    let { email, password, fullName, address, phone, googleId, googleToken, isGoogleSignup } = req.body;
 
     // Validate input
-    if (!email || !password || !fullName || !address || !phone) {
+    if (!email || !fullName || !address || !phone) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
-
-    email = email.toLowerCase();
-
-    // Check if email is valid
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ message: 'Invalid email format' });
@@ -162,7 +158,22 @@ module.exports.registerUser = controllerHandler(async (req, res) => {
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
-    if (existingUser && existingUser.isVerified) {
+    
+    // Nếu là đăng ký qua Google và user đã tồn tại với GoogleId
+    if (isGoogleSignup && existingUser && existingUser.googleId) {
+        // Cập nhật thông tin bổ sung cho tài khoản đã tạo bởi Google
+        await User.updateOne(
+            { email }, 
+            { 
+                phone, 
+                address,
+                isVerified: true // Đảm bảo tài khoản được xác minh
+            }
+        );
+        return res.status(200).json({ message: 'Tài khoản Google đã được cập nhật thành công' });
+    }
+    // Trường hợp thông thường, nếu email đã tồn tại và đã xác minh
+    else if (existingUser && existingUser.isVerified) {
         return res.status(409).json({ message: 'Email already exists' });
     }
     else if (existingUser && !existingUser.isVerified) {

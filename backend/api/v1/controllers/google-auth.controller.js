@@ -11,6 +11,20 @@ module.exports.googleCallback = controllerHandler(async (req, res) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Xác thực Google thất bại' });
         }
+        
+        // Kiểm tra xem tài khoản này là mới tạo hay đã tồn tại
+        // Một cách chính xác hơn, chúng ta cần biết liệu passport.js đã tìm thấy user đã tồn tại hay tạo mới
+        
+        // Giả sử một tài khoản là mới nếu:
+        // - Source là 'google' và được tạo trong vòng 60 giây gần đây
+        const createdRecently = req.user.source === 'google' && 
+                            new Date().getTime() - new Date(req.user.createdAt).getTime() < 60000; // tạo trong vòng 1 phút
+                            
+        // Kiểm tra xem user có thông tin cần thiết để xác định đã hoàn tất đăng ký hay chưa
+        const hasCompleteInfo = req.user.phone && req.user.address;
+        
+        // Chỉ coi là tài khoản mới nếu vừa tạo gần đây VÀ chưa có đầy đủ thông tin
+        const isNewAccount = createdRecently && !hasCompleteInfo;
 
         const user = req.user;
         logger.info('Google authentication successful', { userId: user._id });
@@ -49,11 +63,11 @@ module.exports.googleCallback = controllerHandler(async (req, res) => {
             lastLogin: new Date()
         });
 
-        // Chuyển hướng về frontend với token
+        // Chuyển hướng về frontend với token và thông tin về loại tài khoản
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
         
-        // Chuyển hướng đến API route của frontend để xử lý thông tin đăng nhập
-        res.redirect(`${frontendURL}/api/auth/google/callback?token=${token}&email=${encodeURIComponent(user.email)}&fullName=${encodeURIComponent(user.fullName)}&role=${user.role}`);
+        // Thêm tham số isNewAccount để frontend biết đây là tài khoản mới hay không
+        res.redirect(`${frontendURL}/api/auth/google/callback?token=${token}&email=${encodeURIComponent(user.email)}&fullName=${encodeURIComponent(user.fullName)}&role=${user.role}&isNewAccount=${isNewAccount}&googleId=${user.googleId || ''}`);
     } catch (error) {
         logger.error('Error in Google OAuth callback', { error });
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
