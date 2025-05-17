@@ -24,32 +24,32 @@ export default function OurStoryPage() {
   const timeline = [
     { 
       year: "2005", 
-      title: "Đầu hành trình", 
-      description: "Golden Crust bắt đầu như một tiệm pizza nhỏ ở trung tâm thành phố, với một lò nướng đá và niềm đam mê với ẩm thực Ý.",
+      title: "The Beginning", 
+      description: "Golden Crust started as a small pizza shop in the city center, with a stone oven and passion for Italian cuisine.",
       image: "/placeholder.svg?height=200&width=300&text=2005"
     },
     { 
       year: "2009", 
-      title: "Mở rộng", 
-      description: "Sau thành công ban đầu, chúng tôi mở thêm chi nhánh thứ hai và bắt đầu phát triển thực đơn với các món đặc trưng.",
+      title: "Expansion", 
+      description: "After initial success, we opened our second location and began developing our menu with signature dishes.",
       image: "/placeholder.svg?height=200&width=300&text=2009"
     },
     { 
       year: "2013", 
-      title: "Cam kết chất lượng", 
-      description: "Chúng tôi bắt đầu hợp tác với các trang trại địa phương để đảm bảo nguồn nguyên liệu tươi sạch.",
+      title: "Quality Commitment", 
+      description: "We began partnering with local farms to ensure fresh, clean ingredients for all our dishes.",
       image: "/placeholder.svg?height=200&width=300&text=2013"
     },
     { 
       year: "2018", 
-      title: "Công nhận quốc tế", 
-      description: "Golden Crust được vinh danh trong danh sách '50 Nhà hàng Pizza tốt nhất thế giới' và nhận nhiều giải thưởng ẩm thực.",
+      title: "International Recognition", 
+      description: "Golden Crust was honored in the 'Top 50 Pizza Restaurants in the World' list and received numerous culinary awards.",
       image: "/placeholder.svg?height=200&width=300&text=2018"
     },
     { 
       year: "2023", 
-      title: "Hiện tại", 
-      description: "Ngày nay, Golden Crust có 15 chi nhánh trên toàn quốc và tiếp tục giữ vững cam kết về chất lượng và tính bền vững.",
+      title: "Present Day", 
+      description: "Today, Golden Crust has 15 locations nationwide and continues to uphold its commitment to quality and sustainability.",
       image: "/placeholder.svg?height=200&width=300&text=2023"
     },
   ]
@@ -59,19 +59,19 @@ export default function OurStoryPage() {
     {
       name: "Antonio Rossi",
       title: "Founder & Executive Chef",
-      bio: "Với hơn 25 năm kinh nghiệm trong ẩm thực Ý, Antonio đã mang bí quyết gia truyền của mình vào mỗi công thức của Golden Crust.",
+      bio: "With over 25 years of experience in Italian cuisine, Antonio brings his family's secret recipes to every dish at Golden Crust.",
       image: "/placeholder.svg?height=300&width=300&text=Antonio"
     },
     {
       name: "Maria Bianchi",
       title: "Head of Culinary Innovation",
-      bio: "Từng được đào tạo tại Florence, Maria chịu trách nhiệm phát triển các món mới và đảm bảo mỗi món ăn đều có hương vị đích thực.",
+      bio: "Trained in Florence, Maria is responsible for developing new menu items and ensuring each dish delivers an authentic taste experience.",
       image: "/placeholder.svg?height=300&width=300&text=Maria"
     },
     {
       name: "Luca Esposito",
       title: "Sustainability Director",
-      bio: "Luca làm việc với các nhà cung cấp địa phương để đảm bảo mọi nguyên liệu đều được sản xuất một cách bền vững và có đạo đức.",
+      bio: "Luca works with local suppliers to ensure all ingredients are produced sustainably and ethically, maintaining our commitment to the environment.",
       image: "/placeholder.svg?height=300&width=300&text=Luca"
     }
   ]
@@ -245,11 +245,11 @@ export default function OurStoryPage() {
             </div>
             
             <div className="text-center mt-12">
-              <p className="text-lg font-light text-white/70 mb-6">Chúng tôi tự hào về hành trình của mình và sẽ tiếp tục đem đến cho khách hàng những trải nghiệm ẩm thực đích thực nhất.</p>
+              <p className="text-lg font-light text-white/70 mb-6">We are proud of our journey and will continue to bring our customers the most authentic culinary experiences.</p>
               <Button
                 variant="outline"
                 className="border-white/40 bg-white/10 text-white hover:bg-white/30 transition-colors">
-                Đặt bàn ngay hôm nay
+                Book a Table Today
               </Button>
             </div>
           </div>
@@ -258,7 +258,7 @@ export default function OurStoryPage() {
 
       {/* Values */}
       <div className="container mx-auto px-6 py-20 text-white">
-        <h2 className="text-4xl font-light mb-8 text-center">Giá trị cốt lõi</h2>
+        <h2 className="text-4xl font-light mb-8 text-center">Core Values</h2>
         <div className="w-20 h-1 bg-white/50 mx-auto mb-12"></div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -266,24 +266,24 @@ export default function OurStoryPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-900/50 mb-6">
               <Star className="h-8 w-8" />
             </div>
-            <h3 className="text-2xl font-light mb-4">Chất lượng</h3>
-            <p className="text-white/70">Chúng tôi không bao giờ thỏa hiệp về chất lượng. Từ nguyên liệu đến dịch vụ, sự xuất sắc là tiêu chuẩn của chúng tôi.</p>
+            <h3 className="text-2xl font-light mb-4">Quality</h3>
+            <p className="text-white/70">We never compromise on quality. From ingredients to service, excellence is our standard.</p>
           </div>
           
           <div className="bg-white/10 backdrop-blur-sm p-8 rounded-xl text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-900/50 mb-6">
               <Users className="h-8 w-8" />
             </div>
-            <h3 className="text-2xl font-light mb-4">Cộng đồng</h3>
-            <p className="text-white/70">Chúng tôi tin vào việc xây dựng mối quan hệ bền chặt với cộng đồng địa phương, từ nông dân, nhà cung cấp đến khách hàng.</p>
+            <h3 className="text-2xl font-light mb-4">Community</h3>
+            <p className="text-white/70">We believe in building strong relationships with our local community, from farmers and suppliers to customers.</p>
           </div>
           
           <div className="bg-white/10 backdrop-blur-sm p-8 rounded-xl text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-900/50 mb-6">
               <Calendar className="h-8 w-8" />
             </div>
-            <h3 className="text-2xl font-light mb-4">Truyền thống</h3>
-            <p className="text-white/70">Chúng tôi tôn trọng truyền thống ẩm thực Ý, giữ gìn những kỹ thuật cổ điển trong khi vẫn không ngừng đổi mới.</p>
+            <h3 className="text-2xl font-light mb-4">Tradition</h3>
+            <p className="text-white/70">We respect Italian culinary traditions, preserving classic techniques while constantly innovating.</p>
           </div>
         </div>
       </div>
@@ -301,17 +301,17 @@ export default function OurStoryPage() {
         </div>
         
         <div className="relative z-10 container mx-auto px-6 text-white text-center">
-          <h2 className="text-4xl font-light mb-6">Trở thành một phần câu chuyện của chúng tôi</h2>
-          <p className="text-xl font-light mb-8 max-w-2xl mx-auto">Ghé thăm Golden Crust để trải nghiệm hương vị Ý đích thực và trở thành một phần trong hành trình của chúng tôi.</p>
+          <h2 className="text-4xl font-light mb-6">Become Part of Our Story</h2>
+          <p className="text-xl font-light mb-8 max-w-2xl mx-auto">Visit Golden Crust to experience authentic Italian flavors and become part of our journey.</p>
           
           <div className="flex flex-col md:flex-row gap-4 justify-center">
             <Button className="bg-blue-900 hover:bg-blue-800 shadow-md">
               <Calendar className="h-5 w-5 mr-2" />
-              Đặt bàn
+              Book a Table
             </Button>
             <Button variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/30 transition-colors shadow-md">
               <Clock className="h-5 w-5 mr-2" />
-              Xem giờ mở cửa
+              View Opening Hours
             </Button>
           </div>
         </div>
@@ -320,9 +320,9 @@ export default function OurStoryPage() {
       {/* Footer */}
       <footer className="py-8 border-t border-white/10">
         <div className="container mx-auto px-6 text-white/50 flex flex-col md:flex-row justify-between items-center">
-          <p className="mb-4 md:mb-0">© 2025 Golden Crust. Đã đăng ký bản quyền.</p>
+          <p className="mb-4 md:mb-0">© 2025 Golden Crust. All rights reserved.</p>
           <Link href="/" className="text-white/70 hover:text-white transition-colors">
-            Trở về Trang chủ
+            Back to Home
           </Link>
         </div>
       </footer>

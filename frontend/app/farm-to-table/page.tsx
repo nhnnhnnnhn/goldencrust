@@ -25,149 +25,127 @@ export default function FarmToTablePage() {
   // Partner farms
   const farms = [
     {
-      name: "Trang trại hữu cơ Sông Hồng",
-      description: "Trang trại hữu cơ cung cấp rau xanh và thảo mộc tươi trồng không thuốc trừ sâu hay phân bón hóa học.",
-      location: "Bắc Ninh, Việt Nam",
-      image: "/placeholder.svg?height=300&width=400&text=Song+Hong+Farm",
-      products: ["Rau xanh", "Thảo mộc", "Cà chua"]
+      name: "Red River Organic Farm",
+      description: "An organic farm providing fresh vegetables and herbs grown without pesticides or chemical fertilizers.",
+      location: "Bac Ninh, Vietnam",
+      image: "/images/red-river-farm.jpg",
+      products: ["Leafy Greens", "Herbs", "Tomatoes"]
     },
     {
-      name: "Vườn cây ăn trái Mỹ Khánh",
-      description: "Vườn cây gia đình cung cấp các loại trái cây hữu cơ tươi ngon nhất, được thu hoạch vào thời điểm hoàn hảo.",
-      location: "Đồng Tháp, Việt Nam",
-      image: "/placeholder.svg?height=300&width=400&text=My+Khanh+Orchard",
-      products: ["Quả mọng", "Trái cây theo mùa"]
+      name: "My Khanh Orchard",
+      description: "A family-owned orchard providing the freshest organic fruits, harvested at the perfect moment.",
+      location: "Dong Thap, Vietnam",
+      image: "/images/my-khanh-orchard.jpg",
+      products: ["Berries", "Seasonal Fruits"]
     },
     {
-      name: "Phô mai thủ công Đà Lạt",
-      description: "Phô mai thủ công được sản xuất từ sữa bò tự nhiên, không hormone, với các phương pháp truyền thống của Ý.",
-      location: "Lâm Đồng, Việt Nam",
-      image: "/placeholder.svg?height=300&width=400&text=Dalat+Cheese",
-      products: ["Phô mai mozzarella", "Phô mai ricotta", "Phô mai parmesan"]
+      name: "Mountain Mist Dairy",
+      description: "A sustainable dairy farm with happy cows producing high-quality milk for our artisanal cheeses.",
+      location: "Lam Dong, Vietnam",
+      image: "/images/mountain-dairy.jpg",
+      products: ["Milk", "Cheese", "Butter"]
     },
     {
-      name: "Trang trại gà Trường Phát",
-      description: "Trang trại gia đình chuyên chăn nuôi gà thả vườn, không dùng kháng sinh, đảm bảo sản phẩm sạch và nhân đạo.",
-      location: "Đồng Nai, Việt Nam",
-      image: "/placeholder.svg?height=300&width=400&text=Truong+Phat+Farm",
-      products: ["Thịt gà tươi", "Trứng gà thả vườn"]
+      name: "Ocean Harvest Seafood",
+      description: "Responsible fishing operation providing sustainably sourced seafood for our specialty dishes.",
+      location: "Nha Trang, Vietnam",
+      image: "/images/ocean-harvest.jpg",
+      products: ["Fish", "Shrimp", "Squid"]
     }
   ]
 
-  // Key ingredients
+  // Quality ingredients
   const ingredients = [
     {
-      name: "Bột mì 00",
-      origin: "Nhập khẩu từ Ý",
-      description: "Loại bột mì cao cấp với hàm lượng protein vừa phải, tạo ra lớp vỏ bánh giòn mềm hoàn hảo. Đây là nền tảng cho mọi chiếc pizza của chúng tôi.",
-      image: "/placeholder.svg?height=300&width=300&text=Flour"
+      name: "00 Italian Flour",
+      origin: "Italy",
+      description: "Ultra-fine flour specially imported from Italy, perfect for creating authentic Neapolitan pizza crusts with the perfect balance of crispness and chewiness.",
+      image: "/images/italian-flour.jpg"
     },
     {
-      name: "Cà chua San Marzano",
-      origin: "Trồng tại Việt Nam theo tiêu chuẩn Ý",
-      description: "Cà chua San Marzano cung cấp hương vị ngọt ngào, ít acid và là thành phần chính trong nước sốt truyền thống của chúng tôi.",
-      image: "/placeholder.svg?height=300&width=300&text=Tomatoes"
+      name: "San Marzano Tomatoes",
+      origin: "Italy",
+      description: "Grown in the volcanic soil near Mount Vesuvius, these tomatoes have a perfect balance of sweetness and acidity that make our sauce exceptional.",
+      image: "/images/san-marzano-tomatoes.jpg"
     },
     {
-      name: "Phô mai Mozzarella",
-      origin: "Sản xuất tại Đà Lạt",
-      description: "Phô mai mozzarella tươi được làm từ sữa bò địa phương, có độ béo và độ kéo sợi hoàn hảo cho pizza.",
-      image: "/placeholder.svg?height=300&width=300&text=Mozzarella"
+      name: "Buffalo Mozzarella",
+      origin: "Local, artisanal production",
+      description: "Creamy, fresh mozzarella made daily from the milk of water buffaloes raised in our partner farm in the highlands.",
+      image: "/images/buffalo-mozzarella.jpg"
     },
     {
-      name: "Thảo mộc hữu cơ",
-      origin: "Trang trại Sông Hồng",
-      description: "Húng quế, oregano và rosemary tươi mang đến hương vị đậm đà cho các món ăn của chúng tôi.",
-      image: "/placeholder.svg?height=300&width=300&text=Herbs"
+      name: "Extra Virgin Olive Oil",
+      origin: "Sicily, Italy",
+      description: "First cold-pressed extra virgin olive oil with fruity notes that enhance the flavors of our pizzas and pastas.",
+      image: "/images/olive-oil.jpg"
     },
     {
-      name: "Dầu olive nguyên chất",
-      origin: "Nhập khẩu từ Ý",
-      description: "Dầu olive ép lạnh, nguyên chất được sử dụng để tạo ra hương vị phong phú cho mọi món ăn.",
-      image: "/placeholder.svg?height=300&width=300&text=Olive+Oil"
+      name: "Fresh Basil",
+      origin: "Local organic farm",
+      description: "Aromatic basil grown locally without pesticides, adding a fresh and herbaceous note to our dishes.",
+      image: "/images/fresh-basil.jpg"
     },
     {
-      name: "Các loại bột xay nhuyễn",
-      origin: "Được chế biến theo công thức riêng",
-      description: "Hỗn hợp đặc biệt của chúng tôi gồm các loại gia vị và thảo mộc, đảm bảo hương vị đặc trưng cho mỗi món ăn.",
-      image: "/placeholder.svg?height=300&width=300&text=Spices"
+      name: "Artisanal Sausage",
+      origin: "House-made",
+      description: "Made in-house using traditional Italian recipes with locally sourced pork and our special blend of spices.",
+      image: "/images/artisanal-sausage.jpg"
     }
   ]
 
   // Sustainability initiatives
-  const sustainability = [
+  const sustainabilityInitiatives = [
     {
-      title: "Canh tác hữu cơ",
-      description: "Hợp tác với các trang trại áp dụng phương pháp canh tác hữu cơ, không sử dụng thuốc trừ sâu hay phân bón hóa học.",
-      icon: <Leaf className="h-10 w-10 text-green-500" />
+      title: "Zero Food Waste",
+      description: "We compost all organic waste and have implemented portion control systems to minimize food waste. Excess prepared food is donated to local shelters.",
+      icon: <Leaf className="h-8 w-8 text-green-400" />
     },
     {
-      title: "Bảo tồn nước",
-      description: "Đầu tư vào hệ thống thu nước mưa và tái chế nước để giảm thiểu việc sử dụng nước trong nhà hàng.",
-      icon: <Droplets className="h-10 w-10 text-blue-500" />
+      title: "Water Conservation",
+      description: "Our kitchens use water-efficient fixtures and we collect rainwater for our herb garden. We've reduced water consumption by 30% in the last two years.",
+      icon: <Droplets className="h-8 w-8 text-blue-400" />
     },
     {
-      title: "Năng lượng tái tạo",
-      description: "Sử dụng năng lượng tái tạo khi có thể và đầu tư vào các dự án năng lượng xanh để bù đắp lượng khí thải carbon.",
-      icon: <Wind className="h-10 w-10 text-amber-500" />
+      title: "Renewable Energy",
+      description: "We've installed solar panels that provide 40% of our energy needs and use energy-efficient appliances throughout our restaurants.",
+      icon: <Wind className="h-8 w-8 text-amber-400" />
+    },
+    {
+      title: "Packaging Reduction",
+      description: "All our takeout containers are compostable, and we've eliminated single-use plastics from our operations. Customers receive discounts for bringing their own containers.",
+      icon: <CheckCircle2 className="h-8 w-8 text-emerald-400" />
     }
   ]
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Hero Section */}
+      {/* Fixed Back to Home Button */}
+      <div className="fixed top-6 left-6 z-50">
+        <Link href="/" className="flex items-center text-amber-300 hover:text-amber-200 transition-colors bg-black/50 px-4 py-2 rounded-full">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Home
+        </Link>
+      </div>
+      
+      {/* Hero Banner */}
       <div className="relative h-[60vh]">
         <Image
-          src="/images/143352-2.webp"
-          alt="Farm to Table Banner" 
+          src="/images/farm-vegetables.jpg"
+          alt="Farm to Table" 
           fill
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black" />
         
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white container mx-auto px-6">
-          <Link href="/" className="absolute left-6 top-8 text-white hover:text-white/80 transition-colors flex items-center font-light">
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Trở về Trang chủ
-          </Link>
-          <h1 className="text-6xl font-light mb-4">Từ nông trại đến bàn ăn</h1>
+          <h1 className="text-6xl font-light mb-4">Farm to Table</h1>
           <div className="w-24 h-1 bg-white/50 mx-auto mb-6"></div>
-          <p className="text-xl font-light max-w-2xl">Khám phá cách chúng tôi liên kết với các trang trại địa phương để mang đến những nguyên liệu tươi ngon nhất cho bữa ăn của bạn.</p>
+          <p className="text-xl font-light max-w-2xl">Our commitment to quality starts with the finest ingredients, sourced directly from local farms and quality suppliers.</p>
         </div>
       </div>
-
-      {/* Philosophy Section */}
-      <div className="container mx-auto px-6 py-20 text-white">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl font-light mb-8 text-center">Triết lý của chúng tôi</h2>
-          <div className="w-20 h-1 bg-white/50 mx-auto mb-12"></div>
-          
-          <div className="flex flex-col md:flex-row gap-12 items-center">
-            <div className="md:w-1/2">
-              <Image 
-                src="/placeholder.svg?height=400&width=500&text=Our+Philosophy" 
-                alt="Our Philosophy" 
-                width={500} 
-                height={400}
-                className="rounded-lg"
-              />
-            </div>
-            <div className="md:w-1/2">
-              <p className="text-xl font-light mb-6">
-                Tại Golden Crust, chúng tôi tin rằng những nguyên liệu tốt nhất tạo nên những món ăn tuyệt vời nhất.
-              </p>
-              <p className="text-lg font-light mb-6">
-                Triết lý "Từ nông trại đến bàn ăn" của chúng tôi không chỉ là một khẩu hiệu, mà là cách chúng tôi hoạt động hàng ngày. Chúng tôi hợp tác chặt chẽ với các nhà sản xuất địa phương để đảm bảo rằng mỗi thành phần trong món ăn của chúng tôi đều tươi ngon, bền vững và có đạo đức.
-              </p>
-              <p className="text-lg font-light">
-                Khi thưởng thức một món ăn tại Golden Crust, bạn không chỉ trải nghiệm hương vị Ý đích thực mà còn góp phần hỗ trợ nền nông nghiệp địa phương và các phương pháp sản xuất bền vững.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs Navigation */}
+      
+      {/* Main Content with Tabs */}
       <div className="bg-white/5 pt-8">
         <div className="container mx-auto px-6">
           <Tabs 
@@ -181,30 +159,30 @@ export default function FarmToTablePage() {
                 value="ingredients"
                 className="data-[state=active]:bg-white/20 py-2 px-4 flex-1 whitespace-nowrap text-sm md:text-base font-light"
               >
-                Nguyên liệu
+                Ingredients
               </TabsTrigger>
               <TabsTrigger 
                 value="partners"
                 className="data-[state=active]:bg-white/20 py-2 px-4 flex-1 whitespace-nowrap text-sm md:text-base font-light"
               >
-                Đối tác
+                Partners
               </TabsTrigger>
               <TabsTrigger 
                 value="sustainability"
                 className="data-[state=active]:bg-white/20 py-2 px-4 flex-1 whitespace-nowrap text-sm md:text-base font-light"
               >
-                Bền vững
+                Sustainability
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="ingredients" className="text-white pb-20">
-              <h2 className="text-4xl font-light mb-8 text-center">Nguyên liệu chất lượng cao</h2>
+              <h2 className="text-4xl font-light mb-8 text-center">Premium Quality Ingredients</h2>
               <div className="w-20 h-1 bg-white/50 mx-auto mb-12"></div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 {ingredients.map((ingredient, index) => (
-                  <div key={index} className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden transition-transform hover:scale-[1.02] duration-300">
-                    <div className="relative h-48">
+                  <div key={index} className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden flex flex-col h-full">
+                    <div className="relative h-56">
                       <Image 
                         src={ingredient.image} 
                         alt={ingredient.name} 
@@ -223,7 +201,7 @@ export default function FarmToTablePage() {
             </TabsContent>
             
             <TabsContent value="partners" className="text-white pb-20">
-              <h2 className="text-4xl font-light mb-8 text-center">Đối tác địa phương</h2>
+              <h2 className="text-4xl font-light mb-8 text-center">Local Partners</h2>
               <div className="w-20 h-1 bg-white/50 mx-auto mb-12"></div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -239,14 +217,16 @@ export default function FarmToTablePage() {
                     </div>
                     <div className="p-6 flex-1 flex flex-col">
                       <h3 className="text-2xl font-light mb-1">{farm.name}</h3>
-                      <div className="text-blue-300 text-sm mb-3">{farm.location}</div>
-                      <p className="text-white/70 mb-4 flex-1">{farm.description}</p>
-                      
+                      <div className="text-amber-300 text-sm mb-3">{farm.location}</div>
+                      <p className="text-white/70 mb-4">{farm.description}</p>
                       <div className="mt-auto">
-                        <h4 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-2">Sản phẩm</h4>
+                        <div className="text-sm font-medium text-white/50 mb-2">Products:</div>
                         <div className="flex flex-wrap gap-2">
                           {farm.products.map((product, idx) => (
-                            <span key={idx} className="bg-white/10 px-3 py-1 rounded-full text-sm">
+                            <span 
+                              key={idx} 
+                              className="bg-white/20 px-3 py-1 rounded-full text-xs"
+                            >
                               {product}
                             </span>
                           ))}
@@ -256,48 +236,25 @@ export default function FarmToTablePage() {
                   </div>
                 ))}
               </div>
-              
-              <div className="text-center mt-12">
-                <p className="text-white/70 mb-6 max-w-2xl mx-auto">
-                  Chúng tôi luôn tìm kiếm các đối tác mới chia sẻ giá trị và cam kết về chất lượng. Nếu bạn là một nhà sản xuất địa phương, hãy liên hệ với chúng tôi.
-                </p>
-                <Button variant="outline" className="border-white/30 hover:bg-white/20">
-                  Trở thành đối tác
-                </Button>
-              </div>
             </TabsContent>
             
             <TabsContent value="sustainability" className="text-white pb-20">
-              <h2 className="text-4xl font-light mb-8 text-center">Cam kết phát triển bền vững</h2>
+              <h2 className="text-4xl font-light mb-8 text-center">Sustainability Initiatives</h2>
               <div className="w-20 h-1 bg-white/50 mx-auto mb-12"></div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                {sustainability.map((item, index) => (
-                  <div key={index} className="bg-white/10 backdrop-blur-sm p-8 rounded-xl text-center">
-                    <div className="flex justify-center mb-6">
-                      {item.icon}
-                    </div>
-                    <h3 className="text-2xl font-light mb-4">{item.title}</h3>
-                    <p className="text-white/70">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="bg-gradient-to-br from-green-900/20 to-green-800/20 p-8 rounded-xl">
-                <h3 className="text-2xl font-light mb-6 text-center">Cam kết bền vững của chúng tôi</h3>
+              <div className="max-w-3xl mx-auto">
+                <p className="text-xl font-light mb-12 text-center">
+                  At Golden Crust, we're committed to responsible and sustainable practices that minimize our environmental impact while supporting our community.
+                </p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 max-w-3xl mx-auto">
-                  {[
-                    "Giảm thiểu chất thải nhựa một lần",
-                    "Ưu tiên nguyên liệu theo mùa và địa phương",
-                    "Tối ưu hóa sử dụng nguyên liệu, giảm thiểu lãng phí thực phẩm",
-                    "Sử dụng bao bì thân thiện với môi trường",
-                    "Ủng hộ các phương pháp sản xuất nhân đạo",
-                    "Tổ chức các sự kiện giáo dục cộng đồng về ẩm thực bền vững"
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-start">
-                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
-                      <p className="text-white/90">{item}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  {sustainabilityInitiatives.map((initiative, index) => (
+                    <div key={index} className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                      <div className="mb-4">
+                        {initiative.icon}
+                      </div>
+                      <h3 className="text-2xl font-light mb-3">{initiative.title}</h3>
+                      <p className="text-white/70">{initiative.description}</p>
                     </div>
                   ))}
                 </div>
@@ -306,97 +263,23 @@ export default function FarmToTablePage() {
           </Tabs>
         </div>
       </div>
-
-      {/* Seasonal Highlights */}
-      <div className="container mx-auto px-6 py-20 text-white border-t border-white/10">
-        <h2 className="text-4xl font-light mb-8 text-center">Đặc sản theo mùa</h2>
-        <div className="w-20 h-1 bg-white/50 mx-auto mb-12"></div>
-        
-        <div className="relative">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { name: "Pizza nấm truffle", season: "Mùa thu", image: "/placeholder.svg?height=300&width=300&text=Truffle+Pizza" },
-              { name: "Salad hoa quả mùa hè", season: "Mùa hè", image: "/placeholder.svg?height=300&width=300&text=Summer+Salad" },
-              { name: "Risotto nấm mùa thu", season: "Mùa thu", image: "/placeholder.svg?height=300&width=300&text=Mushroom+Risotto" },
-              { name: "Kem gelato dâu", season: "Mùa xuân", image: "/placeholder.svg?height=300&width=300&text=Strawberry+Gelato" }
-            ].map((item, index) => (
-              <div key={index} className="relative group">
-                <div className="aspect-square overflow-hidden rounded-xl">
-                  <Image 
-                    src={item.image} 
-                    alt={item.name} 
-                    width={300}
-                    height={300}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" 
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 rounded-xl">
-                  <div className="bg-amber-600/90 text-white text-xs px-3 py-1 rounded-full inline-block mb-2 w-fit">
-                    {item.season}
-                  </div>
-                  <h3 className="text-xl font-light">{item.name}</h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="text-center mt-12">
-          <Link
-            href="/menu"
-            className="inline-flex items-center border border-white px-6 py-3 rounded-full text-lg font-light bg-black/30 hover:bg-white/20 transition-all"
+      
+      {/* Commitment Statement */}
+      <div className="bg-green-900/30 py-20 text-white text-center">
+        <div className="container mx-auto px-6 max-w-4xl">
+          <h2 className="text-4xl font-light mb-6">Our Commitment</h2>
+          <p className="text-xl font-light mb-8">
+            From farm to fork, we strive to bring you the most authentic flavors while respecting our environment and supporting local communities. This commitment to quality and sustainability is at the heart of everything we do.
+          </p>
+          <Button 
+            variant="outline" 
+            className="border-white/40 bg-white/10 text-white hover:bg-white/30 transition-colors shadow-md"
           >
-            Xem thực đơn đầy đủ
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Link>
+            Learn About Our Sourcing
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </div>
-
-      {/* Visit Our Kitchen */}
-      <div className="bg-gradient-to-b from-amber-900/20 to-amber-950/20 py-20">
-        <div className="container mx-auto px-6 text-white">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl font-light mb-8 text-center">Tham quan nhà bếp của chúng tôi</h2>
-            <div className="w-20 h-1 bg-white/50 mx-auto mb-12"></div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden">
-              <div className="relative h-80">
-                <Image 
-                  src="/placeholder.svg?height=500&width=1000&text=Kitchen+Tour" 
-                  alt="Kitchen Tour" 
-                  fill
-                  className="object-cover" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors">
-                    <div className="w-0 h-0 border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent border-l-[20px] border-l-white ml-2"></div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-8 text-center">
-                <h3 className="text-2xl font-light mb-4">Hành trình từ nông trại đến bàn ăn</h3>
-                <p className="text-white/70 mb-6">
-                  Tham quan nhà bếp của chúng tôi và khám phá cách chúng tôi biến những nguyên liệu tươi ngon nhất thành những món ăn tuyệt vời. Từ việc lựa chọn nguyên liệu đến tạo hình bánh pizza, chứng kiến sự tận tâm của đội ngũ đầu bếp chúng tôi trong mỗi công đoạn.
-                </p>
-                <Button className="bg-blue-900 hover:bg-blue-800">
-                  Đặt lịch tham quan
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="py-8 border-t border-white/10">
-        <div className="container mx-auto px-6 text-white/50 flex flex-col md:flex-row justify-between items-center">
-          <p className="mb-4 md:mb-0">© 2025 Golden Crust. Đã đăng ký bản quyền.</p>
-          <Link href="/" className="text-white/70 hover:text-white transition-colors">
-            Trở về Trang chủ
-          </Link>
-        </div>
-      </footer>
     </div>
   )
 }

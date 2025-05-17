@@ -256,7 +256,7 @@ export default function MenuPage() {
                   {item.featured && (
                     <div className="absolute top-4 right-4">
                       <span className="bg-amber-600/90 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full">
-                        Nổi bật
+                        Featured
                       </span>
                     </div>
                   )}
@@ -274,7 +274,7 @@ export default function MenuPage() {
                       variant="outline"
                       className="bg-white/10 border-white/30 hover:bg-white/20 hover:text-white hover:border-white/50"
                     >
-                      Đặt ngay
+                      Order Now
                     </Button>
                   </div>
                 </div>
@@ -283,13 +283,13 @@ export default function MenuPage() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <h3 className="text-2xl font-light mb-4">Không tìm thấy món ăn phù hợp</h3>
-            <p className="text-white/70 mb-6">Vui lòng thử từ khóa tìm kiếm khác hoặc xem tất cả các món ăn.</p>
+            <h3 className="text-2xl font-light mb-4">No matching items found</h3>
+            <p className="text-white/70 mb-6">Please try a different search term or browse all menu items.</p>
             <Button variant="outline" onClick={() => {
               setSearchTerm("")
               setSelectedCategory("all")
             }}>
-              Xem tất cả các món ăn
+              View All Menu Items
             </Button>
           </div>
         )}
@@ -298,11 +298,11 @@ export default function MenuPage() {
       {/* Dietary Information */}
       <div className="bg-white/5 backdrop-blur-sm py-12">
         <div className="container mx-auto px-6 text-white text-center">
-          <h3 className="text-2xl font-light mb-6">Thông tin dinh dưỡng</h3>
-          <p className="text-white/70 mb-4 max-w-3xl mx-auto">Chúng tôi có các lựa chọn thuần chay, không gluten và nhiều món phù hợp với các chế độ ăn uống khác nhau.</p>
-          <p className="text-white/70 mb-4 max-w-3xl mx-auto">Vui lòng thông báo cho nhân viên phục vụ về bất kỳ dị ứng hoặc yêu cầu đặc biệt nào.</p>
+          <h3 className="text-2xl font-light mb-6">Dietary Information</h3>
+          <p className="text-white/70 mb-4 max-w-3xl mx-auto">We offer vegan, gluten-free options and many dishes suitable for various dietary needs.</p>
+          <p className="text-white/70 mb-4 max-w-3xl mx-auto">Please inform our staff about any allergies or special requirements.</p>
           <Button variant="link" className="text-blue-300 hover:text-blue-400">
-            Liên hệ để biết thêm thông tin
+            Contact for more information
           </Button>
         </div>
       </div>
@@ -310,9 +310,9 @@ export default function MenuPage() {
       {/* Footer */}
       <footer className="py-8 border-t border-white/10">
         <div className="container mx-auto px-6 text-white/50 flex flex-col md:flex-row justify-between items-center">
-          <p className="mb-4 md:mb-0">© 2025 Golden Crust. Đã đăng ký bản quyền.</p>
+          <p className="mb-4 md:mb-0">© 2025 Golden Crust. All rights reserved.</p>
           <Link href="/" className="text-white/70 hover:text-white transition-colors">
-            Trở về Trang chủ
+            Back to Home
           </Link>
         </div>
       </footer>
