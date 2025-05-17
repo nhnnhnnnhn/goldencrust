@@ -5,6 +5,9 @@ const reservationController = require('../controllers/reservation.controller');
 // Get all reservations
 router.get('/', reservationController.getReservations);
 
+// Get reservations by date range
+router.get('/date-range', reservationController.getReservationsByDateRange);
+
 // Create new reservation
 router.post('/', reservationController.createReservation);
 

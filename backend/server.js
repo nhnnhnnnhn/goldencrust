@@ -26,9 +26,10 @@ try {
 // Cấu hình CORS để cho phép frontend kết nối đến API
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: true,
+    exposedHeaders: ['Set-Cookie']
 }));
 
 app.use(requestTime); // Đo thời gian xử lý request

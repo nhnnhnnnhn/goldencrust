@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 // Define interfaces
 export interface Reservation {
@@ -20,7 +21,7 @@ export interface Reservation {
   updatedAt: Date;
 }
 
-export interface CreateReservationRequest {
+interface CreateReservationRequest {
   customerName: string;
   customerPhone: string;
   reservationDate: string;
@@ -30,9 +31,15 @@ export interface CreateReservationRequest {
   restaurantId: string;
 }
 
-export interface UpdateReservationRequest {
-  id: string;
-  reservation: Partial<Reservation>;
+interface UpdateReservationRequest {
+  customerName?: string;
+  customerPhone?: string;
+  reservationDate?: string;
+  reservationTime?: string;
+  numberOfGuests?: number;
+  specialRequests?: string;
+  restaurantId?: string;
+  status?: 'pending' | 'confirmed' | 'cancelled';
 }
 
 export const reservationApi = createApi({
@@ -41,11 +48,11 @@ export const reservationApi = createApi({
     baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
     credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
-      // Get token from localStorage
       const token = localStorage.getItem('token');
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
+      headers.set('Content-Type', 'application/json');
       return headers;
     },
   }),
@@ -72,11 +79,14 @@ export const reservationApi = createApi({
         method: 'POST',
         body: reservation,
       }),
-      invalidatesTags: ['Reservation'],
+      invalidatesTags: (result) => [
+        'Reservation',
+        { type: 'Reservation', id: 'LIST' }
+      ],
     }),
 
     // Update reservation
-    updateReservation: builder.mutation<Reservation, UpdateReservationRequest>({
+    updateReservation: builder.mutation<Reservation, { id: string; reservation: UpdateReservationRequest }>({
       query: ({ id, reservation }) => ({
         url: `/reservations/${id}`,
         method: 'PUT',
@@ -91,8 +101,37 @@ export const reservationApi = createApi({
         url: `/reservations/${id}/status`,
         method: 'PATCH',
         body: { status },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       }),
-      invalidatesTags: ['Reservation'],
+      transformResponse: (response: { success: boolean; message: string; data: Reservation }) => {
+        if (!response.success) {
+          throw new Error(response.message || 'Failed to update reservation status');
+        }
+        return response.data;
+      },
+      transformErrorResponse: (response: FetchBaseQueryError) => {
+        if (response.status === 'FETCH_ERROR') {
+          return {
+            status: 500,
+            data: { message: 'Network error: Unable to connect to the server' },
+            message: 'Network error: Unable to connect to the server'
+          };
+        }
+        const errorData = response.data as { message?: string } || {};
+        return {
+          status: typeof response.status === 'number' ? response.status : 500,
+          data: errorData,
+          message: errorData.message || 'An error occurred while updating the reservation status'
+        };
+      },
+      invalidatesTags: (result, error, { id }) => [
+        'Reservation',
+        { type: 'Reservation', id },
+        { type: 'Reservation', id: 'LIST' }
+      ],
     }),
 
     // Delete reservation
@@ -104,6 +143,17 @@ export const reservationApi = createApi({
       invalidatesTags: ['Reservation'],
     }),
 
+    // Get reservations by date range
+    getReservationsByDateRange: builder.query<Reservation[], { startDate: string; endDate: string }>({
+      query: ({ startDate, endDate }) => `/reservations/date-range?startDate=${startDate}&endDate=${endDate}`,
+      transformResponse: (response: { success: boolean; message: string; data: Reservation[] }) => response.data,
+      providesTags: (result) => [
+        'Reservation',
+        { type: 'Reservation', id: 'LIST' },
+        ...(result ? result.map(({ _id }) => ({ type: 'Reservation' as const, id: _id })) : [])
+      ],
+    }),
+
     // Get reservations by restaurant
     getReservationsByRestaurant: builder.query<Reservation[], string>({
       query: (restaurantId) => `/reservations/restaurant/${restaurantId}`,
@@ -111,16 +161,15 @@ export const reservationApi = createApi({
       providesTags: ['Reservation'],
     }),
 
-    // Get reservations by user
-    getReservationsByUser: builder.query<Reservation[], string>({
-      query: (userId) => `/reservations/user/${userId}`,
+    // Get reservations by status
+    getReservationsByStatus: builder.query<Reservation[], 'pending' | 'confirmed' | 'cancelled'>({
+      query: (status) => `/reservations/status/${status}`,
       transformResponse: (response: { success: boolean; message: string; data: Reservation[] }) => response.data,
       providesTags: ['Reservation'],
     }),
   }),
 });
 
-// Export hooks
 export const {
   useGetReservationsQuery,
   useGetReservationByIdQuery,
@@ -128,6 +177,7 @@ export const {
   useUpdateReservationMutation,
   useUpdateReservationStatusMutation,
   useDeleteReservationMutation,
+  useGetReservationsByDateRangeQuery,
   useGetReservationsByRestaurantQuery,
-  useGetReservationsByUserQuery,
+  useGetReservationsByStatusQuery,
 } = reservationApi; 

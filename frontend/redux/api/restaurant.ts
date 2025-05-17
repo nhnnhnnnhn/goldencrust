@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-interface Restaurant {
+export interface Restaurant {
   _id: string;
   name: string;
   description?: string;

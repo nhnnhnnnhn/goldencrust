@@ -181,6 +181,12 @@ module.exports.updateReservationStatus = controllerHandler(async (req, res) => {
             data: reservation
         });
     } catch (error) {
+        console.log('Full error:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            stack: error.stack
+        });
         return res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -256,6 +262,37 @@ module.exports.getReservationsByUser = controllerHandler(async (req, res) => {
             deleted: false 
         }).populate('restaurantId');
 
+        res.status(200).json({
+            success: true,
+            message: 'Reservations fetched successfully',
+            data: reservations
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+});
+
+// Get reservations by date range
+module.exports.getReservationsByDateRange = controllerHandler(async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        
+        // Create date range (start of day to end of day)
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        const reservations = await Reservation.find({
+            reservationDate: { $gte: start, $lte: end },
+            deleted: false
+        }).populate('restaurantId');
+        
         res.status(200).json({
             success: true,
             message: 'Reservations fetched successfully',
