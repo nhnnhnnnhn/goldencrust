@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 // Define the User interface
 export interface User {
-    id: string;
+    _id: string;
     email: string;
     fullName: string;
     phone?: string;
@@ -13,6 +13,7 @@ export interface User {
     isSuspended: boolean;
     createdAt: string;
     updatedAt: string;
+    password?: string;
 }
 
 export const userApi = createApi({
@@ -153,6 +154,16 @@ export const userApi = createApi({
             invalidatesTags: ['User'],
         }),
 
+        // Admin update user profile
+        adminUpdateUserProfile: builder.mutation<User, { id: string; userData: Partial<User> }>({
+            query: ({ id, userData }) => ({
+                url: `/users/admin/update/${id}`,
+                method: 'PUT',
+                body: userData,
+            }),
+            invalidatesTags: ['User'],
+        }),
+
         // Change user password
         changeUserPassword: builder.mutation<void, {
             oldPassword: string;
@@ -181,5 +192,6 @@ export const {
     useGetUserStatsQuery,
     useGetUserProfileQuery,
     useUpdateUserProfileMutation,
+    useAdminUpdateUserProfileMutation,
     useChangeUserPasswordMutation,
 } = userApi; 

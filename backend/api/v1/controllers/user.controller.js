@@ -62,6 +62,11 @@ module.exports.changeUserRole = controllerHandler(async (req, res) => {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    // Validate role
+    if (role !== 'admin' && role !== 'user') {
+        return res.status(400).json({ message: 'Invalid role' });
+    }   
+
     // Check if user exists
     const user = await User.findById(id);
     if (!user) {
@@ -87,6 +92,31 @@ module.exports.updateUser = controllerHandler(async (req, res) => {
     // Validate input
     if (!id || !email || !password || !role || !fullName || !avatar || !address || !phone) {
         return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Validate role
+    if (role !== 'admin' && role !== 'user') {
+        return res.status(400).json({ message: 'Invalid role' });
+    }
+
+    // Validate email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: 'Invalid email' });
+    }
+
+    // Validate fullName
+    if (fullName.length < 3 || fullName.length > 50 || !/^[a-zA-Z\s]+$/.test(fullName)) {
+        return res.status(400).json({ message: 'Full name must be at least 3 characters long' });
+    }
+
+    // Validate address
+    if (address.length < 3 || address.length > 100 || !/^[a-zA-Z\s]+$/.test(address) ) {
+        return res.status(400).json({ message: 'Address must be at least 3 characters long' });
+    }
+
+    // Validate phone
+    if (!/^[0-9]+$/.test(phone) || phone.length !== 10) {
+        return res.status(400).json({ message: 'Phone number must be 10 digits' });
     }
 
     // Check if email is already in use
@@ -274,23 +304,59 @@ module.exports.getUserProfile = controllerHandler(async (req, res) => {
 // Update user profile
 module.exports.updateUserProfile = controllerHandler(async (req, res) => {
     const userId = req.user.id; // Get user ID from the token
-    const { fullName, address, phone, avatar } = req.body;
+    const { fullName, address, phone, email } = req.body;
 
     // Validate input
-    if (!userId) {
+    if (!userId || !fullName || !address || !phone || !email) {
+        console.log('User not authenticated');
         return res.status(400).json({ message: 'User not authenticated' });
+    }
+
+    // Validate email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        console.log('Invalid email');
+        return res.status(400).json({ message: 'Invalid email' });
+    }
+
+    // Validate fullName
+    if (fullName.length < 3 || fullName.length > 50 || !/^[a-zA-Z\s]+$/.test(fullName)) {
+        console.log('Invalid full name');
+        return res.status(400).json({ message: 'Full name must be 3-50 characters long and contain only letters' });
+    }
+
+    // Validate address
+    if (address.length < 3 || address.length > 100) {
+        console.log('Invalid address');
+        return res.status(400).json({ message: 'Address must be 3-100 characters long' });
+    }
+
+    // Validate phone
+    if (!/^[0-9]+$/.test(phone) || phone.length !== 10) {
+        console.log('Invalid phone number');
+        return res.status(400).json({ message: 'Phone number must be 10 digits' });
     }
 
     // Check if user exists
     const existingUser = await User.findById(userId);
     if (!existingUser) {
+        console.log('User not found');
         return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if email is already in use by another user
+    if (email) {
+        const existingEmail = await User.findOne({ email, _id: { $ne: userId } });
+        if (existingEmail) {
+            console.log('Email already exists');
+            return res.status(409).json({ message: 'Email already exists' });
+        }
     }
 
     // Check if phone number is already in use by another user
     if (phone) {
         const existingPhone = await User.findOne({ phone, _id: { $ne: userId } });
         if (existingPhone) {
+            console.log('Phone number already exists');
             return res.status(409).json({ message: 'Phone number already exists' });
         }
     }
@@ -301,7 +367,7 @@ module.exports.updateUserProfile = controllerHandler(async (req, res) => {
         if (fullName) updateData.fullName = fullName;
         if (address) updateData.address = address;
         if (phone) updateData.phone = phone;
-        if (avatar) updateData.avatar = avatar;
+        if (email) updateData.email = email;
 
         const updatedUser = await User.findByIdAndUpdate(
             userId,
@@ -310,6 +376,7 @@ module.exports.updateUserProfile = controllerHandler(async (req, res) => {
         );
 
         if (!updatedUser) {
+            console.log('User not found');
             return res.status(404).json({ message: 'User not found' });
         }
 
@@ -318,6 +385,7 @@ module.exports.updateUserProfile = controllerHandler(async (req, res) => {
             user: updatedUser 
         });
     } catch (error) {
+        console.error('Error updating user profile:', error);
         return res.status(500).json({ message: 'Error updating user profile', error });
     }
 });
@@ -351,6 +419,11 @@ module.exports.changeUserPassword = controllerHandler(async (req, res) => {
     // Check if new password is the same as old password
     if (oldPassword === newPassword) {
         return res.status(400).json({ message: 'New password cannot be the same as current password' });
+    }
+
+    // Check password strength
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long' });
     }
 
     // Hash new password before saving
@@ -390,4 +463,69 @@ module.exports.deleteUserData = controllerHandler(async (req, res) => {
     }
 
     return res.status(200).json({ message: 'User data deleted successfully' });
+});
+
+// Admin Update User Profile
+module.exports.adminUpdateUserProfile = controllerHandler(async (req, res) => {
+    const { id } = req.params;
+    const { fullName, address, phone, email } = req.body;
+
+    // Validate input
+    if (!id || !fullName || !address || !phone || !email) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Validate email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: 'Invalid email' });
+    }
+
+    // Validate fullName
+    if (fullName.length < 3 || fullName.length > 50 || !/^[a-zA-Z\s]+$/.test(fullName)) {
+        return res.status(400).json({ message: 'Full name must be 3-50 characters long and contain only letters' });
+    }
+
+    // Validate address
+    if (address.length < 3 || address.length > 100) {
+        return res.status(400).json({ message: 'Address must be 3-100 characters long' });
+    }
+
+    // Validate phone
+    if (!/^[0-9]+$/.test(phone) || phone.length !== 10) {
+        return res.status(400).json({ message: 'Phone number must be 10 digits' });
+    }
+
+    // Check if user exists
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if email is already in use by another user
+    if (email) {
+        const existingEmail = await User.findOne({ email, _id: { $ne: id } });
+        if (existingEmail) {
+            return res.status(409).json({ message: 'Email already exists' });
+        }
+    }
+
+    // Check if phone is already in use by another user
+    if (phone) {
+        const existingPhone = await User.findOne({ phone, _id: { $ne: id } });
+        if (existingPhone) {
+            return res.status(409).json({ message: 'Phone number already exists' });
+        }
+    }
+
+    // Update user
+    try {
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { fullName, address, phone, email },
+            { new: true }
+        );
+        return res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error updating user', error });
+    }
 });
