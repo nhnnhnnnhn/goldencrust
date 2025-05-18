@@ -164,45 +164,6 @@ const initialTransactions: Payment[] = [
   },
 ]
 
-// Dữ liệu mẫu cho cài đặt thanh toán
-const paymentMethods = [
-  {
-    id: "credit_card",
-    name: "Credit Card",
-    enabled: true,
-    provider: "Stripe",
-    fee: "2.9% + $0.30",
-  },
-  {
-    id: "debit_card",
-    name: "Debit Card",
-    enabled: true,
-    provider: "Stripe",
-    fee: "2.9% + $0.30",
-  },
-  {
-    id: "cash",
-    name: "Cash",
-    enabled: true,
-    provider: "N/A",
-    fee: "0%",
-  },
-  {
-    id: "paypal",
-    name: "PayPal",
-    enabled: false,
-    provider: "PayPal",
-    fee: "2.9% + $0.30",
-  },
-  {
-    id: "stripe",
-    name: "Stripe",
-    enabled: true,
-    provider: "Stripe",
-    fee: "2.9% + $0.30",
-  },
-]
-
 // Danh sách trạng thái
 const statuses = ["all", "completed", "pending", "failed"]
 const statusLabels = {
@@ -245,7 +206,7 @@ export default function PaymentManagement() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showPaymentMethodDropdown, setShowPaymentMethodDropdown] = useState(false)
   const [activeTab, setActiveTab] = useState("transactions")
-  const [paymentConfig, setPaymentConfig] = useState(paymentMethods)
+
   const [selectedTransaction, setSelectedTransaction] = useState<Payment | null>(null)
   const [isTransactionDetailsDialogOpen, setIsTransactionDetailsDialogOpen] = useState(false)
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false)
@@ -331,13 +292,6 @@ export default function PaymentManagement() {
 
     // Thông báo thành công
     alert(`Refund of ${formatPrice(refundAmount)} has been processed successfully`)
-  }
-
-  // Xử lý cập nhật trạng thái phương thức thanh toán
-  const handleTogglePaymentMethod = (id: string) => {
-    setPaymentConfig(
-      paymentConfig.map((method) => (method.id === id ? { ...method, enabled: !method.enabled } : method)),
-    )
   }
 
   // Xử lý in hóa đơn
@@ -556,7 +510,6 @@ export default function PaymentManagement() {
           <h1 className="text-2xl font-bold">Payment Management</h1>
           <TabsList>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
         </div>
 
@@ -836,174 +789,6 @@ export default function PaymentManagement() {
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Payment Methods</CardTitle>
-                <CardDescription>Configure available payment methods for your customers</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Fee</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paymentConfig.map((method) => (
-                      <TableRow key={method.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {paymentMethodIcons[method.id as keyof typeof paymentMethodIcons] || (
-                              <CreditCard size={16} />
-                            )}
-                            {method.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>{method.provider}</TableCell>
-                        <TableCell>{method.fee}</TableCell>
-                        <TableCell>
-                          <span
-                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              method.enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {method.enabled ? "Enabled" : "Disabled"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant={method.enabled ? "outline" : "default"}
-                            size="sm"
-                            onClick={() => handleTogglePaymentMethod(method.id)}
-                          >
-                            {method.enabled ? "Disable" : "Enable"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Settings</CardTitle>
-                <CardDescription>Configure general payment settings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Currency</Label>
-                    <Select defaultValue="USD">
-                      <SelectTrigger id="currency">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USD">US Dollar (USD)</SelectItem>
-                        <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                        <SelectItem value="GBP">British Pound (GBP)</SelectItem>
-                        <SelectItem value="VND">Vietnamese Dong (VND)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tax-rate">Tax Rate (%)</Label>
-                    <Input id="tax-rate" type="number" defaultValue="10" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="receipt-prefix">Receipt Prefix</Label>
-                    <Input id="receipt-prefix" defaultValue="INV-" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="receipt-footer">Receipt Footer Text</Label>
-                    <Input id="receipt-footer" defaultValue="Thank you for your business!" />
-                  </div>
-
-                  <Button type="button" className="w-full">
-                    Save Settings
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Gateway Integration</CardTitle>
-              <CardDescription>Configure your payment gateway credentials</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="stripe">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="stripe">Stripe</TabsTrigger>
-                  <TabsTrigger value="paypal">PayPal</TabsTrigger>
-                  <TabsTrigger value="momo">MoMo</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="stripe" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="stripe-public-key">Public Key</Label>
-                      <Input id="stripe-public-key" type="password" defaultValue="pk_test_51H..." />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="stripe-secret-key">Secret Key</Label>
-                      <Input id="stripe-secret-key" type="password" defaultValue="sk_test_51H..." />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="stripe-webhook">Webhook Secret</Label>
-                    <Input id="stripe-webhook" type="password" defaultValue="whsec_..." />
-                  </div>
-                  <Button type="button">Save Stripe Settings</Button>
-                </TabsContent>
-
-                <TabsContent value="paypal" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="paypal-client-id">Client ID</Label>
-                      <Input id="paypal-client-id" type="password" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="paypal-secret">Secret</Label>
-                      <Input id="paypal-secret" type="password" />
-                    </div>
-                  </div>
-                  <Button type="button">Save PayPal Settings</Button>
-                </TabsContent>
-
-                <TabsContent value="momo" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="momo-partner-code">Partner Code</Label>
-                      <Input id="momo-partner-code" type="password" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="momo-access-key">Access Key</Label>
-                      <Input id="momo-access-key" type="password" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="momo-secret-key">Secret Key</Label>
-                    <Input id="momo-secret-key" type="password" />
-                  </div>
-                  <Button type="button">Save MoMo Settings</Button>
-                </TabsContent>
-              </Tabs>
             </CardContent>
           </Card>
         </TabsContent>
