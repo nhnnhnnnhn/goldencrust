@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import {
   Clock,
   Package,
@@ -36,11 +37,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useGetOrdersQuery, useUpdateOrderStatusMutation, useCreateOrderMutation } from '@/redux/api'
+import { useGetRestaurantsQuery } from '@/redux/api/restaurant'
+import { useGetTablesByRestaurantQuery } from '@/redux/api/tableApi'
 import { DataTable } from '@/components/ui/data-table'
 import { format } from 'date-fns'
 import { Loader2 } from 'lucide-react'
@@ -473,6 +476,7 @@ const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
 
 export default function OrdersPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [restaurantFilter, setRestaurantFilter] = useState("all")
@@ -492,6 +496,19 @@ export default function OrdersPage() {
     paymentStatus: "pending" as const,
     deleted: false,
   })
+  
+  // State cho dialog order type
+  const [orderStep, setOrderStep] = useState<'initial' | 'dineInDetails'>('initial')
+  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway' | null>(null)
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('')
+  const [selectedTableId, setSelectedTableId] = useState<string>('')  
+  
+  // Fetch restaurant and table data
+  const { data: restaurantsData, isLoading: restaurantsLoading } = useGetRestaurantsQuery()
+  const { data: tablesData, isLoading: tablesLoading } = useGetTablesByRestaurantQuery(
+    selectedRestaurantId, 
+    { skip: !selectedRestaurantId }
+  )
   
   const { data: orders = [], isLoading, error } = useGetOrdersQuery()
   const [updateOrderStatus] = useUpdateOrderStatusMutation()
@@ -801,67 +818,196 @@ export default function OrdersPage() {
       </Dialog>
 
       {/* Create Order Dialog */}
-      <Dialog open={isCreateOrderDialogOpen} onOpenChange={setIsCreateOrderDialogOpen}>
-        <DialogContent className="sm:max-w-3xl">
+      <Dialog open={isCreateOrderDialogOpen} onOpenChange={(open) => {
+        setIsCreateOrderDialogOpen(open)
+        if (!open) {
+          // Reset state when dialog is closed
+          setOrderStep('initial')
+          setOrderType(null)
+          setSelectedRestaurantId('')
+          setSelectedTableId('')
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Order</DialogTitle>
-            <DialogDescription>Fill in the details to create a new order</DialogDescription>
+            {orderStep === 'initial' && (
+              <DialogDescription>How would you like to order?</DialogDescription>
+            )}
+            {orderStep === 'dineInDetails' && (
+              <DialogDescription>Please enter restaurant and table details</DialogDescription>
+            )}
           </DialogHeader>
 
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {orderStep === 'initial' && (
+            <div className="grid gap-6 py-4">
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="restaurantId">Restaurant ID</Label>
-                  <Input
-                    id="restaurantId"
-                    value={newOrder.restaurantId}
-                    onChange={(e) => setNewOrder({ ...newOrder, restaurantId: e.target.value })}
-                    placeholder="Enter restaurant ID"
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="dine-in" 
+                    name="orderType" 
+                    value="dine-in"
+                    checked={orderType === 'dine-in'}
+                    onChange={() => setOrderType('dine-in')}
+                    className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
+                  <Label htmlFor="dine-in" className="text-base">Dine-in</Label>
                 </div>
-
-                <div>
-                  <Label htmlFor="totalAmount">Total Amount</Label>
-                  <Input
-                    id="totalAmount"
-                    type="number"
-                    value={newOrder.totalAmount}
-                    onChange={(e) => setNewOrder({ ...newOrder, totalAmount: parseFloat(e.target.value) })}
-                    placeholder="Enter total amount"
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="takeaway" 
+                    name="orderType" 
+                    value="takeaway"
+                    checked={orderType === 'takeaway'}
+                    onChange={() => setOrderType('takeaway')}
+                    className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
+                  <Label htmlFor="takeaway" className="text-base">Takeaway</Label>
                 </div>
               </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select
-                    value={newOrder.paymentMethod}
-                    onValueChange={(value: 'cash' | 'card' | 'QR') => setNewOrder({ ...newOrder, paymentMethod: value })}
-                  >
-                    <SelectTrigger id="paymentMethod">
-                      <SelectValue placeholder="Select payment method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="QR">QR Code</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateOrderDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (!orderType) {
+                      alert("Please select an order type.");
+                      return;
+                    }
+                    
+                    if (orderType === 'dine-in') {
+                      setOrderStep('dineInDetails')
+                    } else {
+                      // For takeaway, continue with existing order flow
+                      // You can redirect to takeaway page or show form here
+                      window.location.href = '/menu-order';
+                      // Store takeaway info in localStorage
+                      localStorage.setItem('orderType', 'takeaway');
+                      setIsCreateOrderDialogOpen(false);
+                    }
+                  }} 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Continue
+                </Button>
+              </DialogFooter>
             </div>
+          )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOrderDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateOrder} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Create Order
-              </Button>
-            </DialogFooter>
-          </div>
+          {orderStep === 'dineInDetails' && (
+            <div className="grid gap-6 py-4">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="restaurant">Restaurant</Label>
+                  {restaurantsLoading ? (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <div className="h-4 w-4 rounded-full animate-pulse bg-blue-400"></div>
+                      <span>Loading restaurants...</span>
+                    </div>
+                  ) : restaurantsData ? (
+                    <Select 
+                      value={selectedRestaurantId} 
+                      onValueChange={(value) => {
+                        setSelectedRestaurantId(value);
+                        setSelectedTableId(''); // Reset table selection when restaurant changes
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a restaurant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {restaurantsData.map(restaurant => (
+                          <SelectItem key={restaurant._id} value={restaurant._id}>
+                            {restaurant.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-red-500 mt-2">Failed to load restaurants</div>
+                  )}
+                </div>
+                
+                {selectedRestaurantId && (
+                  <div>
+                    <Label htmlFor="table">Table</Label>
+                    {tablesLoading ? (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <div className="h-4 w-4 rounded-full animate-pulse bg-blue-400"></div>
+                        <span>Loading tables...</span>
+                      </div>
+                    ) : tablesData ? (
+                      tablesData.length > 0 ? (
+                        <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a table" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tablesData.map(table => (
+                              <SelectItem key={table._id} value={table._id}>
+                                {table.tableNumber} - {table.capacity} seats
+                                {table.status === 'occupied' && " (Occupied)"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="text-amber-500 mt-2">No tables available for this restaurant</div>
+                      )
+                    ) : (
+                      <div className="text-red-500 mt-2">Failed to load tables</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOrderStep('initial')}>
+                  Back
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (!selectedRestaurantId) {
+                      alert("Please select a restaurant.");
+                      return;
+                    }
+                    if (!selectedTableId) {
+                      alert("Please select a table.");
+                      return;
+                    }
+                    
+                    // Find the selected restaurant and table from data
+                    const selectedRestaurant = restaurantsData?.find(r => r._id === selectedRestaurantId);
+                    const selectedTable = tablesData?.find(t => t._id === selectedTableId);
+                    
+                    if (!selectedRestaurant || !selectedTable) {
+                      alert("There was an error with your selection. Please try again.");
+                      return;
+                    }
+                    
+                    // Store dine-in information in localStorage for menu-order page to use
+                    localStorage.setItem('orderType', 'dine-in');
+                    localStorage.setItem('restaurantId', selectedRestaurantId);
+                    localStorage.setItem('restaurantName', selectedRestaurant.name);
+                    localStorage.setItem('tableId', selectedTableId);
+                    localStorage.setItem('tableNumber', selectedTable.tableNumber.toString());
+                    
+                    // Redirect to menu-order page
+                    window.location.href = '/menu-order';
+                    setIsCreateOrderDialogOpen(false);
+                  }} 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={tablesLoading || restaurantsLoading || !selectedRestaurantId || !selectedTableId}
+                >
+                  Start Order
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
