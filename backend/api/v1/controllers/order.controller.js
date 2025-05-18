@@ -1,10 +1,12 @@
 const Order = require('../models/order.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
 
+
 // [POST] /api/v1/orders
 module.exports.createOrder = controllerHandler(async (req, res) => {
-    const { tableId, customerId, restaurantId, status, totalAmount, paymentMethod } = req.body;
+    const { tableId, customerId, restaurantId, status, totalAmount, paymentMethod, orderType } = req.body;
     const order = await Order.create({ tableId, customerId, restaurantId, status, totalAmount, paymentMethod,orderType });
+
     res.status(201).json({
         success: true,
         message: 'Order created successfully',

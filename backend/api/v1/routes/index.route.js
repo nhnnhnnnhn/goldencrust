@@ -27,7 +27,7 @@ module.exports = (app) => {
     app.use(version + '/reservations', authMiddleware, reservationRoute);
     app.use(version + '/reserved-tables', authMiddleware, reservedTableRoute);
     app.use(version + '/tables', authMiddleware, tableRoute);
-    app.use(version + '/orders', authMiddleware, orderRoute);
+    app.use(version + '/orders', orderRoute);
     app.use(version + '/order-details', authMiddleware, orderDetailRoute);
     app.use(version + '/deliveries', authMiddleware, deliveryRoute);
     // app.use(version + '/payments', authMiddleware, paymentRoute);

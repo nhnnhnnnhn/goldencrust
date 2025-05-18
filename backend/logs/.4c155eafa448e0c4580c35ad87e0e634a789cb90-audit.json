@@ -29,6 +29,11 @@
             "date": 1747459732754,
             "name": "D:\\TTCS\\goldencrust-main\\backend\\logs\\rejections-2025-05-17.log",
             "hash": "47da4e69b24c6f91de93e6d0a68357de522b3aca4f05d55b3e39bc5be902448c"
+        },
+        {
+            "date": 1747532222332,
+            "name": "D:\\TTCS\\goldencrust-main\\backend\\logs\\rejections-2025-05-18.log",
+            "hash": "25e1825ab81fb4897360789745fc5335088193d071f5f8776c298ef7d655420d"
         }
     ],
     "hashType": "sha256"

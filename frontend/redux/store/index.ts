@@ -23,6 +23,7 @@ import { deliveryApi } from '../api/deliveryApi';
 import userReducer from '../slices/userSlice';
 import validateTokenApi from '../api/validateTokenApi';
 import { categoryApi } from '../api/categoryApi';
+import { menuItemApi } from '../api/menuItems';
 
 const persistConfig = {
   key: 'root',
@@ -45,6 +46,7 @@ const rootReducer = combineReducers({
   user: userReducer,
   [categoryApi.reducerPath]: categoryApi.reducer,
   [chatApi.reducerPath]: chatApi.reducer,
+  [menuItemApi.reducerPath]: menuItemApi.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -69,6 +71,7 @@ export const store = configureStore({
       deliveryApi.middleware,
       categoryApi.middleware,
       chatApi.middleware,
+      menuItemApi.middleware,
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });

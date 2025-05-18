@@ -747,11 +747,10 @@ export default function OrdersPage() {
       </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="all">All Orders</TabsTrigger>
           <TabsTrigger value="dine-in">Dine-in</TabsTrigger>
           <TabsTrigger value="takeaway">Takeaway</TabsTrigger>
-          <TabsTrigger value="delivery">Delivery</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
