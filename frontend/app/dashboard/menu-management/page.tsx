@@ -185,18 +185,83 @@ export default function MenuManagement() {
     return true;
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error('Canvas to Blob conversion failed'));
+              }
+            },
+            'image/jpeg',
+            0.7
+          );
+        };
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       if (validateImage(file)) {
-        setImageFile(file)
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          setImagePreview(reader.result as string)
+        try {
+          // Compress image before setting it
+          const compressedFile = await compressImage(file);
+          setImageFile(compressedFile);
+          
+          // Create preview
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+          };
+          reader.readAsDataURL(compressedFile);
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          toast({
+            title: "Lỗi",
+            description: "Không thể xử lý ảnh. Vui lòng thử lại.",
+            variant: "destructive",
+          });
         }
-        reader.readAsDataURL(file)
       }
-      e.target.value = ''
+      e.target.value = '';
     }
   }
 
@@ -242,6 +307,12 @@ export default function MenuManagement() {
       return;
     }
 
+    // Show loading toast
+    const loadingToast = toast({
+      title: currentItem._id ? "Đang cập nhật..." : "Đang thêm món...",
+      description: "Vui lòng đợi trong giây lát",
+    });
+
     // Reset form errors
     setFormErrors({});
 
@@ -263,19 +334,27 @@ export default function MenuManagement() {
         toast({
           title: "Cập nhật thành công",
           description: `Đã cập nhật ${currentItem.title}`,
+          variant: "success",
         });
       } else {
         await createMenuItem(formData).unwrap();
         toast({
           title: "Thêm món ăn thành công",
           description: `Đã thêm ${currentItem.title}`,
+          variant: "success",
         });
       }
+      // Dismiss loading toast
+      loadingToast.dismiss();
+      
       setShowAddEditModal(false);
       setCurrentItem(null);
       setImageFile(null);
       setImagePreview("");
     } catch (error) {
+      // Dismiss loading toast
+      loadingToast.dismiss();
+      
       const errorMessage = error instanceof Error ? error.message : "Không thể lưu món ăn. Vui lòng thử lại sau.";
       toast({
         title: "Lỗi",
