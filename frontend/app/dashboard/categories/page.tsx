@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
@@ -15,11 +15,13 @@ import { CategoryDialog } from './_components/category-dialog';
 import { useGetCategoriesQuery } from '@/redux/api/categoryApi';
 import { LoadingPage } from '@/components/loading';
 import { getTranslation } from '@/utils/translations';
+import { useToast } from "@/hooks/use-toast"
 
 export default function CategoriesPage() {
   const [open, setOpen] = useState(false);
   const { data: categoryData, isLoading } = useGetCategoriesQuery();
   const [language, setLanguage] = useState<"en" | "vi">("en");
+  const { toast } = useToast();
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null;
@@ -33,6 +35,23 @@ export default function CategoriesPage() {
   if (isLoading) {
     return <LoadingPage />;
   }
+
+  if (!categoryData) {
+    toast({
+      title: "Lỗi",
+      description: "Không thể tải danh sách danh mục. Vui lòng thử lại sau.",
+      variant: "destructive",
+    });
+    return null;
+  }
+
+  const categories = categoryData.categories.map((category) => ({
+    id: category._id,
+    name: category.name,
+    description: category.description,
+    status: category.status,
+    createdAt: new Date(category.createdAt).toLocaleDateString("vi-VN"),
+  }));
 
   return (
     <div className="p-6 space-y-4">
@@ -52,7 +71,7 @@ export default function CategoriesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CategoryDataTable data={categoryData?.categories || []} language={language} />
+          <CategoryDataTable data={categories} language={language} />
         </CardContent>
       </Card>
 

@@ -6,6 +6,7 @@ import { createContext, useContext, useState, useEffect } from "react"
 interface AuthContextType {
   user: {
     name: string
+    fullName: string
     email: string
     role: string
     loyaltyPoints: number
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<{
     name: string
+    fullName: string
     email: string
     role: string
     loyaltyPoints: number
@@ -40,7 +42,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setTimeout(() => {
         const storedUser = localStorage.getItem("user")
         if (storedUser) {
-          setUser(JSON.parse(storedUser))
+          const parsedUser = JSON.parse(storedUser)
+          // Ensure both name and fullName are set
+          setUser({
+            ...parsedUser,
+            name: parsedUser.name || parsedUser.fullName,
+            fullName: parsedUser.fullName || parsedUser.name
+          })
         }
         setIsLoading(false)
       }, 500)
@@ -50,7 +58,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   const login = (name: string, email: string, role: string, loyaltyPoints: number, joinDate: string) => {
-    const newUser = { name, email, role, loyaltyPoints, joinDate }
+    console.log('Login called with name:', name) // Debug log
+    const newUser = { 
+      name: name,
+      fullName: name,
+      email, 
+      role, 
+      loyaltyPoints, 
+      joinDate 
+    }
+    console.log('Setting new user:', newUser) // Debug log
     setUser(newUser)
     localStorage.setItem("user", JSON.stringify(newUser))
   }

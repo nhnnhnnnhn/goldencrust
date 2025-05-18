@@ -16,6 +16,7 @@ import authReducer from '../slices';
 import { authApi, stripeApi, restaurantApi, chatApi } from '../api';
 import { userApi } from '../api/userApi';
 import { orderApi } from '../api/order';
+import { orderDetailApi } from '../api/orderDetail';
 import { reservationApi } from '../api/reservationApi';
 import { tableApi } from '../api/tableApi';
 import { reservedTableApi } from '../api/reservedTableApi';
@@ -23,6 +24,7 @@ import { deliveryApi } from '../api/deliveryApi';
 import userReducer from '../slices/userSlice';
 import validateTokenApi from '../api/validateTokenApi';
 import { categoryApi } from '../api/categoryApi';
+import { menuItemApi } from '../api/menuItems';
 
 const persistConfig = {
   key: 'root',
@@ -36,6 +38,7 @@ const rootReducer = combineReducers({
   [stripeApi.reducerPath]: stripeApi.reducer,
   [userApi.reducerPath]: userApi.reducer,
   [orderApi.reducerPath]: orderApi.reducer,
+  [orderDetailApi.reducerPath]: orderDetailApi.reducer,
   [restaurantApi.reducerPath]: restaurantApi.reducer,
   [validateTokenApi.reducerPath]: validateTokenApi.reducer,
   [reservationApi.reducerPath]: reservationApi.reducer,
@@ -45,6 +48,7 @@ const rootReducer = combineReducers({
   user: userReducer,
   [categoryApi.reducerPath]: categoryApi.reducer,
   [chatApi.reducerPath]: chatApi.reducer,
+  [menuItemApi.reducerPath]: menuItemApi.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -61,6 +65,7 @@ export const store = configureStore({
       stripeApi.middleware, 
       userApi.middleware, 
       orderApi.middleware,
+      orderDetailApi.middleware,
       restaurantApi.middleware,
       validateTokenApi.middleware,
       reservationApi.middleware,
@@ -69,6 +74,7 @@ export const store = configureStore({
       deliveryApi.middleware,
       categoryApi.middleware,
       chatApi.middleware,
+      menuItemApi.middleware,
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });

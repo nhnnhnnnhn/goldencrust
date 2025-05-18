@@ -32,4 +32,19 @@ router.get('/status/:status', orderDetailController.getOrderDetailsByStatus);
 // [GET] /api/v1/order-details/type/:orderType
 router.get('/type/:orderType', orderDetailController.getOrderDetailsByType);
 
+// Create daily summary for a restaurant
+router.post('/daily-summary', orderDetailController.createDailySummary);
+
+// Get today's summary
+router.get('/today', orderDetailController.getTodaySummary);
+
+// Get restaurant's today summary
+router.get('/restaurant/:restaurantId/today', orderDetailController.getRestaurantTodaySummary);
+
+// Update payment summary
+router.patch('/update-payment', orderDetailController.updatePaymentSummary);
+
+// Update order type summary
+router.patch('/update-order-type', orderDetailController.updateOrderTypeSummary);
+
 module.exports = router;

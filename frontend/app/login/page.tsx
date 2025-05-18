@@ -108,10 +108,25 @@ const handleGoogleLogin = () => {
       router.push(redirect)
     } catch (err: any) {
       console.error('Login error:', err)
+      
+      // Handle different types of errors
       if (err.status === 'FETCH_ERROR') {
-        setLoginError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối của bạn.')
+        setLoginError('Cannot connect to server. Please check your internet connection.')
+      } else if (err.data?.message) {
+        // If we have a specific error message from the server
+        setLoginError(err.data.message)
+      } else if (err.status === 401) {
+        // Unauthorized - wrong credentials
+        setLoginError('Invalid email or password. Please try again.')
+      } else if (err.status === 403) {
+        // Forbidden - account issues
+        setLoginError('Your account is suspended or not activated. Please contact support.')
+      } else if (err.status >= 500) {
+        // Server errors
+        setLoginError('Server error. Please try again later.')
       } else {
-        setLoginError(err?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.')
+        // Fallback error message
+        setLoginError('Login failed. Please check your credentials and try again.')
       }
     }
   }

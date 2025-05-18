@@ -18,6 +18,13 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { useGetAllDeliveriesQuery, useUpdateDeliveryStatusMutation } from "@/redux/api/deliveryApi"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface DeliveryItem {
   menuItemId: string;
@@ -66,11 +73,14 @@ const statusIcons: Record<Delivery['deliveryStatus'], ReactElement> = {
   cancelled: <XCircle size={16} className="text-red-600" />,
 }
 
+type DateFilter = 'all' | 'today' | 'yesterday' | 'thisWeek' | 'thisMonth';
+
 export default function DeliveryManagement() {
   const { data: deliveries = [], isLoading, error, refetch } = useGetAllDeliveriesQuery()
   const [updateDeliveryStatus] = useUpdateDeliveryStatusMutation()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("Tất cả")
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false)
   const [currentDelivery, setCurrentDelivery] = useState<Delivery | null>(null)
@@ -100,8 +110,35 @@ export default function DeliveryManagement() {
     }
   }, [updateError])
 
+  const filterDeliveriesByDate = (deliveries: Delivery[]) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    return deliveries.filter(delivery => {
+      const deliveryDate = new Date(delivery.createdAt);
+      
+      switch (dateFilter) {
+        case 'today':
+          return deliveryDate >= today;
+        case 'yesterday':
+          return deliveryDate >= yesterday && deliveryDate < today;
+        case 'thisWeek':
+          return deliveryDate >= startOfWeek;
+        case 'thisMonth':
+          return deliveryDate >= startOfMonth;
+        default:
+          return true;
+      }
+    });
+  };
+
   // Lọc đơn giao hàng dựa trên tìm kiếm và trạng thái
-  const filteredDeliveries = deliveries.filter((delivery) => {
+  const filteredDeliveries = filterDeliveriesByDate(deliveries).filter((delivery) => {
     if (!delivery || typeof delivery !== 'object') return false;
 
     const matchesSearch =
@@ -443,67 +480,79 @@ export default function DeliveryManagement() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Quản Lý Giao Hàng</h1>
-        <button
-          onClick={() => refetch()}
-          className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white px-4 py-2 rounded-md transition-colors"
-        >
-          <RefreshCw size={18} />
-          <span>Làm mới</span>
-        </button>
-      </div>
-
-      {updateError && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Quản lý giao hàng</h2>
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <XCircle size={20} />
-            <span>{updateError}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Thanh tìm kiếm và lọc */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên, số điện thoại hoặc địa chỉ..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
-          >
-            <Filter size={20} />
-            <span>Trạng thái: {selectedStatus === "Tất cả" ? selectedStatus : statusLabels[selectedStatus as Delivery['deliveryStatus']]}</span>
-            <ChevronDown size={16} />
-          </button>
-
-          {showStatusDropdown && (
-            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-              {statuses.map((status) => (
-                <div
-                  key={status}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
-                  onClick={() => {
-                    setSelectedStatus(status)
-                    setShowStatusDropdown(false)
-                  }}
-                >
-                  {status !== "Tất cả" && statusIcons[status as Delivery['deliveryStatus']]}
-                  {status === "Tất cả" ? status : statusLabels[status as Delivery['deliveryStatus']]}
-                </div>
-              ))}
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
-          )}
+            <div className="relative">
+              <button
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-gray-50"
+              >
+                <Filter className="h-4 w-4" />
+                <span>Trạng thái: {selectedStatus === "Tất cả" ? "Tất cả" : statusLabels[selectedStatus as Delivery['deliveryStatus']]}</span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
+              {showStatusDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white border rounded-md shadow-lg z-10">
+                  {statuses.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status)
+                        setShowStatusDropdown(false)
+                      }}
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-2 border-b last:border-0"
+                    >
+                      {status !== "Tất cả" ? (
+                        <>
+                          <span className={`p-1.5 rounded-full ${statusColors[status as Delivery['deliveryStatus']].replace('text-', 'bg-')}`}>
+                            {statusIcons[status as Delivery['deliveryStatus']]}
+                          </span>
+                          <span className={statusColors[status as Delivery['deliveryStatus']]}>
+                            {statusLabels[status as Delivery['deliveryStatus']]}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="p-1.5 rounded-full bg-gray-100">
+                            <Filter className="h-4 w-4 text-gray-600" />
+                          </span>
+                          <span className="text-gray-700">Tất cả</span>
+                        </>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Select
+              value={dateFilter}
+              onValueChange={(value: DateFilter) => setDateFilter(value)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Lọc theo ngày" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả đơn hàng</SelectItem>
+                <SelectItem value="today">Hôm nay</SelectItem>
+                <SelectItem value="yesterday">Hôm qua</SelectItem>
+                <SelectItem value="thisWeek">Tuần này</SelectItem>
+                <SelectItem value="thisMonth">Tháng này</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

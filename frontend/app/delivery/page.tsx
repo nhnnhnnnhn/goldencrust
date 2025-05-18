@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { ChevronLeft, ShoppingCart, Plus, Minus, X, CreditCard } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useCreateCheckoutSessionMutation } from "@/redux/api/stripeApi"
+import { useGetMenuItemsQuery } from "@/redux/api/menuItems"
+import { useGetCategoriesQuery } from "@/redux/api/categoryApi"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,26 +23,64 @@ import { toast } from "@/components/ui/use-toast"
 
 import styles from "./styles.module.css"
 
+interface ApiMenuItem {
+  _id: string;
+  title: string;
+  description?: string;
+  price: number;
+  thumbnail: string;
+  categoryId: string;
+  status: 'active' | 'inactive' | 'out_of_stock';
+  discountPercentage: number;
+}
+
 interface MenuItem {
-  id: string
-  name: string
-  description: string
-  price: number
-  image: string
-  category: string
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  thumbnail: string;
+  categoryId: string;
+  status: 'active' | 'inactive' | 'out_of_stock';
+  discountPercentage: number;
 }
 
 interface CartItem extends MenuItem {
-  quantity: number
+  quantity: number;
+}
+
+interface Category {
+  _id: string;
+  name: string;
+  description: string;
+  status: string;
+  slug: string;
 }
 
 export default function DeliveryPage() {
+  // Router and Auth hooks
   const router = useRouter()
-  const { user, isLoading } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
+  const searchParams = useSearchParams()
+
+  // Redux API hooks
+  const { data: apiMenuItems = [], isLoading: menuLoading } = useGetMenuItemsQuery()
+  const { data: categoriesResponse, isLoading: categoriesLoading } = useGetCategoriesQuery()
+  const [createCheckoutSession, { isLoading: isCreatingCheckout }] = useCreateCheckoutSessionMutation()
+
+  // Transform API data
+  const availableCategories = categoriesResponse?.categories || []
+  const menuItems: MenuItem[] = apiMenuItems.map(item => ({
+    ...item,
+    description: item.description || ''
+  }))
+
+  // Local state hooks
   const [cart, setCart] = useState<CartItem[]>([])
-  const [activeCategory, setActiveCategory] = useState("pizza")
+  const [activeCategory, setActiveCategory] = useState("")
   const [orderStep, setOrderStep] = useState(0)
   const [orderComplete, setOrderComplete] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [deliveryInfo, setDeliveryInfo] = useState({
     name: "",
     phone: "",
@@ -48,30 +88,36 @@ export default function DeliveryPage() {
     notes: "",
     paymentMethod: "cash",
   })
-  const [isProcessing, setIsProcessing] = useState(false)
-  const searchParams = useSearchParams()
 
-  // Check if user is logged in
+  // Filter active menu items by category and status
+  const filteredItems = menuItems.filter(
+    (item) => item.categoryId === activeCategory && item.status === "active"
+  )
+
+  // Effect hooks
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (availableCategories.length > 0 && !activeCategory) {
+      setActiveCategory(availableCategories[0]._id)
+    }
+  }, [availableCategories, activeCategory])
+
+  useEffect(() => {
+    if (!authLoading && !user) {
       router.push("/login?redirect=/delivery")
     } else if (user) {
-      // Pre-fill form with user data
       setDeliveryInfo((prev) => ({
         ...prev,
         name: user.name || prev.name,
       }))
     }
-  }, [user, isLoading, router])
+  }, [user, authLoading, router])
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     if (cart.length > 0) {
       localStorage.setItem("deliveryCart", JSON.stringify(cart))
     }
   }, [cart])
 
-  // Load giỏ hàng từ localStorage khi component mount
   useEffect(() => {
     const storedCart = localStorage.getItem("deliveryCart")
     if (storedCart && cart.length === 0) {
@@ -81,42 +127,33 @@ export default function DeliveryPage() {
           setCart(parsedCart)
         }
       } catch (error) {
-        console.error("Lỗi khi đọc giỏ hàng từ localStorage:", error)
+        console.error("Error reading cart from localStorage:", error)
       }
     }
   }, [])
 
-  // Xử lý trạng thái thanh toán khi người dùng quay trở lại từ Stripe hoặc payment-failed
   useEffect(() => {
     const paymentStatus = searchParams.get("payment")
     const orderStatus = searchParams.get("order")
     const sessionId = searchParams.get("session_id")
-    const method = searchParams.get("method")
 
-    // Kiểm tra nếu từ trang thanh toán Stripe trở về
     if (paymentStatus === "success" && sessionId) {
-      // Thanh toán thành công với Stripe
       setIsProcessing(false)
       setOrderComplete(true)
-      // Xóa giỏ hàng sau khi đã thanh toán thành công
       localStorage.removeItem("deliveryCart")
       setCart([])
     } else if (paymentStatus === "failed" && sessionId) {
-      // Thanh toán thất bại từ Stripe, quay lại bước giỏ hàng
       setOrderStep(1)
       setIsProcessing(false)
-      // Hiển thị thông báo lỗi để người dùng biết
       toast({
         variant: "destructive",
-        title: "Thanh toán thất bại",
-        description: "Vui lòng thử lại hoặc chọn phương thức thanh toán khác",
+        title: "Payment failed",
+        description: "Please try again or choose a different payment method",
       })
     } else if (paymentStatus === "retry") {
-      // Người dùng quay lại từ trang payment-failed để thử lại
-      setOrderStep(1) // Quay lại bước điền thông tin
+      setOrderStep(1)
       setIsProcessing(false)
       
-      // Thiết lập phương thức thanh toán mặc định dựa trên lựa chọn
       const preferredPaymentMethod = localStorage.getItem("preferredPaymentMethod")
       if (preferredPaymentMethod) {
         setDeliveryInfo(prev => ({
@@ -125,16 +162,15 @@ export default function DeliveryPage() {
         }))
       }
       
-      // Xóa tham số URL để tránh việc xử lý lại nếu refresh trang
       window.history.replaceState({}, document.title, "/delivery")
     } else if (orderStatus === "cancelled") {
-      // Đơn hàng bị hủy
       setCart([])
       localStorage.removeItem("deliveryCart")
       setOrderStep(0)
     }
   }, [searchParams])
 
+  // Event handlers
   const handleInputChange = (field: string, value: string) => {
     setDeliveryInfo({
       ...deliveryInfo,
@@ -144,10 +180,10 @@ export default function DeliveryPage() {
 
   const addToCart = (item: MenuItem) => {
     setCart((prevCart) => {
-      const existingItem = prevCart.find((cartItem) => cartItem.id === item.id)
+      const existingItem = prevCart.find((cartItem) => cartItem._id === item._id)
       if (existingItem) {
         return prevCart.map((cartItem) =>
-          cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
+          cartItem._id === item._id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
         )
       } else {
         return [...prevCart, { ...item, quantity: 1 }]
@@ -156,7 +192,7 @@ export default function DeliveryPage() {
   }
 
   const removeFromCart = (itemId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== itemId))
+    setCart((prevCart) => prevCart.filter((item) => item._id !== itemId))
   }
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
@@ -164,8 +200,7 @@ export default function DeliveryPage() {
       removeFromCart(itemId)
       return
     }
-
-    setCart((prevCart) => prevCart.map((item) => (item.id === itemId ? { ...item, quantity: newQuantity } : item)))
+    setCart((prevCart) => prevCart.map((item) => (item._id === itemId ? { ...item, quantity: newQuantity } : item)))
   }
 
   const getTotalItems = () => {
@@ -180,23 +215,18 @@ export default function DeliveryPage() {
     setOrderStep(1)
   }
 
-  const [createCheckoutSession, { isLoading: isCreatingCheckout }] = useCreateCheckoutSessionMutation()
-
   const handlePlaceOrder = async () => {
-    // Thiết lập trạng thái đang xử lý
     setIsProcessing(true)
 
     try {
-      // Nếu thanh toán bằng thẻ, sử dụng Stripe Checkout
       if (deliveryInfo.paymentMethod === "card") {
-        // Chuẩn bị dữ liệu cho Stripe Checkout
         const checkoutData = {
           items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
+            id: item._id,
+            name: item.title,
             description: item.description,
             price: item.price,
-            image: item.image,
+            image: item.thumbnail,
             quantity: item.quantity
           })),
           customer: {
@@ -205,184 +235,39 @@ export default function DeliveryPage() {
             address: deliveryInfo.address,
             notes: deliveryInfo.notes
           },
-          deliveryFee: 5 // Phí vận chuyển cố định 5$
+          deliveryFee: 5
         }
 
-        // Gọi API để tạo Stripe Checkout Session
         const response = await createCheckoutSession(checkoutData).unwrap()
         
-        // Chuyển hướng người dùng đến trang thanh toán Stripe
         if (response.url) {
           window.location.href = response.url
-          return // Ngừng xử lý hàm vì người dùng sẽ rời khỏi trang
+          return
         }
       } else {
-        // Thanh toán bằng tiền mặt khi giao hàng (COD)
         setTimeout(() => {
           setIsProcessing(false)
           setOrderComplete(true)
         }, 1000)
       }
     } catch (error) {
-      console.error('Lỗi xử lý thanh toán:', error)
+      console.error('Error processing payment:', error)
       setIsProcessing(false)
-      
-      // Hiển thị thông báo lỗi hoặc chuyển hướng đến trang lỗi thanh toán
       router.push("/payment-failed")
     }
   }
 
-  const menuItems: MenuItem[] = [
-    {
-      id: "p1",
-      name: "Margherita Elegante",
-      description: "San Marzano tomato sauce, buffalo mozzarella, fresh basil, extra virgin olive oil",
-      price: 18,
-      image: "/placeholder.svg?height=300&width=300&text=Margherita+Elegante",
-      category: "pizza",
-    },
-    {
-      id: "p2",
-      name: "Tartufo Nero",
-      description: "Truffle cream, mozzarella, wild mushrooms, arugula, shaved black truffle",
-      price: 28,
-      image: "/placeholder.svg?height=300&width=300&text=Tartufo+Nero",
-      category: "pizza",
-    },
-    {
-      id: "p3",
-      name: "Giardino Mediterraneo",
-      description: "Tomato sauce, mozzarella, grilled zucchini, eggplant, bell peppers, cherry tomatoes, basil pesto",
-      price: 22,
-      image: "/placeholder.svg?height=300&width=300&text=Giardino+Mediterraneo",
-      category: "pizza",
-    },
-    {
-      id: "p4",
-      name: "Quattro Formaggi Superiore",
-      description: "Mozzarella, gorgonzola DOP, aged parmigiano reggiano, smoked scamorza, honey drizzle, walnuts",
-      price: 24,
-      image: "/placeholder.svg?height=300&width=300&text=Quattro+Formaggi",
-      category: "pizza",
-    },
-    {
-      id: "p5",
-      name: "Prosciutto di Parma",
-      description: "Tomato sauce, mozzarella, 24-month aged prosciutto di Parma, arugula, shaved parmigiano",
-      price: 26,
-      image: "/placeholder.svg?height=300&width=300&text=Prosciutto+di+Parma",
-      category: "pizza",
-    },
-    {
-      id: "p6",
-      name: "Frutti di Mare",
-      description: "Tomato sauce, mozzarella, fresh seafood medley, lemon zest, parsley, garlic oil",
-      price: 30,
-      image: "/placeholder.svg?height=300&width=300&text=Frutti+di+Mare",
-      category: "pizza",
-    },
-    {
-      id: "pa1",
-      name: "Spaghetti alla Carbonara",
-      description: "Artisanal spaghetti, guanciale, egg yolks, pecorino romano, black pepper",
-      price: 22,
-      image: "/placeholder.svg?height=300&width=300&text=Carbonara",
-      category: "pasta",
-    },
-    {
-      id: "pa2",
-      name: "Tagliatelle al Tartufo",
-      description: "House-made tagliatelle, butter, parmigiano, fresh black truffle",
-      price: 28,
-      image: "/placeholder.svg?height=300&width=300&text=Tagliatelle+Tartufo",
-      category: "pasta",
-    },
-    {
-      id: "pa3",
-      name: "Lasagna Tradizionale",
-      description: "Layers of fresh pasta, slow-cooked ragù, béchamel, parmigiano reggiano",
-      price: 24,
-      image: "/placeholder.svg?height=300&width=300&text=Lasagna",
-      category: "pasta",
-    },
-    {
-      id: "s1",
-      name: "Insalata Cesare",
-      description: "Romaine hearts, house-made caesar dressing, sourdough croutons, aged parmigiano",
-      price: 16,
-      image: "/placeholder.svg?height=300&width=300&text=Insalata+Cesare",
-      category: "salad",
-    },
-    {
-      id: "s2",
-      name: "Caprese di Bufala",
-      description: "Heirloom tomatoes, buffalo mozzarella, basil, aged balsamic, Sicilian olive oil",
-      price: 18,
-      image: "/placeholder.svg?height=300&width=300&text=Caprese",
-      category: "salad",
-    },
-    {
-      id: "d1",
-      name: "Tiramisu Classico",
-      description: "Mascarpone cream, espresso-soaked savoiardi, cocoa powder",
-      price: 14,
-      image: "/placeholder.svg?height=300&width=300&text=Tiramisu",
-      category: "dessert",
-    },
-    {
-      id: "d2",
-      name: "Panna Cotta ai Frutti di Bosco",
-      description: "Vanilla bean panna cotta, wild berry compote, mint",
-      price: 12,
-      image: "/placeholder.svg?height=300&width=300&text=Panna+Cotta",
-      category: "dessert",
-    },
-    {
-      id: "b1",
-      name: "Acqua Panna",
-      description: "Still mineral water, 750ml",
-      price: 6,
-      image: "/placeholder.svg?height=300&width=300&text=Acqua+Panna",
-      category: "beverage",
-    },
-    {
-      id: "b2",
-      name: "San Pellegrino",
-      description: "Sparkling mineral water, 750ml",
-      price: 6,
-      image: "/placeholder.svg?height=300&width=300&text=San+Pellegrino",
-      category: "beverage",
-    },
-    {
-      id: "b3",
-      name: "Barolo DOCG",
-      description: "Premium Italian red wine, 750ml",
-      price: 65,
-      image: "/placeholder.svg?height=300&width=300&text=Barolo",
-      category: "beverage",
-    },
-  ]
-
-  const categories = [
-    { id: "pizza", name: "Pizza" },
-    { id: "pasta", name: "Pasta" },
-    { id: "salad", name: "Salad" },
-    { id: "dessert", name: "Dessert" },
-    { id: "beverage", name: "Beverages" },
-  ]
-
-  const filteredItems = menuItems.filter((item) => item.category === activeCategory)
-
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Loading state
+  if (authLoading || menuLoading || categoriesLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-900 border-t-transparent"></div>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingSpinner} />
+        <p>Loading...</p>
       </div>
     )
   }
 
-  // If not logged in, the useEffect will redirect to login page
+  // Not logged in
   if (!user) return null
 
   return (
@@ -424,25 +309,25 @@ export default function DeliveryPage() {
                 <>
                   <div className={styles.cartItems}>
                     {cart.map((item) => (
-                      <div key={item.id} className={styles.cartItem}>
+                      <div key={item._id} className={styles.cartItem}>
                         <div className={styles.cartItemImage}>
                           <Image
-                            src={item.image || "/placeholder.svg"}
-                            alt={item.name}
+                            src={item.thumbnail || "/placeholder.svg"}
+                            alt={item.title}
                             width={64}
                             height={64}
                             className={styles.itemImage}
                           />
                         </div>
                         <div className={styles.cartItemDetails}>
-                          <h4 className={styles.cartItemName}>{item.name}</h4>
+                          <h4 className={styles.cartItemName}>{item.title}</h4>
                           <div className={styles.cartItemControls}>
                             <div className={styles.quantityControls}>
                               <Button
                                 variant="outline"
                                 size="icon"
                                 className={styles.quantityButton}
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                onClick={() => updateQuantity(item._id, item.quantity - 1)}
                               >
                                 <Minus className={styles.quantityIcon} />
                               </Button>
@@ -451,7 +336,7 @@ export default function DeliveryPage() {
                                 variant="outline"
                                 size="icon"
                                 className={styles.quantityButton}
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item._id, item.quantity + 1)}
                               >
                                 <Plus className={styles.quantityIcon} />
                               </Button>
@@ -463,7 +348,7 @@ export default function DeliveryPage() {
                           variant="ghost"
                           size="icon"
                           className={styles.removeButton}
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item._id)}
                         >
                           <X className={styles.removeIcon} />
                         </Button>
@@ -528,29 +413,34 @@ export default function DeliveryPage() {
                     className={styles.menuTabs}
                   >
                     <TabsList className={styles.categoryTabs}>
-                      {categories.map((category) => (
-                        <TabsTrigger key={category.id} value={category.id} className={styles.categoryTab}>
+                      {availableCategories.map((category) => (
+                        <TabsTrigger
+                          key={category._id}
+                          value={category._id}
+                          className={styles.categoryTab}
+                          onClick={() => setActiveCategory(category._id)}
+                        >
                           {category.name}
                         </TabsTrigger>
                       ))}
                     </TabsList>
 
-                    {categories.map((category) => (
-                      <TabsContent key={category.id} value={category.id} className={styles.menuItems}>
+                    {availableCategories.map((category) => (
+                      <TabsContent key={category._id} value={category._id} className={styles.menuItems}>
                         <div className={styles.menuGrid}>
                           {filteredItems.map((item) => (
-                            <div key={item.id} className={styles.menuItem}>
+                            <div key={item._id} className={styles.menuItem}>
                               <div className={styles.menuItemImageContainer}>
                                 <Image
-                                  src={item.image || "/placeholder.svg"}
-                                  alt={item.name}
+                                  src={item.thumbnail || "/placeholder.svg"}
+                                  alt={item.title}
                                   width={300}
                                   height={300}
                                   className={styles.menuItemImage}
                                 />
                               </div>
                               <div className={styles.menuItemContent}>
-                                <h3 className={styles.menuItemName}>{item.name}</h3>
+                                <h3 className={styles.menuItemName}>{item.title}</h3>
                                 <p className={styles.menuItemDescription}>{item.description}</p>
                                 <div className={styles.menuItemFooter}>
                                   <span className={styles.menuItemPrice}>${item.price.toFixed(2)}</span>
@@ -670,9 +560,9 @@ export default function DeliveryPage() {
                       <h2 className={styles.summaryTitle}>Order Summary</h2>
                       <div className={styles.orderItems}>
                         {cart.map((item) => (
-                          <div key={item.id} className={styles.orderItem}>
+                          <div key={item._id} className={styles.orderItem}>
                             <div className={styles.orderItemQuantity}>{item.quantity}x</div>
-                            <div className={styles.orderItemName}>{item.name}</div>
+                            <div className={styles.orderItemName}>{item.title}</div>
                             <div className={styles.orderItemPrice}>${(item.price * item.quantity).toFixed(2)}</div>
                           </div>
                         ))}

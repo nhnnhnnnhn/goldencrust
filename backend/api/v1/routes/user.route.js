@@ -50,12 +50,10 @@ router.get('/stats', authMiddleware, userController.getUserStats);
 router.get('/profile', authMiddleware, userController.getUserProfile);
 
 // Update User Profile
-router.put('/profile/update',
-    authMiddleware,
-    upload.single('avatar'),
-    uploadCloud.upload,
-    userController.updateUserProfile
-);
+router.put('/profile/update',authMiddleware,userController.updateUserProfile);
+
+// Admin Update User Profile
+router.put('/admin/update/:id', authMiddleware, userController.adminUpdateUserProfile);
 
 // Change User Password
 router.put('/profile/change-password', authMiddleware, userController.changeUserPassword);

@@ -6,7 +6,6 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  getPaginationRowModel,
   SortingState,
   getSortedRowModel,
 } from '@tanstack/react-table';
@@ -24,7 +23,7 @@ import { CategoryDialog } from './category-dialog';
 import { useDeleteCategoryMutation } from '@/redux/api/categoryApi';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import Image from 'next/image';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { getTranslation } from '@/utils/translations';
 
 interface Category {
@@ -45,8 +44,25 @@ interface CategoryDataTableProps {
 export function CategoryDataTable({ data, language }: CategoryDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [deleteCategory] = useDeleteCategoryMutation();
   const t = getTranslation(language);
+
+  const handleDeleteClick = (category: Category) => {
+    setCategoryToDelete(category);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!categoryToDelete) return;
+
+    try {
+      await deleteCategory(categoryToDelete._id).unwrap();
+      toast.success(t.dashboard.categoryDeleted);
+      setCategoryToDelete(null);
+    } catch (error) {
+      toast.error(t.dashboard.categoryError);
+    }
+  };
 
   const columns: ColumnDef<Category>[] = [
     {
@@ -83,14 +99,7 @@ export function CategoryDataTable({ data, language }: CategoryDataTableProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={async () => {
-                try {
-                  await deleteCategory(category._id).unwrap();
-                  toast.success(t.dashboard.categoryDeleted);
-                } catch (error) {
-                  toast.error(t.dashboard.categoryError);
-                }
-              }}
+              onClick={() => handleDeleteClick(category)}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -104,7 +113,6 @@ export function CategoryDataTable({ data, language }: CategoryDataTableProps) {
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     state: {
@@ -163,31 +171,39 @@ export function CategoryDataTable({ data, language }: CategoryDataTableProps) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
-      </div>
-
       <CategoryDialog
         open={!!editCategory}
         onOpenChange={() => setEditCategory(null)}
         category={editCategory}
         language={language}
       />
+
+      {/* Delete Confirmation Dialog */}
+      {categoryToDelete && (
+        <Dialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận xóa danh mục</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>Bạn có chắc chắn muốn xóa danh mục "{categoryToDelete.name}"?</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Lưu ý: Việc xóa danh mục có thể ảnh hưởng đến các món ăn thuộc danh mục này.
+              </p>
+            </div>
+            <DialogFooter>
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setCategoryToDelete(null)} className="sm:mr-2">
+                  Hủy
+                </Button>
+                <Button onClick={handleConfirmDelete} variant="destructive">
+                  Xóa
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 } 

@@ -1,38 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/order.controller');
-// [POST] /api/v1/orders
+
+// Create new order
 router.post('/', orderController.createOrder);
 
-// [GET] /api/v1/orders
-router.get('/', orderController.getOrders);
+// Get today's orders
+router.get('/today', orderController.getTodayOrders);
 
-// [GET] /api/v1/orders/:id
+// Get specific order by ID
 router.get('/:id', orderController.getOrderById);
 
-// [PUT] /api/v1/orders/:id
-router.put('/:id', orderController.updateOrder);
-
-// [PATCH] /api/v1/orders/:id/status
+// Update order status
 router.patch('/:id/status', orderController.updateOrderStatus);
 
-// [DELETE] /api/v1/orders/:id
-router.delete('/:id', orderController.deleteOrder);
+// Get restaurant's today orders
+router.get('/restaurant/:restaurantId/today', orderController.getRestaurantTodayOrders);
 
-// [GET] /api/v1/orders/table/:tableId
-router.get('/table/:tableId', orderController.getOrdersByTableId);
-
-// [GET] /api/v1/orders/customer/:customerId
-router.get('/customer/:customerId', orderController.getOrdersByCustomerId);
-
-// [GET] /api/v1/orders/restaurant/:restaurantId
-router.get('/restaurant/:restaurantId', orderController.getOrdersByRestaurantId);
-
-// [GET] /api/v1/orders/status/:status
-router.get('/status/:status', orderController.getOrdersByStatus);
-
-// [GET] /api/v1/orders/date/:date
-router.get('/date/:date', orderController.getOrdersByDate);
-
+// Get today's orders by type (dine-in/takeaway)
+router.get('/type/:orderType/today', orderController.getTodayOrdersByType);
 
 module.exports = router;
