@@ -305,7 +305,7 @@ export default function PaymentManagement() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Payment Receipt - Pizza Liêm Khiết</title>
+        <title>Payment Receipt - Golden Crust</title>
         <meta charset="UTF-8">
         <style>
           body {
@@ -388,7 +388,7 @@ export default function PaymentManagement() {
       <body>
         <div class="receipt">
           <div class="header">
-            <div class="logo">Pizza Liêm Khiết</div>
+            <div class="logo">Golden Crust</div>
             <div>123 Nguyễn Huệ, Quận 1, TP.HCM</div>
             <div>SĐT: 028-1234-5678</div>
           </div>
@@ -437,7 +437,7 @@ export default function PaymentManagement() {
           <div class="footer">
             <p>Thank you for your business!</p>
             <p>This is an official receipt for your payment.</p>
-            <p>www.pizzaliemkhiet.com</p>
+            <p>www.goldencrust.com</p>
           </div>
         </div>
         

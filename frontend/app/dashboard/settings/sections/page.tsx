@@ -68,9 +68,9 @@ export default function SectionsPage() {
       enabled: true,
       required: false,
       content: {
-        title: "Về Pizza Liêm Khiết",
+        title: "Về Golden Crust",
         description:
-          "Thành lập năm 2020, Pizza Liêm Khiết mang đến hương vị Việt Nam đích thực trong thế giới pizza. Đầu bếp của chúng tôi kết hợp nguyên liệu truyền thống Việt Nam với kỹ thuật Ý cổ điển để tạo ra những chiếc bánh pizza độc đáo, ngon miệng mà bạn không thể tìm thấy ở bất kỳ đâu khác.",
+          "Thành lập năm 2020, Golden Crust mang đến hương vị Việt Nam đích thực trong thế giới pizza. Đầu bếp của chúng tôi kết hợp nguyên liệu truyền thống Việt Nam với kỹ thuật Ý cổ điển để tạo ra những chiếc bánh pizza độc đáo, ngon miệng mà bạn không thể tìm thấy ở bất kỳ đâu khác.",
       },
     },
   ])
