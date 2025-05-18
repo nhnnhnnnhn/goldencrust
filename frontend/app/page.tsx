@@ -407,9 +407,17 @@ export default function Home() {
             id="home"
             className="relative min-h-screen flex flex-col justify-end"
           >
-            {/* Background image */}
+            {/* Background video */}
             <div className="absolute inset-0 z-0">
-              <Image src="/vietnam-street.png" alt="Vietnam street scene" fill className="object-cover" priority />
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+              >
+                <source src="/videos/demo.mp4" type="video/mp4" />
+              </video>
               <div className="absolute inset-0 bg-black/20" />
             </div>
           </section>
