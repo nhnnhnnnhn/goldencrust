@@ -89,7 +89,7 @@ export default function PaymentFailedPage() {
         </div>
         <div className={styles.headerCenter}>
           <Link href="/" className={styles.logo}>
-            PIZZA LIÊM KHIẾT&apos;S
+            GOLDEN CRUST
           </Link>
         </div>
         <div className={styles.headerRight}></div>
@@ -219,9 +219,9 @@ export default function PaymentFailedPage() {
 
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
-          <div className={styles.footerLogo}>PIZZA LIÊM KHIẾT&apos;S</div>
+          <div className={styles.footerLogo}>GOLDEN CRUST</div>
           <div className={styles.footerDivider}></div>
-          <div className={styles.footerCopyright}>© 2023 Pizza Liêm Khiết. All rights reserved.</div>
+          <div className={styles.footerCopyright}>© 2023 Golden Crust. All rights reserved.</div>
         </div>
       </footer>
     </div>

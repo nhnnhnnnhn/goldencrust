@@ -48,12 +48,12 @@ export default function CustomersPage() {
     address: '',
   })
 
-  // Real data from backend
+  // Fetch customers
   const { 
     data: customers, 
     isLoading, 
     error 
-  } = useGetAllUsersQuery(undefined)
+  } = useGetAllUsersQuery()
 
   // Search functionality using the API
   const { 
@@ -68,7 +68,7 @@ export default function CustomersPage() {
   const [toggleUserActivation] = useToggleUserActivationMutation()
   const [adminUpdateUserProfile] = useAdminUpdateUserProfileMutation()
 
-  // Filter out admins and use either search results or all customers
+  // Update the displayCustomers to use local state
   const displayCustomers = (searchQuery ? searchResults : customers)?.filter(
     (customer: User) => customer.role === 'user'
   )
@@ -243,7 +243,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -251,24 +251,8 @@ export default function CustomersPage() {
                 <p className="text-sm font-medium text-gray-500">Total Customers</p>
                 <p className="mt-1 text-3xl font-semibold">{displayCustomers?.length || 0}</p>
               </div>
-              <div className="rounded-full bg-blue-100 p-2 text-blue-800">
-                <UserPlus className="h-5 w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Active Customers</p>
-                <p className="mt-1 text-3xl font-semibold">
-                  {displayCustomers?.filter((c: User) => c.isActive).length || 0}
-                </p>
-              </div>
-              <div className="rounded-full bg-green-100 p-2 text-green-800">
-                <UserPlus className="h-5 w-5" />
+              <div className="rounded-full bg-blue-100 p-3 text-blue-800">
+                <UserPlus className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -288,8 +272,8 @@ export default function CustomersPage() {
                   }).length || 0}
                 </p>
               </div>
-              <div className="rounded-full bg-purple-100 p-2 text-purple-800">
-                <UserPlus className="h-5 w-5" />
+              <div className="rounded-full bg-purple-100 p-3 text-purple-800">
+                <UserPlus className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -323,8 +307,7 @@ export default function CustomersPage() {
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Join Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -334,58 +317,36 @@ export default function CustomersPage() {
                   <TableCell>{customer.email}</TableCell>
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        customer.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {customer.isActive ? 'active' : 'inactive'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100 cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem 
-                          className="cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleViewCustomer(customer)}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleEditCustomer(customer)}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit Customer
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleToggleActivation(customer)}
-                        >
-                          <Award className="mr-2 h-4 w-4" />
-                          {customer.isActive ? 'Deactivate' : 'Activate'}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="cursor-pointer hover:bg-red-100 text-red-600"
-                          onClick={() => {
-                            setSelectedCustomer(customer)
-                            setIsDeleteDialogOpen(true)
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Customer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-blue-100 hover:text-blue-800"
+                        onClick={() => handleViewCustomer(customer)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-blue-100 hover:text-blue-800"
+                        onClick={() => handleEditCustomer(customer)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-red-100 hover:text-red-600"
+                        onClick={() => {
+                          setSelectedCustomer(customer)
+                          setIsDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

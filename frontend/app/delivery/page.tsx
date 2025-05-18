@@ -5,10 +5,12 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ChevronLeft, ShoppingCart, Plus, Minus, X, CreditCard } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { useCreateCheckoutSessionMutation } from "@/redux/api/stripeApi"
+import { useAppSelector } from "@/redux/hooks"
+import { useCreateCheckoutSessionMutation, useCheckPaymentStatusQuery } from "@/redux/api/stripeApi"
 import { useGetMenuItemsQuery } from "@/redux/api/menuItems"
 import { useGetCategoriesQuery } from "@/redux/api/categoryApi"
+import { useGetUserProfileQuery } from "@/redux/api/userApi"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 
 import styles from "./styles.module.css"
+import { useCreateOrderMutation } from "@/redux/api/order"
+import { useCreateDeliveryMutation } from "@/redux/api/deliveryApi"
 
 interface ApiMenuItem {
   _id: string;
@@ -60,13 +64,20 @@ interface Category {
 export default function DeliveryPage() {
   // Router and Auth hooks
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user } = useAppSelector((state) => state.auth)
   const searchParams = useSearchParams()
 
   // Redux API hooks
   const { data: apiMenuItems = [], isLoading: menuLoading } = useGetMenuItemsQuery()
   const { data: categoriesResponse, isLoading: categoriesLoading } = useGetCategoriesQuery()
-  const [createCheckoutSession, { isLoading: isCreatingCheckout }] = useCreateCheckoutSessionMutation()
+  const [createCheckoutSession] = useCreateCheckoutSessionMutation()
+  const sessionId = searchParams.get("session_id")
+  const { data: paymentStatusData } = useCheckPaymentStatusQuery(sessionId || '', { 
+    skip: !sessionId || searchParams.get("payment") !== "success" 
+  })
+  const { data: userProfile } = useGetUserProfileQuery()
+  const [createOrder] = useCreateOrderMutation()
+  const [createDelivery] = useCreateDeliveryMutation()
 
   // Transform API data
   const availableCategories = categoriesResponse?.categories || []
@@ -88,6 +99,16 @@ export default function DeliveryPage() {
     notes: "",
     paymentMethod: "cash",
   })
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null)
+  const [isMenuItemOpen, setIsMenuItemOpen] = useState(false)
+  const [selectedItemQuantity, setSelectedItemQuantity] = useState(1)
+  const [validationErrors, setValidationErrors] = useState({
+    name: '',
+    phone: '',
+    address: ''
+  })
+  const [isMounted, setIsMounted] = useState(false)
 
   // Filter active menu items by category and status
   const filteredItems = menuItems.filter(
@@ -96,21 +117,26 @@ export default function DeliveryPage() {
 
   // Effect hooks
   useEffect(() => {
+    setIsMounted(true)
+    return () => setIsMounted(false)
+  }, [])
+
+  useEffect(() => {
     if (availableCategories.length > 0 && !activeCategory) {
       setActiveCategory(availableCategories[0]._id)
     }
   }, [availableCategories, activeCategory])
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!user) {
       router.push("/login?redirect=/delivery")
-    } else if (user) {
+    } else {
       setDeliveryInfo((prev) => ({
         ...prev,
-        name: user.name || prev.name,
+        name: user.fullName || prev.name,
       }))
     }
-  }, [user, authLoading, router])
+  }, [user, router])
 
   useEffect(() => {
     if (cart.length > 0) {
@@ -138,10 +164,42 @@ export default function DeliveryPage() {
     const sessionId = searchParams.get("session_id")
 
     if (paymentStatus === "success" && sessionId) {
-      setIsProcessing(false)
-      setOrderComplete(true)
-      localStorage.removeItem("deliveryCart")
-      setCart([])
+      if (paymentStatusData?.status === 'paid') {
+        // Get pending delivery info from localStorage
+        const pendingDeliveryInfo = localStorage.getItem("pendingDeliveryInfo")
+        
+        if (pendingDeliveryInfo) {
+          // Create delivery with the stored info
+          createDelivery(JSON.parse(pendingDeliveryInfo))
+            .unwrap()
+            .then(() => {
+              // Clear cart and stored info
+              localStorage.removeItem("deliveryCart")
+              localStorage.removeItem("pendingDeliveryInfo")
+              setCart([])
+              setOrderComplete(true)
+              setIsProcessing(false)
+            })
+            .catch((error: any) => {
+              console.error('Error creating delivery after payment:', error)
+              toast({
+                variant: "destructive",
+                title: "Delivery creation failed",
+                description: "Payment was successful but there was an error creating your delivery. Please contact support.",
+              })
+              setIsProcessing(false)
+            })
+        }
+      } else if (paymentStatusData) {
+        // Payment not successful
+        setOrderStep(1)
+        setIsProcessing(false)
+        toast({
+          variant: "destructive",
+          title: "Payment verification failed",
+          description: "Please try again or choose a different payment method",
+        })
+      }
     } else if (paymentStatus === "failed" && sessionId) {
       setOrderStep(1)
       setIsProcessing(false)
@@ -166,16 +224,80 @@ export default function DeliveryPage() {
     } else if (orderStatus === "cancelled") {
       setCart([])
       localStorage.removeItem("deliveryCart")
+      localStorage.removeItem("pendingDeliveryInfo")
       setOrderStep(0)
     }
-  }, [searchParams])
+  }, [searchParams, createDelivery, paymentStatusData])
+
+  // Validation functions
+  const validateName = (name: string) => {
+    if (!name.trim()) {
+      return 'Name is required'
+    }
+    if (name.length < 2) {
+      return 'Name must be at least 2 characters'
+    }
+    return ''
+  }
+
+  const validatePhone = (phone: string) => {
+    if (!phone.trim()) {
+      return 'Phone number is required'
+    }
+    // Basic phone validation - can be adjusted based on your requirements
+    const phoneRegex = /^[0-9]{10,11}$/
+    if (!phoneRegex.test(phone.replace(/\D/g, ''))) {
+      return 'Please enter a valid phone number (10-11 digits)'
+    }
+    return ''
+  }
+
+  const validateAddress = (address: string) => {
+    if (!address.trim()) {
+      return 'Address is required'
+    }
+    if (address.length < 10) {
+      return 'Please enter a complete address (minimum 10 characters)'
+    }
+    return ''
+  }
 
   // Event handlers
   const handleInputChange = (field: string, value: string) => {
-    setDeliveryInfo({
-      ...deliveryInfo,
+    if (!isMounted) return
+
+    setDeliveryInfo(prev => ({
+      ...prev,
       [field]: value,
-    })
+    }))
+
+    // Validate the field
+    let error = ''
+    switch (field) {
+      case 'name':
+        error = validateName(value)
+        break
+      case 'phone':
+        error = validatePhone(value)
+        break
+      case 'address':
+        error = validateAddress(value)
+        break
+    }
+
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: error
+    }))
+  }
+
+  const isFormValid = () => {
+    return !validationErrors.name && 
+           !validationErrors.phone && 
+           !validationErrors.address &&
+           deliveryInfo.name.trim() !== '' &&
+           deliveryInfo.phone.trim() !== '' &&
+           deliveryInfo.address.trim() !== ''
   }
 
   const addToCart = (item: MenuItem) => {
@@ -212,6 +334,14 @@ export default function DeliveryPage() {
   }
 
   const handleCheckout = () => {
+    // Set phone and address from user profile if available
+    if (userProfile) {
+      setDeliveryInfo(prev => ({
+        ...prev,
+        phone: userProfile.phone || prev.phone,
+        address: userProfile.address || prev.address
+      }))
+    }
     setOrderStep(1)
   }
 
@@ -220,6 +350,7 @@ export default function DeliveryPage() {
 
     try {
       if (deliveryInfo.paymentMethod === "card") {
+        // Create checkout session for card payment
         const checkoutData = {
           items: cart.map(item => ({
             id: item._id,
@@ -238,27 +369,133 @@ export default function DeliveryPage() {
           deliveryFee: 5
         }
 
+        console.log('Creating checkout session with data:', checkoutData)
         const response = await createCheckoutSession(checkoutData).unwrap()
+        console.log('Checkout session response:', response)
         
         if (response.url) {
+          // Store delivery info in localStorage for after payment
+          const pendingDeliveryInfo = {
+            userId: user?._id,
+            customerName: deliveryInfo.name,
+            items: cart.map(item => ({
+              menuItemId: item._id,
+              menuItemName: item.title,
+              quantity: item.quantity,
+              price: item.price,
+              discountPercentage: item.discountPercentage || 0,
+              total: item.price * item.quantity
+            })),
+            totalAmount: getTotalPrice() + 5,
+            expectedDeliveryTime: new Date(Date.now() + 1000 * 60 * 30),
+            notes: deliveryInfo.notes,
+            deliveryAddress: deliveryInfo.address,
+            deliveryPhone: deliveryInfo.phone,
+            paymentMethod: "online payment" as const,
+            paymentStatus: "pending" as const
+          }
+          
+          console.log('Storing pending delivery info:', pendingDeliveryInfo)
+          localStorage.setItem("pendingDeliveryInfo", JSON.stringify(pendingDeliveryInfo))
+          
+          // Redirect to Stripe checkout
           window.location.href = response.url
           return
+        } else {
+          throw new Error('No checkout URL received from server')
         }
       } else {
-        setTimeout(() => {
-          setIsProcessing(false)
+        // Create delivery for cash on delivery
+        const deliveryData = {
+          userId: user?._id,
+          customerName: deliveryInfo.name,
+          items: cart.map(item => ({
+            menuItemId: item._id,
+            menuItemName: item.title,
+            quantity: item.quantity,
+            price: item.price,
+            discountPercentage: item.discountPercentage || 0,
+            total: item.price * item.quantity
+          })),
+          totalAmount: getTotalPrice() + 5, // Including delivery fee
+          expectedDeliveryTime: new Date(Date.now() + 1000 * 60 * 30), // 30 minutes from now
+          notes: deliveryInfo.notes,
+          deliveryAddress: deliveryInfo.address,
+          deliveryPhone: deliveryInfo.phone,
+          paymentMethod: "cash on delivery" as const,
+          paymentStatus: "pending" as const
+        }
+
+        console.log('Creating delivery with data:', deliveryData)
+        const response = await createDelivery(deliveryData).unwrap()
+        console.log('Delivery creation response:', response)
+        
+        if (response) {
+          // Clear cart and show success
+          localStorage.removeItem("deliveryCart")
+          setCart([])
           setOrderComplete(true)
-        }, 1000)
+          setIsProcessing(false)
+        } else {
+          throw new Error('No response received from server')
+        }
       }
-    } catch (error) {
-      console.error('Error processing payment:', error)
+    } catch (error: any) {
+      console.error('Error processing delivery:', error)
+      console.error('Error details:', {
+        status: error.status,
+        data: error.data,
+        message: error.message,
+        error: error.error,
+        originalError: error.originalError
+      })
       setIsProcessing(false)
-      router.push("/payment-failed")
+      
+      // Extract error message from the error response
+      let errorMessage = 'There was an error processing your delivery. Please try again.'
+      
+      if (error.status === 500) {
+        if (error.data?.error?.details) {
+          // Handle validation errors
+          errorMessage = `Server error: ${error.data.error.details}`
+        } else if (error.data?.error?.message) {
+          // Handle specific error messages
+          errorMessage = `Server error: ${error.data.error.message}`
+        } else if (error.data?.message) {
+          // Handle general error messages
+          errorMessage = `Server error: ${error.data.message}`
+        } else {
+          errorMessage = 'Server error: Please try again later or contact support.'
+        }
+      } else if (error.data?.message) {
+        errorMessage = error.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      } else if (error.error) {
+        errorMessage = error.error
+      }
+
+      // Log the full error object for debugging
+      console.error('Full error object:', JSON.stringify(error, null, 2))
+      
+      toast({
+        variant: "destructive",
+        title: "Delivery failed",
+        description: errorMessage,
+      })
     }
   }
 
+  const handleQuantityChange = (value: string) => {
+    // Remove any non-numeric characters
+    const numericValue = value.replace(/[^0-9]/g, '')
+    // Convert to number and ensure it's at least 1
+    const newQuantity = Math.max(1, parseInt(numericValue) || 1)
+    setSelectedItemQuantity(newQuantity)
+  }
+
   // Loading state
-  if (authLoading || menuLoading || categoriesLoading) {
+  if (menuLoading || categoriesLoading) {
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.loadingSpinner} />
@@ -272,126 +509,20 @@ export default function DeliveryPage() {
 
   return (
     <div className={styles.container}>
-      {/* Background elements */}
-      <div className={styles.backgroundPattern}></div>
-      <div className={styles.backgroundCircle}></div>
-
-      {/* Header */}
+      <div className={styles.backgroundPattern} />
+      <div className={styles.backgroundCircle} />
+      
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <Link href="/" className={styles.backLink}>
             <ChevronLeft className={styles.backIcon} />
-            <span>Back to Home</span>
+            Back to Home
           </Link>
         </div>
         <div className={styles.headerCenter}>
-          <Link href="/" className={styles.logo}>
-            PIZZA LIÊM KHIẾT&apos;S
-          </Link>
+          <h1 className={styles.logo}>Golden Crust</h1>
         </div>
-        <div className={styles.headerRight}>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className={styles.cartButton}>
-                <ShoppingCart className={styles.cartIcon} />
-                {getTotalItems() > 0 && <span className={styles.cartBadge}>{getTotalItems()}</span>}
-              </Button>
-            </SheetTrigger>
-            <SheetContent className={styles.cartSheet}>
-              <SheetHeader>
-                <SheetTitle className={styles.cartTitle}>Your Order</SheetTitle>
-                <SheetDescription className={styles.cartDescription}>
-                  {cart.length === 0 ? "Your cart is empty" : `${getTotalItems()} items in your cart`}
-                </SheetDescription>
-              </SheetHeader>
-
-              {cart.length > 0 ? (
-                <>
-                  <div className={styles.cartItems}>
-                    {cart.map((item) => (
-                      <div key={item._id} className={styles.cartItem}>
-                        <div className={styles.cartItemImage}>
-                          <Image
-                            src={item.thumbnail || "/placeholder.svg"}
-                            alt={item.title}
-                            width={64}
-                            height={64}
-                            className={styles.itemImage}
-                          />
-                        </div>
-                        <div className={styles.cartItemDetails}>
-                          <h4 className={styles.cartItemName}>{item.title}</h4>
-                          <div className={styles.cartItemControls}>
-                            <div className={styles.quantityControls}>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className={styles.quantityButton}
-                                onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                              >
-                                <Minus className={styles.quantityIcon} />
-                              </Button>
-                              <span className={styles.quantity}>{item.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className={styles.quantityButton}
-                                onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                              >
-                                <Plus className={styles.quantityIcon} />
-                              </Button>
-                            </div>
-                            <div className={styles.cartItemPrice}>${(item.price * item.quantity).toFixed(2)}</div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={styles.removeButton}
-                          onClick={() => removeFromCart(item._id)}
-                        >
-                          <X className={styles.removeIcon} />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className={styles.cartSummary}>
-                    <div className={styles.summaryRow}>
-                      <span className={styles.summaryLabel}>Subtotal</span>
-                      <span className={styles.summaryValue}>${getTotalPrice().toFixed(2)}</span>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span className={styles.summaryLabelSmall}>Delivery Fee</span>
-                      <span className={styles.summaryValueSmall}>$5.00</span>
-                    </div>
-                    <div className={styles.summaryTotal}>
-                      <span>Total</span>
-                      <span>${(getTotalPrice() + 5).toFixed(2)}</span>
-                    </div>
-                    <SheetFooter>
-                      <SheetClose asChild>
-                        <Button className={styles.checkoutButton} onClick={handleCheckout}>
-                          Checkout
-                        </Button>
-                      </SheetClose>
-                    </SheetFooter>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.emptyCart}>
-                  <ShoppingCart className={styles.emptyCartIcon} />
-                  <p className={styles.emptyCartText}>Your cart is empty</p>
-                  <SheetClose asChild>
-                    <Button variant="outline" className={styles.continueShoppingButton}>
-                      Continue Shopping
-                    </Button>
-                  </SheetClose>
-                </div>
-              )}
-            </SheetContent>
-          </Sheet>
-        </div>
+        <div className={styles.headerRight} />
       </header>
 
       <main className={styles.main}>
@@ -429,11 +560,19 @@ export default function DeliveryPage() {
                       <TabsContent key={category._id} value={category._id} className={styles.menuItems}>
                         <div className={styles.menuGrid}>
                           {filteredItems.map((item) => (
-                            <div key={item._id} className={styles.menuItem}>
+                            <div
+                              key={item._id}
+                              className={styles.menuItem}
+                              onClick={() => {
+                                setSelectedMenuItem(item)
+                                setIsMenuItemOpen(true)
+                              }}
+                              style={{ cursor: 'pointer' }}
+                            >
                               <div className={styles.menuItemImageContainer}>
                                 <Image
                                   src={item.thumbnail || "/placeholder.svg"}
-                                  alt={item.title}
+                                  alt={item.title || "Menu item image"}
                                   width={300}
                                   height={300}
                                   className={styles.menuItemImage}
@@ -444,7 +583,7 @@ export default function DeliveryPage() {
                                 <p className={styles.menuItemDescription}>{item.description}</p>
                                 <div className={styles.menuItemFooter}>
                                   <span className={styles.menuItemPrice}>${item.price.toFixed(2)}</span>
-                                  <Button className={styles.addButton} onClick={() => addToCart(item)}>
+                                  <Button className={styles.addButton} onClick={e => { e.stopPropagation(); addToCart(item); }}>
                                     Add to Cart
                                   </Button>
                                 </div>
@@ -476,12 +615,15 @@ export default function DeliveryPage() {
                           </Label>
                           <Input
                             id="name"
-                            className={styles.input}
+                            className={`${styles.input} ${validationErrors.name ? styles.inputError : ''}`}
                             placeholder="Enter your full name"
                             value={deliveryInfo.name}
                             onChange={(e) => handleInputChange("name", e.target.value)}
                             required
                           />
+                          {validationErrors.name && (
+                            <div className={styles.errorMessage}>{validationErrors.name}</div>
+                          )}
                         </div>
                         <div className={styles.formGroup}>
                           <Label htmlFor="phone" className={styles.formLabel}>
@@ -489,12 +631,15 @@ export default function DeliveryPage() {
                           </Label>
                           <Input
                             id="phone"
-                            className={styles.input}
+                            className={`${styles.input} ${validationErrors.phone ? styles.inputError : ''}`}
                             placeholder="Enter your phone number"
                             value={deliveryInfo.phone}
                             onChange={(e) => handleInputChange("phone", e.target.value)}
                             required
                           />
+                          {validationErrors.phone && (
+                            <div className={styles.errorMessage}>{validationErrors.phone}</div>
+                          )}
                         </div>
                       </div>
 
@@ -508,12 +653,15 @@ export default function DeliveryPage() {
                         </div>
                         <Textarea
                           id="address"
-                          className={styles.textarea}
+                          className={`${styles.textarea} ${validationErrors.address ? styles.inputError : ''}`}
                           placeholder="Enter your full address"
                           value={deliveryInfo.address}
                           onChange={(e) => handleInputChange("address", e.target.value)}
                           required
                         />
+                        {validationErrors.address && (
+                          <div className={styles.errorMessage}>{validationErrors.address}</div>
+                        )}
                       </div>
 
                       <div className={styles.formGroup}>
@@ -586,7 +734,7 @@ export default function DeliveryPage() {
                       <Button
                         className={styles.placeOrderButton}
                         onClick={handlePlaceOrder}
-                        disabled={!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address || isProcessing}
+                        disabled={!isFormValid() || isProcessing}
                       >
                         {isProcessing ? (
                           <>
@@ -701,11 +849,205 @@ export default function DeliveryPage() {
         )}
       </main>
 
+      <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+        <SheetTrigger asChild>
+          <button
+            className={
+              isCartOpen
+                ? `${styles.cartButton} ${styles.cartButtonHidden}`
+                : styles.cartButton
+            }
+            aria-label="Open cart"
+          >
+            <ShoppingCart className={styles.cartIcon} />
+            {cart.length > 0 && (
+              <span className={styles.cartBadge}>{getTotalItems()}</span>
+            )}
+          </button>
+        </SheetTrigger>
+        <SheetContent className={styles.cartSheet}>
+          <SheetHeader>
+            <SheetTitle className={styles.cartTitle}>Your Order</SheetTitle>
+            <SheetDescription className={styles.cartDescription}>
+              {cart.length === 0 ? "Your cart is empty" : `${getTotalItems()} items in your cart`}
+            </SheetDescription>
+          </SheetHeader>
+
+          {cart.length > 0 ? (
+            <>
+              <div className={styles.cartItems}>
+                {cart.map((item) => (
+                  <div key={item._id} className={styles.cartItem}>
+                    <div className={styles.cartItemImage}>
+                      <Image
+                        src={item.thumbnail || "/placeholder.svg"}
+                        alt={item.title}
+                        width={64}
+                        height={64}
+                        className={styles.itemImage}
+                      />
+                    </div>
+                    <div className={styles.cartItemDetails}>
+                      <h4 className={styles.cartItemName}>{item.title}</h4>
+                      <div className={styles.cartItemControls}>
+                        <div className={styles.quantityControls}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className={styles.quantityButton}
+                            onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                          >
+                            <Minus className={styles.quantityIcon} />
+                          </Button>
+                          <input
+                            type="text"
+                            className={styles.quantityInput}
+                            value={item.quantity}
+                            onChange={(e) => updateQuantity(item._id, parseInt(e.target.value) || 1)}
+                            min="1"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className={styles.quantityButton}
+                            onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                          >
+                            <Plus className={styles.quantityIcon} />
+                          </Button>
+                        </div>
+                        <div className={styles.cartItemPrice}>${(item.price * item.quantity).toFixed(2)}</div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={styles.removeButton}
+                      onClick={() => removeFromCart(item._id)}
+                    >
+                      <X className={styles.removeIcon} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <div className={styles.cartSummary}>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryLabel}>Subtotal</span>
+                  <span className={styles.summaryValue}>${getTotalPrice().toFixed(2)}</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryLabelSmall}>Delivery Fee</span>
+                  <span className={styles.summaryValueSmall}>$5.00</span>
+                </div>
+                <div className={styles.summaryTotal}>
+                  <span>Total</span>
+                  <span>${(getTotalPrice() + 5).toFixed(2)}</span>
+                </div>
+                <SheetFooter>
+                  <SheetClose asChild>
+                    <Button className={styles.checkoutButton} onClick={handleCheckout}>
+                      Checkout
+                    </Button>
+                  </SheetClose>
+                </SheetFooter>
+              </div>
+            </>
+          ) : (
+            <div className={styles.emptyCart}>
+              <ShoppingCart className={styles.emptyCartIcon} />
+              <p className={styles.emptyCartText}>Your cart is empty</p>
+              <SheetClose asChild>
+                <Button variant="outline" className={styles.continueShoppingButton}>
+                  Continue Shopping
+                </Button>
+              </SheetClose>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Menu Item Details Dialog */}
+      <Dialog open={isMenuItemOpen} onOpenChange={setIsMenuItemOpen}>
+        <DialogContent className={styles.menuItemDialog}>
+          {selectedMenuItem && (
+            <div className={styles.menuItemDetails}>
+              <DialogHeader>
+                <DialogTitle className={styles.menuItemDialogTitle}>{selectedMenuItem.title}</DialogTitle>
+              </DialogHeader>
+              
+              <div className={styles.menuItemDialogImage}>
+                <Image
+                  src={selectedMenuItem.thumbnail || "/placeholder.svg"}
+                  alt={selectedMenuItem.title || "Menu item image"}
+                  width={400}
+                  height={300}
+                  className={styles.detailsImage}
+                />
+              </div>
+
+              <div className={styles.menuItemDialogContent}>
+                <p className={styles.menuItemDialogDescription}>{selectedMenuItem.description}</p>
+                
+                <div className={styles.menuItemDialogPrice}>
+                  ${selectedMenuItem.price.toFixed(2)}
+                </div>
+
+                <div className={styles.menuItemDialogControls}>
+                  <div className={styles.quantityControls}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className={styles.quantityButton}
+                      onClick={() => setSelectedItemQuantity(prev => Math.max(1, prev - 1))}
+                    >
+                      <Minus className={styles.quantityIcon} />
+                    </Button>
+                    <input
+                      type="text"
+                      className={styles.quantityInput}
+                      value={selectedItemQuantity}
+                      onChange={(e) => handleQuantityChange(e.target.value)}
+                      min="1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className={styles.quantityButton}
+                      onClick={() => setSelectedItemQuantity(prev => prev + 1)}
+                    >
+                      <Plus className={styles.quantityIcon} />
+                    </Button>
+                  </div>
+
+                  <Button
+                    className={styles.addToCartButton}
+                    onClick={() => {
+                      // Add multiple items to cart
+                      for (let i = 0; i < selectedItemQuantity; i++) {
+                        addToCart(selectedMenuItem)
+                      }
+                      setIsMenuItemOpen(false)
+                      setSelectedItemQuantity(1) // Reset quantity
+                    }}
+                  >
+                    Add to Cart - ${(selectedMenuItem.price * selectedItemQuantity).toFixed(2)}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
-          <div className={styles.footerLogo}>PIZZA LIÊM KHIẾT&apos;S</div>
+          <div className={styles.footerLogo}>GOLDEN CRUST</div>
           <div className={styles.footerDivider}></div>
-          <div className={styles.footerCopyright}>© 2023 Pizza Liêm Khiết. All rights reserved.</div>
+          <div className={styles.footerCopyright}>© 2023 Golden Crust. All rights reserved.</div>
         </div>
       </footer>
     </div>

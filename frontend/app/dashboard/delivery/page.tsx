@@ -91,7 +91,29 @@ export default function DeliveryManagement() {
   // Add error logging
   useEffect(() => {
     if (error) {
-      console.error('Error fetching deliveries:', error)
+      // Handle RTK Query error
+      if ('status' in error) {
+        // Handle different error statuses
+        switch (error.status) {
+          case 'FETCH_ERROR':
+            console.error('Network error:', error.error)
+            break
+          case 'PARSING_ERROR':
+            console.error('Parsing error:', error.error)
+            break
+          case 'CUSTOM_ERROR':
+            console.error('Custom error:', error.error)
+            break
+          default:
+            console.error('Unknown error:', error)
+        }
+      } else if (error instanceof Error) {
+        // Handle standard Error objects
+        console.error('Error:', error.message)
+      } else {
+        // Handle unknown error types
+        console.error('Unknown error type:', error)
+      }
     }
   }, [error])
 
@@ -227,7 +249,7 @@ export default function DeliveryManagement() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Hóa đơn - Pizza Liêm Khiết</title>
+        <title>Hóa đơn - Golden Crust</title>
         <meta charset="UTF-8">
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
@@ -389,7 +411,7 @@ export default function DeliveryManagement() {
       <body>
         <div class="receipt">
           <div class="header">
-            <div class="logo">Pizza Liêm Khiết</div>
+            <div class="logo">Golden Crust</div>
             <p>123 Nguyễn Huệ, Quận 1, TP.HCM</p>
             <p>SĐT: 028-1234-5678</p>
             <p>MST: 0123456789</p>

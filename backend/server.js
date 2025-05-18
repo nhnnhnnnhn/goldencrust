@@ -66,7 +66,10 @@ const io = socketIO(server, {
         origin: process.env.FRONTEND_URL || 'http://localhost:3000',
         methods: ['GET', 'POST'],
         credentials: true
-    }
+    },
+    path: '/socket.io',
+    transports: ['websocket', 'polling'],
+    allowEIO3: true
 });
 
 // Xử lý kết nối Socket.IO
