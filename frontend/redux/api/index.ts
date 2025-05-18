@@ -3,7 +3,6 @@ import { stripeApi } from './stripeApi';
 import { restaurantApi } from './restaurant';
 import { reservationApi } from './reservationApi';
 import { chatApi } from './chatApi';
-import { paymentApi } from './paymentApi';
 
 export * from './authApi';
 export * from './userApi';
@@ -14,7 +13,6 @@ export * from './stripeApi';
 export * from './validateTokenApi';
 export * from './reservedTableApi';
 export * from './chatApi';
-export * from './paymentApi';
 
 export {
   authApi,
@@ -22,5 +20,4 @@ export {
   restaurantApi,
   reservationApi,
   chatApi,
-  paymentApi,
 };
