@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { PlusCircle, Pencil, Trash2, Search, Filter, ChevronDown, X, Plus, ImageIcon } from "lucide-react"
+import { PlusCircle, Pencil, Trash2, Search, Filter, ChevronDown, ImageIcon } from "lucide-react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -29,9 +29,7 @@ interface MenuItem {
   discountPercentage: number
   categoryId: string
   thumbnail: string
-  images: string[]
   status: "active" | "inactive" | "out_of_stock"
-  tags: string[]
   deleted?: boolean
   deletedAt?: string
   createdAt: string
@@ -50,8 +48,6 @@ export default function MenuManagement() {
 
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState("")
-  const [additionalImages, setAdditionalImages] = useState<string[]>([])
-  const [newTag, setNewTag] = useState("")
 
   // RTK Query hooks
   const { data: menuItems = [], isLoading: menuLoading } = useGetMenuItemsQuery()
@@ -77,19 +73,15 @@ export default function MenuManagement() {
       discountPercentage: 0,
       categoryId: "",
       thumbnail: "",
-      images: [],
-      status: "active",
-      tags: []
+      status: "active"
     })
     setImagePreview("")
-    setAdditionalImages([])
     setShowAddEditModal(true)
   }
 
   const handleEditItem = (item: MenuItem) => {
     setCurrentItem(item)
     setImagePreview(item.thumbnail)
-    setAdditionalImages(item.images)
     setShowAddEditModal(true)
   }
 
@@ -130,36 +122,6 @@ export default function MenuManagement() {
     }
   }
 
-  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setAdditionalImages([...additionalImages, reader.result as string])
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const handleRemoveImage = (index: number) => {
-    setAdditionalImages(additionalImages.filter((_, i) => i !== index))
-  }
-
-  const handleAddTag = () => {
-    if (newTag.trim() && currentItem) {
-      const updatedTags = [...(currentItem.tags || []), newTag.trim()]
-      setCurrentItem({ ...currentItem, tags: updatedTags })
-      setNewTag("")
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    if (currentItem) {
-      const updatedTags = currentItem.tags?.filter(tag => tag !== tagToRemove) || []
-      setCurrentItem({ ...currentItem, tags: updatedTags })
-    }
-  }
-
   const handleSaveItem = async () => {
     if (!currentItem) return
 
@@ -170,7 +132,6 @@ export default function MenuManagement() {
     formData.append("discountPercentage", currentItem.discountPercentage?.toString() || "0")
     formData.append("categoryId", currentItem.categoryId || "")
     formData.append("status", currentItem.status || "active")
-    formData.append("tags", JSON.stringify(currentItem.tags || []))
 
     if (imageFile) {
       formData.append("thumbnail", imageFile)
@@ -354,13 +315,6 @@ export default function MenuManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{item.title}</div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {item.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="mr-1">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-500 max-w-xs truncate">{item.description}</div>
@@ -397,10 +351,18 @@ export default function MenuManagement() {
                     <button
                       onClick={() => toggleItemStatus(item)}
                       className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        item.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        item.status === "active" 
+                          ? "bg-green-100 text-green-800" 
+                          : item.status === "inactive"
+                          ? "bg-gray-100 text-gray-800"
+                          : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {item.status === "active" ? "Có sẵn" : "Hết hàng"}
+                      {item.status === "active" 
+                        ? "Có sẵn" 
+                        : item.status === "inactive"
+                        ? "Không hoạt động"
+                        : "Hết hàng"}
                     </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -513,7 +475,7 @@ export default function MenuManagement() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="active">Có sẵn</option>
-                  <option value="inactive">Hết hàng</option>
+                  <option value="inactive">Không hoạt động</option>
                   <option value="out_of_stock">Hết hàng</option>
                 </select>
               </div>
@@ -527,42 +489,6 @@ export default function MenuManagement() {
                 rows={3}
                 className="w-full"
               />
-            </div>
-
-            <div className="space-y-2 mb-4">
-              <label className="block text-sm font-medium text-gray-700">Tags</label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {(currentItem.tags || []).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X size={14} />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Thêm tag mới"
-                  className="flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                />
-                <Button type="button" onClick={handleAddTag} size="sm">
-                  <Plus size={16} />
-                </Button>
-              </div>
             </div>
 
             <div className="space-y-2 mb-4">
@@ -585,31 +511,6 @@ export default function MenuManagement() {
                     className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
                   <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF tối đa 2MB</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              <label className="block text-sm font-medium text-gray-700">Hình ảnh bổ sung</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {additionalImages.map((img, index) => (
-                  <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-gray-300">
-                    <Image src={img} alt={`Additional ${index}`} fill className="object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-                <div className="aspect-square border border-dashed border-gray-300 rounded-md flex items-center justify-center">
-                  <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-                    <ImageIcon size={24} className="text-gray-400" />
-                    <span className="text-xs text-gray-500 mt-1">Thêm ảnh</span>
-                    <Input type="file" accept="image/*" onChange={handleAddImage} className="hidden" />
-                  </label>
                 </div>
               </div>
             </div>
@@ -638,12 +539,14 @@ export default function MenuManagement() {
             <p className="mb-6">Bạn có chắc chắn muốn xóa món "{itemToDelete.title}" khỏi menu?</p>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-                Hủy
-              </Button>
-              <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
-                Xóa
-              </Button>
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="sm:mr-2">
+                  Hủy
+                </Button>
+                <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                  Xóa
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

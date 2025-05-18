@@ -24,7 +24,7 @@ module.exports.getMenuItems = controllerHandler(async (req, res) => {
 // Create menu item
 module.exports.createMenuItem = controllerHandler(async (req, res) => {
     try {
-        const { title, description, price, categoryId, thumbnail, images, status, tags, discountPercentage } = req.body;
+        const { title, description, price, categoryId, thumbnail, status, tags, discountPercentage } = req.body;
         
         // Validate required fields
         if (!title || !price || !categoryId) {
@@ -49,7 +49,6 @@ module.exports.createMenuItem = controllerHandler(async (req, res) => {
             price: Number(price),
             categoryId,
             thumbnail,
-            images: images || [],
             status: status || 'active',
             tags: tags || [],
             discountPercentage: Number(discountPercentage) || 0
