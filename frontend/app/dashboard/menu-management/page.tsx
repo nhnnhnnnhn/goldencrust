@@ -160,51 +160,122 @@ export default function MenuManagement() {
 
   const validateImage = (file: File): boolean => {
     const maxSize = 5 * 1024 * 1024; // 5MB
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     
     if (!allowedTypes.includes(file.type)) {
-      setFormErrors(prev => ({
-        ...prev,
-        thumbnail: "Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WebP"
-      }));
+      toast({
+        title: "Lỗi",
+        description: "Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WebP",
+        variant: "destructive",
+      });
       return false;
     }
     
     if (file.size > maxSize) {
-      setFormErrors(prev => ({
-        ...prev,
-        thumbnail: "Kích thước ảnh không được vượt quá 5MB"
-      }));
+      toast({
+        title: "Lỗi",
+        description: "Kích thước ảnh không được vượt quá 5MB",
+        variant: "destructive",
+      });
       return false;
     }
     
-    setFormErrors(prev => ({
-      ...prev,
-      thumbnail: undefined
-    }));
     return true;
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = document.createElement('img');
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error('Canvas to Blob conversion failed'));
+              }
+            },
+            'image/jpeg',
+            0.7
+          );
+        };
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
       if (validateImage(file)) {
-        setImageFile(file)
-        const reader = new FileReader()
+        // Compress image before setting it
+        const compressedFile = await compressImage(file);
+        setImageFile(compressedFile);
+        
+        // Create preview
+        const reader = new FileReader();
         reader.onloadend = () => {
-          setImagePreview(reader.result as string)
-        }
-        reader.readAsDataURL(file)
+          setImagePreview(reader.result as string);
+          // Clear any existing thumbnail error
+          if (formErrors.thumbnail) {
+            setFormErrors(prev => ({ ...prev, thumbnail: undefined }));
+          }
+        };
+        reader.readAsDataURL(compressedFile);
       }
-      e.target.value = ''
+    } catch (error) {
+      console.error('Error handling image:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể xử lý ảnh. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      // Reset input value
+      e.target.value = '';
     }
   }
 
   const handleSaveItem = async () => {
+    if (!currentItem) return;
+
     // Validate all required fields
     const newErrors: MenuItemFormErrors = {};
     
-    if (!currentItem?.title?.trim()) {
+    if (!currentItem.title?.trim()) {
       newErrors.title = "Vui lòng nhập tên món ăn";
     } else if (currentItem.title.length < 3) {
       newErrors.title = "Tên món ăn phải có ít nhất 3 ký tự";
@@ -212,22 +283,22 @@ export default function MenuManagement() {
       newErrors.title = "Tên món ăn không được vượt quá 100 ký tự";
     }
 
-    if (!currentItem?.categoryId) {
+    if (!currentItem.categoryId) {
       newErrors.categoryId = "Vui lòng chọn danh mục";
     }
 
-    if (!currentItem?.price || currentItem.price <= 0) {
+    if (!currentItem.price || currentItem.price <= 0) {
       newErrors.price = "Vui lòng nhập giá hợp lệ";
     } else if (currentItem.price > 10000000) {
       newErrors.price = "Giá không được vượt quá 10,000,000 VNĐ";
     }
 
-    if (currentItem?.discountPercentage && (currentItem.discountPercentage < 0 || currentItem.discountPercentage > 100)) {
+    if (currentItem.discountPercentage && (currentItem.discountPercentage < 0 || currentItem.discountPercentage > 100)) {
       newErrors.discountPercentage = "Giảm giá phải từ 0% đến 100%";
     }
 
     // Check thumbnail requirement for new items
-    if (!currentItem?._id && !imageFile && !imagePreview) {
+    if (!currentItem._id && !imageFile && !imagePreview) {
       newErrors.thumbnail = "Vui lòng chọn hình ảnh cho món ăn";
     }
 
@@ -241,6 +312,22 @@ export default function MenuManagement() {
       });
       return;
     }
+
+    // Ensure required fields are present
+    if (!currentItem.title || !currentItem.price || !currentItem.categoryId) {
+      toast({
+        title: "Lỗi",
+        description: "Thiếu thông tin bắt buộc",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Show loading toast
+    const loadingToast = toast({
+      title: currentItem._id ? "Đang cập nhật..." : "Đang thêm món...",
+      description: "Vui lòng đợi trong giây lát",
+    });
 
     // Reset form errors
     setFormErrors({});
@@ -271,11 +358,17 @@ export default function MenuManagement() {
           description: `Đã thêm ${currentItem.title}`,
         });
       }
+      // Dismiss loading toast
+      loadingToast.dismiss();
+      
       setShowAddEditModal(false);
       setCurrentItem(null);
       setImageFile(null);
       setImagePreview("");
     } catch (error) {
+      // Dismiss loading toast
+      loadingToast.dismiss();
+      
       const errorMessage = error instanceof Error ? error.message : "Không thể lưu món ăn. Vui lòng thử lại sau.";
       toast({
         title: "Lỗi",
@@ -648,7 +741,13 @@ export default function MenuManagement() {
                     formErrors.thumbnail ? 'border-red-500' : 'border-gray-300'
                   }`}>
                     {imagePreview ? (
-                      <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                      <Image 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        fill 
+                        className="object-cover"
+                        sizes="(max-width: 128px) 100vw, 128px"
+                      />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center bg-gray-50">
                         <ImageIcon className="h-12 w-12 text-gray-400" />
@@ -659,8 +758,8 @@ export default function MenuManagement() {
                     <Input
                       type="file"
                       onChange={handleImageChange}
-                      accept="image/jpeg,image/png,image/webp"
-                      className={formErrors.thumbnail ? 'border-red-500' : ''}
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      className={`w-full ${formErrors.thumbnail ? 'border-red-500' : ''}`}
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Hỗ trợ JPG, PNG, WebP. Tối đa 5MB.
