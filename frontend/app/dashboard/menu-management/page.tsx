@@ -36,6 +36,14 @@ interface MenuItem {
   updatedAt: string
 }
 
+interface MenuItemFormErrors {
+  title?: string;
+  categoryId?: string;
+  price?: string;
+  discountPercentage?: string;
+  thumbnail?: string;
+}
+
 export default function MenuManagement() {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
@@ -56,6 +64,8 @@ export default function MenuManagement() {
   const [updateMenuItem] = useUpdateMenuItemMutation()
   const [deleteMenuItem] = useDeleteMenuItemMutation()
   const [updateMenuItemStatus] = useUpdateMenuItemStatusMutation()
+
+  const [formErrors, setFormErrors] = useState<MenuItemFormErrors>({})
 
   // Filter menu items
   const filteredMenuItems = menuItems.filter((item: MenuItem) => {
@@ -110,59 +120,170 @@ export default function MenuManagement() {
     }
   }
 
+  const validateForm = (data: Partial<MenuItem>): boolean => {
+    const errors: MenuItemFormErrors = {};
+
+    // Validate title
+    if (!data.title?.trim()) {
+      errors.title = "Vui lòng nhập tên món ăn";
+    } else if (data.title.length < 3) {
+      errors.title = "Tên món ăn phải có ít nhất 3 ký tự";
+    } else if (data.title.length > 100) {
+      errors.title = "Tên món ăn không được vượt quá 100 ký tự";
+    }
+
+    // Validate category
+    if (!data.categoryId) {
+      errors.categoryId = "Vui lòng chọn danh mục";
+    }
+
+    // Validate price
+    if (!data.price || data.price <= 0) {
+      errors.price = "Vui lòng nhập giá hợp lệ";
+    } else if (data.price > 10000000) { // 10 triệu VNĐ
+      errors.price = "Giá không được vượt quá 10,000,000 VNĐ";
+    }
+
+    // Validate discount
+    if (data.discountPercentage && (data.discountPercentage < 0 || data.discountPercentage > 100)) {
+      errors.discountPercentage = "Giảm giá phải từ 0% đến 100%";
+    }
+
+    // Validate thumbnail for new items
+    if (!data._id && !imageFile) {
+      errors.thumbnail = "Vui lòng chọn hình ảnh cho món ăn";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateImage = (file: File): boolean => {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    
+    if (!allowedTypes.includes(file.type)) {
+      setFormErrors(prev => ({
+        ...prev,
+        thumbnail: "Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WebP"
+      }));
+      return false;
+    }
+    
+    if (file.size > maxSize) {
+      setFormErrors(prev => ({
+        ...prev,
+        thumbnail: "Kích thước ảnh không được vượt quá 5MB"
+      }));
+      return false;
+    }
+    
+    setFormErrors(prev => ({
+      ...prev,
+      thumbnail: undefined
+    }));
+    return true;
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setImageFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
+      if (validateImage(file)) {
+        setImageFile(file)
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string)
+        }
+        reader.readAsDataURL(file)
       }
-      reader.readAsDataURL(file)
+      e.target.value = ''
     }
   }
 
   const handleSaveItem = async () => {
-    if (!currentItem) return
+    // Validate all required fields
+    const newErrors: MenuItemFormErrors = {};
+    
+    if (!currentItem?.title?.trim()) {
+      newErrors.title = "Vui lòng nhập tên món ăn";
+    } else if (currentItem.title.length < 3) {
+      newErrors.title = "Tên món ăn phải có ít nhất 3 ký tự";
+    } else if (currentItem.title.length > 100) {
+      newErrors.title = "Tên món ăn không được vượt quá 100 ký tự";
+    }
 
-    const formData = new FormData()
-    formData.append("title", currentItem.title || "")
-    formData.append("description", currentItem.description || "")
-    formData.append("price", currentItem.price?.toString() || "0")
-    formData.append("discountPercentage", currentItem.discountPercentage?.toString() || "0")
-    formData.append("categoryId", currentItem.categoryId || "")
-    formData.append("status", currentItem.status || "active")
+    if (!currentItem?.categoryId) {
+      newErrors.categoryId = "Vui lòng chọn danh mục";
+    }
+
+    if (!currentItem?.price || currentItem.price <= 0) {
+      newErrors.price = "Vui lòng nhập giá hợp lệ";
+    } else if (currentItem.price > 10000000) {
+      newErrors.price = "Giá không được vượt quá 10,000,000 VNĐ";
+    }
+
+    if (currentItem?.discountPercentage && (currentItem.discountPercentage < 0 || currentItem.discountPercentage > 100)) {
+      newErrors.discountPercentage = "Giảm giá phải từ 0% đến 100%";
+    }
+
+    // Check thumbnail requirement for new items
+    if (!currentItem?._id && !imageFile && !imagePreview) {
+      newErrors.thumbnail = "Vui lòng chọn hình ảnh cho món ăn";
+    }
+
+    // If there are any errors, show them and return
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng điền đầy đủ thông tin bắt buộc",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Reset form errors
+    setFormErrors({});
+
+    const formData = new FormData();
+    formData.append("title", currentItem.title.trim());
+    formData.append("description", currentItem.description?.trim() || "");
+    formData.append("price", currentItem.price.toString());
+    formData.append("discountPercentage", currentItem.discountPercentage?.toString() || "0");
+    formData.append("categoryId", currentItem.categoryId);
+    formData.append("status", currentItem.status || "active");
 
     if (imageFile) {
-      formData.append("thumbnail", imageFile)
+      formData.append("thumbnail", imageFile);
     }
 
     try {
       if (currentItem._id) {
-        // Update existing item
-        await updateMenuItem({ id: currentItem._id, menuItem: formData }).unwrap()
+        await updateMenuItem({ id: currentItem._id, menuItem: formData }).unwrap();
         toast({
           title: "Cập nhật thành công",
           description: `Đã cập nhật ${currentItem.title}`,
-        })
+        });
       } else {
-        // Create new item
-        await createMenuItem(formData).unwrap()
+        await createMenuItem(formData).unwrap();
         toast({
           title: "Thêm món ăn thành công",
           description: `Đã thêm ${currentItem.title}`,
-        })
+        });
       }
-      setShowAddEditModal(false)
-      setCurrentItem(null)
+      setShowAddEditModal(false);
+      setCurrentItem(null);
+      setImageFile(null);
+      setImagePreview("");
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Không thể lưu món ăn. Vui lòng thử lại sau.";
       toast({
         title: "Lỗi",
-        description: "Không thể lưu món ăn. Vui lòng thử lại sau.",
+        description: errorMessage,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const toggleItemStatus = async (item: MenuItem) => {
     try {
@@ -396,7 +517,7 @@ export default function MenuManagement() {
           <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {menuItems.find((i) => i._id === currentItem._id) ? "Chỉnh Sửa Món Ăn" : "Thêm Món Ăn Mới"}
+                {currentItem._id ? "Chỉnh Sửa Món Ăn" : "Thêm Món Ăn Mới"}
               </DialogTitle>
             </DialogHeader>
 
@@ -407,34 +528,46 @@ export default function MenuManagement() {
                   type="text"
                   value={currentItem.title || ""}
                   onChange={(e) => {
-                    const title = e.target.value
-                    setCurrentItem({
-                      ...currentItem,
-                      title,
-                    })
+                    const title = e.target.value;
+                    setCurrentItem({ ...currentItem, title });
+                    // Clear error when user types
+                    if (formErrors.title) {
+                      setFormErrors(prev => ({ ...prev, title: undefined }));
+                    }
                   }}
-                  className="w-full"
+                  className={`w-full ${formErrors.title ? 'border-red-500' : ''}`}
                   required
                 />
+                {formErrors.title && (
+                  <p className="text-sm text-red-500 mt-1">{formErrors.title}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Danh mục *</label>
                 <select
                   value={currentItem.categoryId || ""}
-                  onChange={(e) => setCurrentItem({ ...currentItem, categoryId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    setCurrentItem({ ...currentItem, categoryId: e.target.value });
+                    if (formErrors.categoryId) {
+                      setFormErrors(prev => ({ ...prev, categoryId: undefined }));
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.categoryId ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   required
                 >
-                  <option value="" disabled>
-                    Chọn danh mục
-                  </option>
+                  <option value="" disabled>Chọn danh mục</option>
                   {categoriesData?.categories.map((category) => (
                     <option key={category._id} value={category._id}>
                       {category.name}
                     </option>
                   ))}
                 </select>
+                {formErrors.categoryId && (
+                  <p className="text-sm text-red-500 mt-1">{formErrors.categoryId}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -442,10 +575,21 @@ export default function MenuManagement() {
                 <Input
                   type="number"
                   value={currentItem.price || ""}
-                  onChange={(e) => setCurrentItem({ ...currentItem, price: Number.parseInt(e.target.value) || 0 })}
-                  className="w-full"
+                  onChange={(e) => {
+                    const price = Number(e.target.value);
+                    setCurrentItem({ ...currentItem, price });
+                    if (formErrors.price) {
+                      setFormErrors(prev => ({ ...prev, price: undefined }));
+                    }
+                  }}
+                  className={`w-full ${formErrors.price ? 'border-red-500' : ''}`}
+                  min="0"
+                  step="1000"
                   required
                 />
+                {formErrors.price && (
+                  <p className="text-sm text-red-500 mt-1">{formErrors.price}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -455,23 +599,28 @@ export default function MenuManagement() {
                   min="0"
                   max="100"
                   value={currentItem.discountPercentage || ""}
-                  onChange={(e) =>
-                    setCurrentItem({
-                      ...currentItem,
-                      discountPercentage: Math.min(100, Math.max(0, Number.parseInt(e.target.value) || 0)),
-                    })
-                  }
-                  className="w-full"
+                  onChange={(e) => {
+                    const discountPercentage = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                    setCurrentItem({ ...currentItem, discountPercentage });
+                    if (formErrors.discountPercentage) {
+                      setFormErrors(prev => ({ ...prev, discountPercentage: undefined }));
+                    }
+                  }}
+                  className={`w-full ${formErrors.discountPercentage ? 'border-red-500' : ''}`}
                 />
+                {formErrors.discountPercentage && (
+                  <p className="text-sm text-red-500 mt-1">{formErrors.discountPercentage}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
                 <select
                   value={currentItem.status || "active"}
-                  onChange={(e) =>
-                    setCurrentItem({ ...currentItem, status: e.target.value as "active" | "inactive" | "out_of_stock" })
-                  }
+                  onChange={(e) => setCurrentItem({ 
+                    ...currentItem, 
+                    status: e.target.value as "active" | "inactive" | "out_of_stock" 
+                  })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="active">Có sẵn</option>
@@ -479,51 +628,58 @@ export default function MenuManagement() {
                   <option value="out_of_stock">Hết hàng</option>
                 </select>
               </div>
-            </div>
 
-            <div className="space-y-2 mb-4">
-              <label className="block text-sm font-medium text-gray-700">Mô tả</label>
-              <Textarea
-                value={currentItem.description || ""}
-                onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
-                rows={3}
-                className="w-full"
-              />
-            </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                <Textarea
+                  value={currentItem.description || ""}
+                  onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
+                  rows={3}
+                  className="w-full"
+                />
+              </div>
 
-            <div className="space-y-2 mb-4">
-              <label className="block text-sm font-medium text-gray-700">Hình ảnh đại diện</label>
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <div className="h-32 w-32 relative rounded-md overflow-hidden border border-gray-300 flex-shrink-0">
-                  {imagePreview ? (
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center bg-gray-50">
-                      <ImageIcon size={24} className="text-gray-400" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 w-full">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF tối đa 2MB</p>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Hình ảnh đại diện {!currentItem._id && '*'}
+                </label>
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                  <div className={`h-32 w-32 relative rounded-md overflow-hidden border flex-shrink-0 ${
+                    formErrors.thumbnail ? 'border-red-500' : 'border-gray-300'
+                  }`}>
+                    {imagePreview ? (
+                      <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-gray-50">
+                        <ImageIcon className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      onChange={handleImageChange}
+                      accept="image/jpeg,image/png,image/webp"
+                      className={formErrors.thumbnail ? 'border-red-500' : ''}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Hỗ trợ JPG, PNG, WebP. Tối đa 5MB.
+                    </p>
+                    {formErrors.thumbnail && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.thumbnail}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             <DialogFooter>
-              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setShowAddEditModal(false)} className="sm:mr-2">
-                  Hủy
-                </Button>
-                <Button onClick={handleSaveItem} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Lưu
-                </Button>
-              </div>
+              <Button variant="outline" onClick={() => setShowAddEditModal(false)}>
+                Hủy
+              </Button>
+              <Button onClick={handleSaveItem}>
+                {currentItem._id ? "Cập nhật" : "Thêm món"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
