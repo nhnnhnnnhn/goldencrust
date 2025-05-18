@@ -18,6 +18,7 @@ export default function RegisterPage() {
   const searchParams = useSearchParams()
   const [register, { isLoading }] = useRegisterMutation()
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [registerError, setRegisterError] = useState<string | null>(null)
   
   // Kiểm tra xem có phải đang đăng ký từ Google OAuth không
@@ -67,14 +68,36 @@ export default function RegisterPage() {
       address?: string
     } = {}
 
-    if (!registerData.fullName.trim()) {
-      errors.fullName = "Họ tên là bắt buộc"
-    }
-
+    // Validate email
     if (!registerData.email.trim()) {
       errors.email = "Email là bắt buộc"
-    } else if (!/\S+@\S+\.\S+/.test(registerData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerData.email)) {
       errors.email = "Email không hợp lệ"
+    }
+
+    // Validate fullName
+    if (!registerData.fullName.trim()) {
+      errors.fullName = "Họ tên là bắt buộc"
+    } else if (registerData.fullName.length < 3 || registerData.fullName.length > 50) {
+      errors.fullName = "Họ tên phải từ 3-50 ký tự"
+    } else if (!/^[a-zA-ZÀ-ỹ\s]+$/u.test(registerData.fullName)) {
+      errors.fullName = "Họ tên chỉ được chứa chữ cái và khoảng trắng"
+    }
+
+    // Validate address
+    if (!registerData.address.trim()) {
+      errors.address = "Địa chỉ là bắt buộc"
+    } else if (registerData.address.length < 3 || registerData.address.length > 100) {
+      errors.address = "Địa chỉ phải từ 3-100 ký tự"
+    }
+
+    // Validate phone
+    if (!registerData.phone) {
+      errors.phone = "Số điện thoại là bắt buộc"
+    } else if (!/^[0-9]+$/.test(registerData.phone)) {
+      errors.phone = "Số điện thoại chỉ được chứa chữ số"
+    } else if (registerData.phone.length !== 10) {
+      errors.phone = "Số điện thoại phải có đúng 10 chữ số"
     }
 
     // Bỏ qua kiểm tra mật khẩu nếu đăng ký từ Google
@@ -92,16 +115,6 @@ export default function RegisterPage() {
       }
     }
 
-    if (!registerData.phone) {
-      errors.phone = "Số điện thoại là bắt buộc"
-    } else if (!/^\d{10,11}$/.test(registerData.phone.replace(/[^0-9]/g, ""))) {
-      errors.phone = "Số điện thoại không hợp lệ"
-    }
-    
-    if (!registerData.address.trim()) {
-      errors.address = "Địa chỉ là bắt buộc"
-    }
-
     setRegisterErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -115,9 +128,16 @@ export default function RegisterPage() {
     }
 
     try {
+      console.log('Sending registration data:', {
+        email: registerData.email,
+        fullName: registerData.fullName,
+        phone: registerData.phone,
+        address: registerData.address,
+        isGoogleSignup,
+      })
+
       // Gọi API đăng ký từ backend thông qua Redux Toolkit
-      // Thêm thông tin Google nếu đăng ký từ Google
-      await register({
+      const response = await register({
         email: registerData.email,
         password: registerData.password,
         fullName: registerData.fullName,
@@ -127,6 +147,8 @@ export default function RegisterPage() {
         googleToken: registerData.googleToken || undefined,
         isGoogleSignup: isGoogleSignup,
       }).unwrap()
+
+      console.log('Registration response:', response)
 
       // Nếu đăng ký từ Google, chuyển thẳng về trang chủ vì email đã được xác minh
       if (isGoogleSignup) {
@@ -154,13 +176,33 @@ export default function RegisterPage() {
         router.push("/verify-otp?action=register")
       }
     } catch (err: any) {
-      console.error('Registration error:', err)
+      console.error('Registration error details:', {
+        error: err,
+        status: err?.status,
+        data: err?.data,
+        message: err?.message,
+        stack: err?.stack
+      })
+      
+      // Xử lý các loại lỗi cụ thể
+      if (!err) {
+        setRegisterError('Đã xảy ra lỗi không xác định')
+        return
+      }
+
       if (err.status === 'FETCH_ERROR') {
         setRegisterError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối của bạn.')
-      } else if (err?.data?.message?.includes('already exists')) {
-        setRegisterError('Email này đã được sử dụng. Vui lòng sử dụng email khác hoặc đăng nhập nếu đã có tài khoản.')
+      } else if (typeof err.data?.message === 'string') {
+        // Hiển thị thông báo lỗi từ server
+        setRegisterError(err.data.message)
+      } else if (typeof err.error === 'string') {
+        // Hiển thị lỗi từ RTK Query
+        setRegisterError(err.error)
+      } else if (err.message) {
+        // Hiển thị message từ Error object
+        setRegisterError(err.message)
       } else {
-        setRegisterError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.')
+        setRegisterError('Đăng ký thất bại. Vui lòng thử lại sau.')
       }
     }
   }
@@ -279,14 +321,23 @@ export default function RegisterPage() {
 
                       <div className="space-y-2">
                         <Label htmlFor="confirm-password">Confirm Password</Label>
-                        <Input
-                          id="confirm-password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={registerData.confirmPassword}
-                          onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                          required
-                        />
+                        <div className="relative">
+                          <Input
+                            id="confirm-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={registerData.confirmPassword}
+                            onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                         {registerErrors.confirmPassword && (
                           <p className="text-sm text-red-600">{registerErrors.confirmPassword}</p>
                         )}
