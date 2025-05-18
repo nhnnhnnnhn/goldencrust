@@ -23,6 +23,7 @@ interface CheckoutSessionRequest {
   items: CartItem[];
   customer: CustomerInfo;
   deliveryFee?: number;
+  orderIds?: string[];
 }
 
 interface CheckoutSessionResponse {
@@ -33,6 +34,7 @@ interface CheckoutSessionResponse {
 interface PaymentStatusResponse {
   status: 'paid' | 'unpaid' | 'no_payment_required';
   customer: CustomerInfo;
+  orderIds?: string[];
 }
 
 export const stripeApi = createApi({

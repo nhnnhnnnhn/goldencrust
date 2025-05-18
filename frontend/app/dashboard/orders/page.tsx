@@ -58,6 +58,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { useCheckPaymentStatusQuery } from '@/redux/api/stripeApi'
 
 // Định nghĩa các kiểu dữ liệu
 interface MenuItem {
@@ -506,6 +507,7 @@ export default function OrdersPage() {
   const [showRestaurantDropdown, setShowRestaurantDropdown] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false)
   const [isOrderDetailsDialogOpen, setIsOrderDetailsDialogOpen] = useState(false)
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<Order['status'] | 'all'>('all')
@@ -542,14 +544,50 @@ export default function OrdersPage() {
   const { data: dateOrders = [], isLoading: dateLoading } = useGetOrdersByDateQuery(formattedDate, {
     skip: isToday
   })
-  const [updateOrderStatus] = useUpdateOrderStatusMutation()
-  const [createOrder] = useCreateOrderMutation()
+  const [updateOrderStatusMutation] = useUpdateOrderStatusMutation()
+  const [createOrderMutation] = useCreateOrderMutation()
+  const [deleteOrderMutation] = useDeleteOrderMutation()
 
   const orders = isToday ? todayOrders : dateOrders
   const isLoading = isToday ? todayLoading : dateLoading
 
   // Fetch menu items data
   const { data: menuItems = [] } = useGetMenuItemsQuery()
+  
+  // Sử dụng các API của Stripe để kiểm tra trạng thái thanh toán
+  const { data: stripeCheckoutStatus, isLoading: isLoadingStripeStatus } = useCheckPaymentStatusQuery(
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('session_id')) || '',
+    { skip: typeof window === 'undefined' || !new URLSearchParams(window.location.search).get('session_id') }
+  )
+  
+  // Xử lý trạng thái thanh toán từ Stripe
+  useEffect(() => {
+    // Kiểm tra xem có phải đang chuyển hướng từ Stripe sau khi thanh toán không
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const sessionId = urlParams.get('session_id');
+      
+      // Nếu có session_id và payment status là success
+      if (sessionId && paymentStatus === 'success' && stripeCheckoutStatus && !isLoadingStripeStatus) {
+        // Kiểm tra xem có orderIds nào được cập nhật không
+        if (stripeCheckoutStatus.orderIds && stripeCheckoutStatus.orderIds.length > 0) {
+          // Hiển thị thông báo thành công
+          toast({
+            title: "Thanh toán thành công",
+            description: `Đơn hàng của bạn đã được thanh toán thành công qua Stripe.`,
+            variant: "default",
+          });
+          
+          // Xóa query params để tránh refresh lại trang và thực hiện lại việc cập nhật
+          if (window.history && window.history.replaceState) {
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+          }
+        }
+      }
+    }
+  }, [stripeCheckoutStatus, isLoadingStripeStatus])
 
   // Transform orders to include sequential IDs and restaurant names
   const transformedOrders = orders?.map((order: Order, index: number) => {
@@ -677,7 +715,7 @@ export default function OrdersPage() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
     try {
-      await updateOrderStatus({ id: orderId, status: newStatus }).unwrap()
+      await updateOrderStatusMutation({ id: orderId, status: newStatus }).unwrap()
     } catch (error) {
       console.error('Failed to update order status:', error)
     }

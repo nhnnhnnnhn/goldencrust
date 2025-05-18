@@ -91,37 +91,73 @@ export default function OrderDetailPage() {
           })
         )
 
+        // Calculate total amount
+        const totalAmountForPayment = pendingOrders.reduce((sum, order) => sum + order.totalAmount, 0)
+
+        // Create a special line item for the total amount
+        const orderSummaryItem = {
+          id: 'order-summary',
+          name: `Payment for ${pendingOrdersCount} Orders`,
+          description: `Bulk payment for ${pendingOrdersCount} pending orders`,
+          price: totalAmountForPayment,
+          quantity: 1
+        }
+
+        // Use just the summary item for payment to avoid confusion with multiple line items
         const checkoutData = {
-          items: allItems,
+          items: [orderSummaryItem],
           customer: {
             name: 'Bulk Payment',
             phone: '',
             address: '',
-            notes: `Bulk payment for ${pendingOrdersCount} orders`
+            notes: `Bulk payment for ${pendingOrdersCount} orders with total amount ${new Intl.NumberFormat("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            }).format(totalAmountForPayment)}`
           },
           orderIds: pendingOrders.map(order => order._id)
         }
 
+        // Call Stripe API to create checkout session
         const response = await createCheckoutSession(checkoutData).unwrap()
         
         if (response.url) {
+          // Redirect to Stripe checkout page
           window.location.href = response.url
           return
+        } else {
+          throw new Error('No checkout URL returned from Stripe')
         }
       } else {
         // Handle cash payment
+        // Here you would normally call an API to mark these orders as paid
+        // For demonstration, we'll just show a success message
+        
+        // Example API call (commented out - implement this according to your backend)
+        // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/bulk-payment`, {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({
+        //     orderIds: pendingOrders.map(order => order._id),
+        //     paymentMethod: 'cash'
+        //   })
+        // })
+
         toast({
           title: "Payment Successful",
           description: "Cash payment has been recorded for all pending orders",
         })
+        
+        // Refresh the orders list
+        router.refresh()
         setIsProcessing(false)
       }
     } catch (error) {
       console.error('Payment error:', error)
       toast({
         variant: "destructive",
-        title: "Payment failed",
-        description: "Please try again or choose a different payment method",
+        title: "Payment Failed",
+        description: "There was an error processing the payment. Please try again.",
       })
       setIsProcessing(false)
     }

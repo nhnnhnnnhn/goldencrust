@@ -634,29 +634,29 @@ export default function Home() {
                   {
                     name: "Tartufo Nero",
                     description: "Truffle cream, mozzarella, wild mushrooms, arugula, shaved black truffle",
-                    price: 28,
-                    image: "/placeholder.svg?height=400&width=400&text=Tartufo+Nero",
+                    price: 280000,
+                    image: "/images/nero.jpg",
                     category: "Signature Pizzas",
                   },
                   {
                     name: "Margherita Elegante",
                     description: "San Marzano tomato sauce, buffalo mozzarella, fresh basil, extra virgin olive oil",
-                    price: 18,
-                    image: "/placeholder.svg?height=400&width=400&text=Margherita+Elegante",
+                    price: 180000,
+                    image: "/images/margherita.jpg",
                     category: "Classic Pizzas",
                   },
                   {
                     name: "Frutti di Mare",
                     description: "Tomato sauce, mozzarella, fresh seafood medley, lemon zest, parsley, garlic oil",
-                    price: 30,
-                    image: "/placeholder.svg?height=400&width=400&text=Frutti+di+Mare",
+                    price: 300000,
+                    image: "/images/frutti.jpg",
                     category: "Signature Pizzas",
                   },
                   {
                     name: "Tagliatelle al Tartufo",
                     description: "House-made tagliatelle, butter, parmigiano, fresh black truffle",
-                    price: 28,
-                    image: "/placeholder.svg?height=400&width=400&text=Tagliatelle+Tartufo",
+                    price: 280000,
+                    image: "/images/tagliatelle.jpg",
                     category: "Pasta",
                   },
                 ].map((item, index) => (
@@ -669,14 +669,7 @@ export default function Home() {
                       <h3 className="text-2xl font-light mb-2">{item.name}</h3>
                       <p className="text-white/70 mb-4 flex-1">{item.description}</p>
                       <div className="flex justify-between items-center">
-                        <span className="text-2xl font-light">${item.price}</span>
-                        {/* Thay đổi text trong menu items */}
-                        <Link
-                          href="/delivery"
-                          className="bg-white/10 hover:bg-white/20 transition-colors px-4 py-2 rounded-full text-sm"
-                        >
-                          {t.menu.orderNow}
-                        </Link>
+                        <span className="text-2xl font-light">{item.price.toLocaleString()} VND</span>
                       </div>
                     </div>
                   </div>
