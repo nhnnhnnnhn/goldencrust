@@ -22,6 +22,7 @@ import {
   Utensils,
   Plus,
   Eye,
+  Receipt
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,12 +42,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { useGetOrdersQuery, useUpdateOrderStatusMutation, useCreateOrderMutation } from '@/redux/api'
+import { useGetTodayOrdersQuery, useUpdateOrderStatusMutation, useCreateOrderMutation, useDeleteOrderMutation, useGetOrdersByDateQuery } from '@/redux/api/order'
 import { useGetRestaurantsQuery } from '@/redux/api/restaurant'
 import { useGetTablesByRestaurantQuery } from '@/redux/api/tableApi'
 import { DataTable } from '@/components/ui/data-table'
 import { format } from 'date-fns'
 import { Loader2 } from 'lucide-react'
+import { useGetMenuItemsQuery } from '@/redux/api/menuItems'
+import { toast } from "@/components/ui/use-toast"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 // Định nghĩa các kiểu dữ liệu
 interface MenuItem {
@@ -59,12 +70,10 @@ interface MenuItem {
 }
 
 interface OrderItem {
-  menuItemId: string
-  name: string
-  quantity: number
-  price: number
-  discountPercentage: number
-  total: number
+  menuItemId: string;
+  quantity: number;
+  price: number;
+  total: number;
 }
 
 interface Restaurant {
@@ -130,14 +139,28 @@ interface Payment {
 
 interface Order {
   _id: string;
+  userId: string;
   restaurantId: string;
+  orderDate: Date;
+  items: OrderItem[];
+  orderType: 'Dine-in' | 'Takeaway';
+  status: 'pending' | 'completed' | 'cancelled';
   totalAmount: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
-  paymentMethod: 'cash' | 'card' | 'QR';
-  paymentStatus: 'pending' | 'paid' | 'failed';
-  deleted: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface Row {
+  getValue: (key: string) => any;
+  original: Order;
+}
+
+interface CreateOrderRequest {
+  userId: string;
+  restaurantId: string;
+  items: OrderItem[];
+  orderType: 'Dine-in' | 'Takeaway';
+  totalAmount: number;
 }
 
 // Dữ liệu mẫu cho nhà hàng
@@ -236,26 +259,20 @@ const MOCK_ORDER_DETAILS: OrderDetail[] = [
     items: [
       {
         menuItemId: "item1",
-        name: "Margherita Pizza",
         quantity: 1,
         price: 12.99,
-        discountPercentage: 0,
         total: 12.99,
       },
       {
         menuItemId: "item3",
-        name: "Garlic Bread",
         quantity: 1,
         price: 4.99,
-        discountPercentage: 0,
         total: 4.99,
       },
       {
         menuItemId: "item4",
-        name: "Coca Cola",
         quantity: 2,
         price: 2.99,
-        discountPercentage: 0,
         total: 5.98,
       },
     ],
@@ -273,18 +290,14 @@ const MOCK_ORDER_DETAILS: OrderDetail[] = [
     items: [
       {
         menuItemId: "item2",
-        name: "Pepperoni Pizza",
         quantity: 1,
         price: 14.99,
-        discountPercentage: 0,
         total: 14.99,
       },
       {
         menuItemId: "item4",
-        name: "Coca Cola",
         quantity: 1,
         price: 2.99,
-        discountPercentage: 0,
         total: 2.99,
       },
     ],
@@ -430,34 +443,42 @@ interface OrderDetailsProps {
 }
 
 const OrderDetails = ({ order, onClose }: OrderDetailsProps) => {
+  const { data: restaurants } = useGetRestaurantsQuery();
+  const restaurant = restaurants?.find(r => r._id === order.restaurantId);
+
   return (
-    <DialogContent className="max-w-3xl">
-      <DialogHeader>
-        <DialogTitle>Order Details</DialogTitle>
-        <DialogDescription>
-          Order ID: {order._id}
-        </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="font-semibold">Order Information</h3>
-            <p>Restaurant ID: {order.restaurantId}</p>
-            <p>Total Amount: ${order.totalAmount.toFixed(2)}</p>
-            <p>Status: {order.status}</p>
-            <p>Payment Method: {order.paymentMethod}</p>
-            <p>Payment Status: {order.paymentStatus}</p>
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Order Details</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Restaurant</Label>
+            <div className="col-span-3">
+              {restaurant?.name || 'Unknown Restaurant'}
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold">Dates</h3>
-            <p>Created: {format(new Date(order.createdAt), 'PPp')}</p>
-            <p>Updated: {format(new Date(order.updatedAt), 'PPp')}</p>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Total Amount</Label>
+            <div className="col-span-3">
+              {new Intl.NumberFormat("vi-VN", {
+                style: "currency",
+                currency: "VND",
+              }).format(order.totalAmount)}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Created At</Label>
+            <div className="col-span-3">
+              {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")}
+            </div>
           </div>
         </div>
-      </div>
-    </DialogContent>
-  );
-};
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
   const statusColors = {
@@ -478,6 +499,7 @@ export default function OrdersPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [statusFilter, setStatusFilter] = useState("all")
   const [restaurantFilter, setRestaurantFilter] = useState("all")
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
@@ -485,21 +507,20 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isOrderDetailsDialogOpen, setIsOrderDetailsDialogOpen] = useState(false)
-  const [isPaymentDetailsDialogOpen, setIsPaymentDetailsDialogOpen] = useState(false)
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<Order['status'] | 'all'>('all')
   const [newOrder, setNewOrder] = useState<Partial<Order>>({
+    userId: "",
     restaurantId: "",
-    totalAmount: 0,
-    status: "pending" as const,
-    paymentMethod: "cash" as const,
-    paymentStatus: "pending" as const,
-    deleted: false,
+    items: [],
+    orderType: "Dine-in",
+    status: "pending",
+    totalAmount: 0
   })
   
   // State cho dialog order type
   const [orderStep, setOrderStep] = useState<'initial' | 'dineInDetails'>('initial')
-  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway' | null>(null)
+  const [orderType, setOrderType] = useState<'Dine-in' | 'Takeaway' | null>(null)
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('')
   const [selectedTableId, setSelectedTableId] = useState<string>('')  
   
@@ -510,105 +531,149 @@ export default function OrdersPage() {
     { skip: !selectedRestaurantId }
   )
   
-  const { data: orders = [], isLoading, error } = useGetOrdersQuery()
+  // Format date for API call
+  const formattedDate = format(selectedDate, 'yyyy-MM-dd')
+  
+  // Use the appropriate query based on whether we're viewing today's orders or a specific date
+  const isToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+  const { data: todayOrders = [], isLoading: todayLoading } = useGetTodayOrdersQuery(undefined, {
+    skip: !isToday
+  })
+  const { data: dateOrders = [], isLoading: dateLoading } = useGetOrdersByDateQuery(formattedDate, {
+    skip: isToday
+  })
   const [updateOrderStatus] = useUpdateOrderStatusMutation()
   const [createOrder] = useCreateOrderMutation()
 
-  console.log('Orders from API:', orders) // Add this line for debugging
+  const orders = isToday ? todayOrders : dateOrders
+  const isLoading = isToday ? todayLoading : dateLoading
+
+  // Fetch menu items data
+  const { data: menuItems = [] } = useGetMenuItemsQuery()
+
+  // Transform orders to include sequential IDs and restaurant names
+  const transformedOrders = orders?.map((order: Order, index: number) => {
+    const restaurant = restaurantsData?.find(r => r._id === order.restaurantId);
+    return {
+      ...order,
+      sequentialId: index + 1,
+      restaurantName: restaurant?.name || 'Unknown Restaurant'
+    };
+  }) || [];
 
   const columns = [
     {
-      accessorKey: '_id',
-      header: 'Order ID',
+      accessorKey: "sequentialId",
+      header: "Order ID",
     },
     {
-      accessorKey: 'restaurantId',
-      header: 'Restaurant ID',
+      accessorKey: "restaurantName",
+      header: "Restaurant",
     },
     {
-      accessorKey: 'totalAmount',
-      header: 'Total Amount',
-      cell: ({ row }: { row: any }) => (
-        <span>${row.original.totalAmount.toFixed(2)}</span>
-      ),
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }: { row: any }) => (
-        <OrderStatusBadge status={row.original.status} />
-      ),
-    },
-    {
-      accessorKey: 'createdAt',
-      header: 'Created At',
-      cell: ({ row }: { row: any }) => (
-        <span>{format(new Date(row.original.createdAt), 'PPp')}</span>
-      ),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }: { row: any }) => {
-        const order = row.original;
+      accessorKey: "items",
+      header: "Ordered Items",
+      cell: ({ row }: { row: Row }) => {
+        const items = row.getValue("items") as OrderItem[];
         return (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelectedOrder(order)}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            {order.status === 'pending' && (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleStatusUpdate(order._id, 'processing')}
-                >
-                  Process
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleStatusUpdate(order._id, 'cancelled')}
-                >
-                  Cancel
-                </Button>
-              </>
-            )}
-            {order.status === 'processing' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleStatusUpdate(order._id, 'completed')}
-              >
-                Complete
-              </Button>
-            )}
+          <div className="max-w-[300px]">
+            {items.map((item, index) => {
+              const menuItem = menuItems.find(mi => mi._id === item.menuItemId);
+              return (
+                <div key={item.menuItemId} className="text-sm">
+                  {item.quantity}x - {menuItem?.title || 'Unknown Item'}
+                  {index < items.length - 1 && ", "}
+                </div>
+              );
+            })}
           </div>
         );
       },
     },
-  ];
+    {
+      accessorKey: "orderType",
+      header: "Order Type",
+    },
+    {
+      accessorKey: "totalAmount",
+      header: "Total Amount",
+      cell: ({ row }: { row: Row }) => {
+        const amount = parseFloat(row.getValue("totalAmount"))
+        const formatted = new Intl.NumberFormat("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        }).format(amount)
+        return formatted
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }: { row: Row }) => {
+        const status = row.getValue("status")
+        return <OrderStatusBadge status={status} />
+      },
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created At",
+      cell: ({ row }: { row: Row }) => {
+        return format(new Date(row.getValue("createdAt")), "dd/MM/yyyy HH:mm")
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }: { row: Row }) => {
+        const order = row.original
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={() => setSelectedOrder(order)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
+        )
+      },
+    },
+  ]
 
   const handleCreateOrder = async () => {
     try {
-      await createOrder(newOrder).unwrap()
-      setIsCreateOrderDialogOpen(false)
-      setNewOrder({
-        restaurantId: "",
-        totalAmount: 0,
-        status: "pending" as const,
-        paymentMethod: "cash" as const,
-        paymentStatus: "pending" as const,
-        deleted: false,
-      })
+      if (!user?.email) {
+        console.error('User email is required');
+        return;
+      }
+
+      if (!newOrder.restaurantId) {
+        console.error('Restaurant is required');
+        return;
+      }
+
+      if (!newOrder.orderType) {
+        console.error('Order type is required');
+        return;
+      }
+
+      // Instead of creating order directly, navigate to menu selection
+      const queryParams = new URLSearchParams({
+        restaurantId: newOrder.restaurantId,
+        orderType: newOrder.orderType,
+        userId: user.email
+      });
+
+      // Close the dialog
+      setIsCreateOrderDialogOpen(false);
+      
+      // Navigate to menu order page with parameters
+      router.push(`/menu-order?${queryParams.toString()}`);
+      
     } catch (error) {
-      console.error('Failed to create order:', error)
+      console.error('Failed to process order:', error);
     }
-  }
+  };
 
   const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
     try {
@@ -616,19 +681,21 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Failed to update order status:', error)
     }
-    }
+  }
 
   // Filter orders based on search term and status
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrders = transformedOrders.filter((order: Order & { sequentialId: number; restaurantName: string }) => {
     const matchesSearch = searchTerm
-      ? order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.restaurantId.toLowerCase().includes(searchTerm.toLowerCase())
+      ? order.restaurantName.toLowerCase().includes(searchTerm.toLowerCase())
       : true
 
     const matchesStatus = selectedStatus === 'all' ? true : order.status === selectedStatus
 
     return matchesSearch && matchesStatus
   })
+
+  // Calculate total amount from all orders
+  const totalAmount = filteredOrders.reduce((sum: number, order: Order & { sequentialId: number; restaurantName: string }) => sum + order.totalAmount, 0);
 
   if (isLoading) {
     return (
@@ -638,25 +705,61 @@ export default function OrdersPage() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full text-red-500">
-        Error loading orders. Please try again later.
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Order Management</h1>
-          <p className="text-gray-500">View and manage all orders</p>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {isToday ? "Today's Orders" : format(selectedDate, "MMMM d, yyyy") + "'s Orders"}
+          </h1>
+          <p className="text-gray-500">View and manage orders</p>
         </div>
-        <Button onClick={() => setIsCreateOrderDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-          <ShoppingBag className="h-4 w-4 mr-2" />
-          Create New Order
-        </Button>
+        <div className="flex gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <CalendarComponent
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date: Date | undefined) => date && setSelectedDate(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <Button 
+            onClick={() => setIsCreateOrderDialogOpen(true)} 
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!isToday}
+            title={!isToday ? "You can only create orders for today" : ""}
+          >
+            <ShoppingBag className="h-4 w-4 mr-2" />
+            Create New Order
+          </Button>
+          <Button 
+            onClick={() => router.push('/dashboard/order-detail')} 
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Receipt className="h-4 w-4 mr-2" />
+            View Order Summary
+            <span className="ml-2 px-2 py-0.5 bg-green-700 rounded-full text-sm">
+              {new Intl.NumberFormat("vi-VN", {
+                style: "currency",
+                currency: "VND",
+              }).format(totalAmount)}
+            </span>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
@@ -671,343 +774,92 @@ export default function OrdersPage() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <div className="relative">
-            <button
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
-            >
-              <Filter size={16} />
-              <span>
-                Status: {statusFilter === "all" ? "All" : STATUS_MAP[statusFilter as keyof typeof STATUS_MAP].label}
-              </span>
-              <ChevronDown size={16} />
-            </button>
-
-            {showStatusDropdown && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                <div
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => {
-                    setStatusFilter("all")
-                    setShowStatusDropdown(false)
-                  }}
-                >
-                  All
-                </div>
-                {Object.entries(STATUS_MAP).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => {
-                      setStatusFilter(key)
-                      setShowStatusDropdown(false)
-                    }}
-                  >
-                    {value.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => setShowRestaurantDropdown(!showRestaurantDropdown)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
-            >
-              <Home size={16} />
-              <span>
-                Restaurant:{" "}
-                {restaurantFilter === "all" ? "All" : MOCK_RESTAURANTS.find((r) => r._id === restaurantFilter)?.name}
-              </span>
-              <ChevronDown size={16} />
-            </button>
-
-            {showRestaurantDropdown && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                <div
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => {
-                    setRestaurantFilter("all")
-                    setShowRestaurantDropdown(false)
-                  }}
-                >
-                  All Restaurants
-                </div>
-                {MOCK_RESTAURANTS.map((restaurant) => (
-                  <div
-                    key={restaurant._id}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => {
-                      setRestaurantFilter(restaurant._id)
-                      setShowRestaurantDropdown(false)
-                    }}
-                  >
-                    {restaurant.name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Button variant="outline" className="flex items-center gap-2">
-            <Calendar size={16} />
-            <span>Filter by Date</span>
-          </Button>
-
-          <Button variant="outline" className="flex items-center gap-2">
-            <Download size={16} />
-            <span>Export</span>
-          </Button>
-        </div>
+        <Select value={selectedStatus} onValueChange={(value: Order['status'] | 'all') => setSelectedStatus(value)}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="all">All Orders</TabsTrigger>
-          <TabsTrigger value="dine-in">Dine-in</TabsTrigger>
-          <TabsTrigger value="takeaway">Takeaway</TabsTrigger>
-        </TabsList>
+      <DataTable
+        columns={columns}
+        data={filteredOrders}
+      />
 
-        <TabsContent value={activeTab} className="space-y-4">
-          {filteredOrders.length > 0 ? (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <DataTable
-                columns={columns}
-                data={filteredOrders}
-              />
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-10">
-                <ShoppingBag className="h-12 w-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">No Orders Found</h3>
-                <p className="text-gray-500 text-center mt-1">
-                  {searchTerm || statusFilter !== "all" || restaurantFilter !== "all"
-                    ? "No orders match your current filters."
-                    : "There are no orders in the system yet."}
-                </p>
-                {(searchTerm || statusFilter !== "all" || restaurantFilter !== "all") && (
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => {
-                      setSearchTerm("")
-                      setStatusFilter("all")
-                      setRestaurantFilter("all")
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+      {selectedOrder && (
+        <OrderDetails
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
 
-      {/* Order Details Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-          {selectedOrder && (
-          <OrderDetails
-            order={selectedOrder}
-            onClose={() => setSelectedOrder(null)}
-          />
-        )}
-      </Dialog>
-
-      {/* Create Order Dialog */}
-      <Dialog open={isCreateOrderDialogOpen} onOpenChange={(open) => {
-        setIsCreateOrderDialogOpen(open)
-        if (!open) {
-          // Reset state when dialog is closed
-          setOrderStep('initial')
-          setOrderType(null)
-          setSelectedRestaurantId('')
-          setSelectedTableId('')
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={isCreateOrderDialogOpen} onOpenChange={setIsCreateOrderDialogOpen}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Order</DialogTitle>
-            {orderStep === 'initial' && (
-              <DialogDescription>How would you like to order?</DialogDescription>
-            )}
-            {orderStep === 'dineInDetails' && (
-              <DialogDescription>Please enter restaurant and table details</DialogDescription>
-            )}
+            <DialogDescription>
+              Fill in the order details below
+            </DialogDescription>
           </DialogHeader>
 
-          {orderStep === 'initial' && (
-            <div className="grid gap-6 py-4">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input 
-                    type="radio" 
-                    id="dine-in" 
-                    name="orderType" 
-                    value="dine-in"
-                    checked={orderType === 'dine-in'}
-                    onChange={() => setOrderType('dine-in')}
-                    className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="dine-in" className="text-base">Dine-in</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input 
-                    type="radio" 
-                    id="takeaway" 
-                    name="orderType" 
-                    value="takeaway"
-                    checked={orderType === 'takeaway'}
-                    onChange={() => setOrderType('takeaway')}
-                    className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="takeaway" className="text-base">Takeaway</Label>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateOrderDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => {
-                    if (!orderType) {
-                      alert("Please select an order type.");
-                      return;
-                    }
-                    
-                    if (orderType === 'dine-in') {
-                      setOrderStep('dineInDetails')
-                    } else {
-                      // For takeaway, continue with existing order flow
-                      // You can redirect to takeaway page or show form here
-                      window.location.href = '/menu-order';
-                      // Store takeaway info in localStorage
-                      localStorage.setItem('orderType', 'takeaway');
-                      setIsCreateOrderDialogOpen(false);
-                    }
-                  }} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Continue
-                </Button>
-              </DialogFooter>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="restaurant" className="text-right">
+                Restaurant
+              </Label>
+              <Select
+                value={newOrder.restaurantId}
+                onValueChange={(value) => setNewOrder({ ...newOrder, restaurantId: value })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a restaurant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {restaurantsData?.map((restaurant) => (
+                    <SelectItem key={restaurant._id} value={restaurant._id}>
+                      {restaurant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          {orderStep === 'dineInDetails' && (
-            <div className="grid gap-6 py-4">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="restaurant">Restaurant</Label>
-                  {restaurantsLoading ? (
-                    <div className="flex items-center space-x-2 mt-2">
-                      <div className="h-4 w-4 rounded-full animate-pulse bg-blue-400"></div>
-                      <span>Loading restaurants...</span>
-                    </div>
-                  ) : restaurantsData ? (
-                    <Select 
-                      value={selectedRestaurantId} 
-                      onValueChange={(value) => {
-                        setSelectedRestaurantId(value);
-                        setSelectedTableId(''); // Reset table selection when restaurant changes
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a restaurant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {restaurantsData.map(restaurant => (
-                          <SelectItem key={restaurant._id} value={restaurant._id}>
-                            {restaurant.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="text-red-500 mt-2">Failed to load restaurants</div>
-                  )}
-                </div>
-                
-                {selectedRestaurantId && (
-                  <div>
-                    <Label htmlFor="table">Table</Label>
-                    {tablesLoading ? (
-                      <div className="flex items-center space-x-2 mt-2">
-                        <div className="h-4 w-4 rounded-full animate-pulse bg-blue-400"></div>
-                        <span>Loading tables...</span>
-                      </div>
-                    ) : tablesData ? (
-                      tablesData.length > 0 ? (
-                        <Select value={selectedTableId} onValueChange={setSelectedTableId}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a table" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {tablesData.map(table => (
-                              <SelectItem key={table._id} value={table._id}>
-                                {table.tableNumber} - {table.capacity} seats
-                                {table.status === 'occupied' && " (Occupied)"}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="text-amber-500 mt-2">No tables available for this restaurant</div>
-                      )
-                    ) : (
-                      <div className="text-red-500 mt-2">Failed to load tables</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOrderStep('initial')}>
-                  Back
-                </Button>
-                <Button 
-                  onClick={() => {
-                    if (!selectedRestaurantId) {
-                      alert("Please select a restaurant.");
-                      return;
-                    }
-                    if (!selectedTableId) {
-                      alert("Please select a table.");
-                      return;
-                    }
-                    
-                    // Find the selected restaurant and table from data
-                    const selectedRestaurant = restaurantsData?.find(r => r._id === selectedRestaurantId);
-                    const selectedTable = tablesData?.find(t => t._id === selectedTableId);
-                    
-                    if (!selectedRestaurant || !selectedTable) {
-                      alert("There was an error with your selection. Please try again.");
-                      return;
-                    }
-                    
-                    // Store dine-in information in localStorage for menu-order page to use
-                    localStorage.setItem('orderType', 'dine-in');
-                    localStorage.setItem('restaurantId', selectedRestaurantId);
-                    localStorage.setItem('restaurantName', selectedRestaurant.name);
-                    localStorage.setItem('tableId', selectedTableId);
-                    localStorage.setItem('tableNumber', selectedTable.tableNumber.toString());
-                    
-                    // Redirect to menu-order page
-                    window.location.href = '/menu-order';
-                    setIsCreateOrderDialogOpen(false);
-                  }} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={tablesLoading || restaurantsLoading || !selectedRestaurantId || !selectedTableId}
-                >
-                  Start Order
-                </Button>
-              </DialogFooter>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="orderType" className="text-right">
+                Order Type
+              </Label>
+              <Select
+                value={newOrder.orderType}
+                onValueChange={(value: 'Dine-in' | 'Takeaway') => setNewOrder({ ...newOrder, orderType: value })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select order type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dine-in">Dine-in</SelectItem>
+                  <SelectItem value="Takeaway">Takeaway</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateOrderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateOrder}
+              disabled={!newOrder.restaurantId || !newOrder.orderType}
+            >
+              Create Order
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

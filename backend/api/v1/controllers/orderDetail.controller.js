@@ -190,3 +190,199 @@ module.exports.getOrderDetailsByType = controllerHandler(async (req, res) => {
         data: orderDetails
     });
 });
+
+// [POST] /api/v1/order-details/daily-summary
+module.exports.createDailySummary = controllerHandler(async (req, res) => {
+    const { restaurantId } = req.body;
+    
+    if (!restaurantId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Restaurant ID is required'
+        });
+    }
+
+    // Set date to today
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+
+    // Check if summary already exists for today
+    const existingSummary = await OrderDetail.findOne({ date, restaurantId });
+    if (existingSummary) {
+        return res.status(400).json({
+            success: false,
+            message: 'Daily summary already exists for today'
+        });
+    }
+
+    const dailySummary = await OrderDetail.create({
+        date,
+        restaurantId,
+        totalOrders: 0,
+        dailyTotal: 0,
+        paymentSummary: {
+            cash: { count: 0, total: 0 },
+            card: { count: 0, total: 0 }
+        },
+        orderTypeSummary: {
+            dineIn: { count: 0, total: 0 },
+            takeaway: { count: 0, total: 0 }
+        }
+    });
+
+    res.status(201).json({
+        success: true,
+        message: 'Daily summary created successfully',
+        data: dailySummary
+    });
+});
+
+// [GET] /api/v1/order-details/today
+module.exports.getTodaySummary = controllerHandler(async (req, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const summary = await OrderDetail.findOne({
+        date: {
+            $gte: today,
+            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        }
+    });
+
+    if (!summary) {
+        return res.status(404).json({
+            success: false,
+            message: 'No summary found for today'
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Today\'s summary fetched successfully',
+        data: summary
+    });
+});
+
+// [GET] /api/v1/order-details/restaurant/:restaurantId/today
+module.exports.getRestaurantTodaySummary = controllerHandler(async (req, res) => {
+    const { restaurantId } = req.params;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const summary = await OrderDetail.findOne({
+        restaurantId,
+        date: {
+            $gte: today,
+            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        }
+    });
+
+    if (!summary) {
+        return res.status(404).json({
+            success: false,
+            message: 'No summary found for today'
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Restaurant\'s today summary fetched successfully',
+        data: summary
+    });
+});
+
+// [PATCH] /api/v1/order-details/update-payment
+module.exports.updatePaymentSummary = controllerHandler(async (req, res) => {
+    const { restaurantId, paymentMethod, amount } = req.body;
+    
+    if (!restaurantId || !paymentMethod || !amount) {
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required fields'
+        });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const updateField = `paymentSummary.${paymentMethod}`;
+    
+    const summary = await OrderDetail.findOneAndUpdate(
+        {
+            restaurantId,
+            date: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        },
+        {
+            $inc: {
+                [`${updateField}.count`]: 1,
+                [`${updateField}.total`]: amount,
+                totalOrders: 1,
+                dailyTotal: amount
+            }
+        },
+        { new: true }
+    );
+
+    if (!summary) {
+        return res.status(404).json({
+            success: false,
+            message: 'No summary found for today'
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Payment summary updated successfully',
+        data: summary
+    });
+});
+
+// [PATCH] /api/v1/order-details/update-order-type
+module.exports.updateOrderTypeSummary = controllerHandler(async (req, res) => {
+    const { restaurantId, orderType, amount } = req.body;
+    
+    if (!restaurantId || !orderType || !amount) {
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required fields'
+        });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const updateField = `orderTypeSummary.${orderType === 'Dine-in' ? 'dineIn' : 'takeaway'}`;
+    
+    const summary = await OrderDetail.findOneAndUpdate(
+        {
+            restaurantId,
+            date: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        },
+        {
+            $inc: {
+                [`${updateField}.count`]: 1,
+                [`${updateField}.total`]: amount
+            }
+        },
+        { new: true }
+    );
+
+    if (!summary) {
+        return res.status(404).json({
+            success: false,
+            message: 'No summary found for today'
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Order type summary updated successfully',
+        data: summary
+    });
+});

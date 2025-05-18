@@ -2,50 +2,30 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 interface OrderItem {
   menuItemId: string;
-  name: string;
   quantity: number;
   price: number;
-  discountPercentage: number;
   total: number;
-}
-
-interface OrderDetail {
-  _id: string;
-  orderId: string;
-  restaurantId: string;
-  items: OrderItem[];
-  totalAmount: number;
-  status: 'pending' | 'completed' | 'cancelled';
-  orderType: 'dine-in' | 'takeaway' | 'delivery';
-  deleted: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface Payment {
-  _id: string;
-  amount: number;
-  userId: string;
-  paymentMethod: 'cash' | 'card' | 'QR';
-  orderId: string;
-  currency: string;
-  status: 'pending' | 'paid' | 'failed';
-  createdBy: string;
-  deleted: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 interface Order {
   _id: string;
+  userId: string;
   restaurantId: string;
+  orderDate: Date;
+  items: OrderItem[];
+  orderType: 'Dine-in' | 'Takeaway';
+  status: 'pending' | 'completed' | 'cancelled';
   totalAmount: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
-  paymentMethod: 'cash' | 'card' | 'QR';
-  paymentStatus: 'pending' | 'paid' | 'failed';
-  deleted: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface CreateOrderRequest {
+  userId: string;
+  restaurantId: string;
+  items: OrderItem[];
+  orderType: 'Dine-in' | 'Takeaway';
+  totalAmount: number;
 }
 
 export const orderApi = createApi({
@@ -54,7 +34,6 @@ export const orderApi = createApi({
     baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
     credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
-      // Get token from localStorage
       const token = localStorage.getItem('token');
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
@@ -65,7 +44,7 @@ export const orderApi = createApi({
   tagTypes: ['Order'],
   endpoints: (builder) => ({
     // Create a new order
-    createOrder: builder.mutation<Order, Partial<Order>>({
+    createOrder: builder.mutation<Order, CreateOrderRequest>({
       query: (order) => ({
         url: '/orders',
         method: 'POST',
@@ -74,9 +53,19 @@ export const orderApi = createApi({
       invalidatesTags: ['Order'],
     }),
 
-    // Get all orders
-    getOrders: builder.query<Order[], void>({
-      query: () => '/orders',
+    // Delete order
+    deleteOrder: builder.mutation<{ success: boolean; message: string; data: any }, string>({
+      query: (id) => ({
+        url: `/orders/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: (response: { success: boolean; message: string; data: any }) => response,
+      invalidatesTags: ['Order'],
+    }),
+
+    // Get today's orders
+    getTodayOrders: builder.query<Order[], void>({
+      query: () => '/orders/today',
       transformResponse: (response: { success: boolean; message: string; data: Order[] }) => response.data,
       providesTags: ['Order'],
     }),
@@ -88,18 +77,8 @@ export const orderApi = createApi({
       providesTags: ['Order'],
     }),
 
-    // Update order
-    updateOrder: builder.mutation<Order, { id: string; order: Partial<Order> }>({
-      query: ({ id, order }) => ({
-        url: `/orders/${id}`,
-        method: 'PUT',
-        body: order,
-      }),
-      invalidatesTags: ['Order'],
-    }),
-
     // Update order status
-    updateOrderStatus: builder.mutation<Order, { id: string; status: 'pending' | 'processing' | 'completed' | 'cancelled' }>({
+    updateOrderStatus: builder.mutation<Order, { id: string; status: 'pending' | 'completed' | 'cancelled' }>({
       query: ({ id, status }) => ({
         url: `/orders/${id}/status`,
         method: 'PATCH',
@@ -108,42 +87,24 @@ export const orderApi = createApi({
       invalidatesTags: ['Order'],
     }),
 
-    // Delete order
-    deleteOrder: builder.mutation<void, string>({
-      query: (id) => ({
-        url: `/orders/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Order'],
-    }),
-
-    // Get orders by table ID
-    getOrdersByTableId: builder.query<Order[], string>({
-      query: (tableId) => `/orders/table/${tableId}`,
+    // Get restaurant's today orders
+    getRestaurantTodayOrders: builder.query<Order[], string>({
+      query: (restaurantId) => `/orders/restaurant/${restaurantId}/today`,
+      transformResponse: (response: { success: boolean; message: string; data: Order[] }) => response.data,
       providesTags: ['Order'],
     }),
 
-    // Get orders by customer ID
-    getOrdersByCustomerId: builder.query<Order[], string>({
-      query: (customerId) => `/orders/customer/${customerId}`,
-      providesTags: ['Order'],
-    }),
-
-    // Get orders by restaurant ID
-    getOrdersByRestaurantId: builder.query<Order[], string>({
-      query: (restaurantId) => `/orders/restaurant/${restaurantId}`,
-      providesTags: ['Order'],
-    }),
-
-    // Get orders by status
-    getOrdersByStatus: builder.query<Order[], string>({
-      query: (status) => `/orders/status/${status}`,
+    // Get today's orders by type
+    getTodayOrdersByType: builder.query<Order[], 'Dine-in' | 'Takeaway'>({
+      query: (orderType) => `/orders/type/${orderType}/today`,
+      transformResponse: (response: { success: boolean; message: string; data: Order[] }) => response.data,
       providesTags: ['Order'],
     }),
 
     // Get orders by date
     getOrdersByDate: builder.query<Order[], string>({
       query: (date) => `/orders/date/${date}`,
+      transformResponse: (response: { success: boolean; message: string; data: Order[] }) => response.data,
       providesTags: ['Order'],
     }),
   }),
@@ -151,14 +112,11 @@ export const orderApi = createApi({
 
 export const {
   useCreateOrderMutation,
-  useGetOrdersQuery,
-  useGetOrderByIdQuery,
-  useUpdateOrderMutation,
-  useUpdateOrderStatusMutation,
   useDeleteOrderMutation,
-  useGetOrdersByTableIdQuery,
-  useGetOrdersByCustomerIdQuery,
-  useGetOrdersByRestaurantIdQuery,
-  useGetOrdersByStatusQuery,
+  useGetTodayOrdersQuery,
+  useGetOrderByIdQuery,
+  useUpdateOrderStatusMutation,
+  useGetRestaurantTodayOrdersQuery,
+  useGetTodayOrdersByTypeQuery,
   useGetOrdersByDateQuery,
 } = orderApi;

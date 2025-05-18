@@ -16,6 +16,7 @@ import authReducer from '../slices';
 import { authApi, stripeApi, restaurantApi, chatApi } from '../api';
 import { userApi } from '../api/userApi';
 import { orderApi } from '../api/order';
+import { orderDetailApi } from '../api/orderDetail';
 import { reservationApi } from '../api/reservationApi';
 import { tableApi } from '../api/tableApi';
 import { reservedTableApi } from '../api/reservedTableApi';
@@ -37,6 +38,7 @@ const rootReducer = combineReducers({
   [stripeApi.reducerPath]: stripeApi.reducer,
   [userApi.reducerPath]: userApi.reducer,
   [orderApi.reducerPath]: orderApi.reducer,
+  [orderDetailApi.reducerPath]: orderDetailApi.reducer,
   [restaurantApi.reducerPath]: restaurantApi.reducer,
   [validateTokenApi.reducerPath]: validateTokenApi.reducer,
   [reservationApi.reducerPath]: reservationApi.reducer,
@@ -63,6 +65,7 @@ export const store = configureStore({
       stripeApi.middleware, 
       userApi.middleware, 
       orderApi.middleware,
+      orderDetailApi.middleware,
       restaurantApi.middleware,
       validateTokenApi.middleware,
       reservationApi.middleware,
