@@ -21,6 +21,7 @@ import {
   BarChart2,
   CreditCard,
   LayoutList,
+  ChevronDown,
 } from "lucide-react"
 import { getTranslation } from "@/utils/translations"
 
@@ -28,6 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, isLoading, logout } = useAuth()
   const router = useRouter()
   const [language, setLanguage] = useState<"en" | "vi">("en")
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   useEffect(() => {
     // Get language from localStorage
@@ -55,6 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return null
   }
 
+  console.log('Layout user data:', user)
   const isAdmin = user.role === "admin"
   const t = getTranslation(language)
 
@@ -70,6 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const adminNavItems = [
     { href: "/dashboard", label: t.dashboard.dashboard, icon: <Home className="h-5 w-5" /> },
+    { href: "/dashboard/profile", label: t.dashboard.profile, icon: <User className="h-5 w-5" /> },
     { href: "/dashboard/customers", label: t.dashboard.customers, icon: <Users className="h-5 w-5" /> },
     { href: "/dashboard/categories", label: t.dashboard.categories, icon: <LayoutList className="h-5 w-5" /> },
     { href: "/dashboard/menu-management", label: t.dashboard.menu, icon: <MenuIcon className="h-5 w-5" /> },
@@ -131,12 +135,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex flex-1 justify-end">
             <div className="flex items-center">
               <span className="mr-2 text-sm text-gray-700">
-                {user.name} ({isAdmin ? t.dashboard.adminRole : t.dashboard.userRole})
+                {user.fullName || user.name} ({isAdmin ? t.dashboard.adminRole : t.dashboard.userRole})
               </span>
               <div className="relative">
-                <button className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-900">
-                  {user.name.charAt(0).toUpperCase()}
+                <button 
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center space-x-1 rounded-full bg-blue-100 px-3 py-1 text-blue-900 hover:bg-blue-200"
+                >
+                  <span className="h-8 w-8 flex items-center justify-center rounded-full bg-blue-900 text-white">
+                    {(user.fullName || user.name || 'U').charAt(0).toUpperCase()}
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
                 </button>
+                
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5">
+                    <button
+                      onClick={() => {
+                        logout()
+                        router.push("/")
+                        setIsProfileOpen(false)
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {t.navigation.logout}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

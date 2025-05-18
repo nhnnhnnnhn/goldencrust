@@ -26,10 +26,12 @@ interface Delivery {
   updatedAt: Date;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 export const deliveryApi = createApi({
   reducerPath: 'deliveryApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+    baseUrl: API_URL,
     credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
       const token = localStorage.getItem('token');
@@ -67,19 +69,34 @@ export const deliveryApi = createApi({
       query: (delivery) => ({
         url: '/deliveries/create',
         method: 'POST',
-        body: delivery,
+        body: {
+          ...delivery,
+          userId: delivery.userId // Keep the original userId from the frontend
+        },
       }),
       invalidatesTags: ['Delivery'],
     }),
 
     // Edit a delivery
-    editDelivery: builder.mutation<Delivery, { id: string; delivery: Partial<Delivery> }>({
-      query: ({ id, delivery }) => ({
+    editDelivery: builder.mutation<Delivery, { id: string; notes?: string; deliveryAddress?: string; deliveryPhone?: string }>({
+      query: ({ id, ...delivery }) => ({
         url: `/deliveries/edit/${id}`,
         method: 'PATCH',
         body: delivery,
       }),
       invalidatesTags: ['Delivery'],
+      async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
+        try {
+          const { data: updatedDelivery } = await queryFulfilled;
+          dispatch(
+            deliveryApi.util.updateQueryData('getDeliveryById', id, (draft) => {
+              Object.assign(draft, updatedDelivery);
+            })
+          );
+        } catch (error) {
+          console.error('Error updating delivery:', error);
+        }
+      },
     }),
 
     // Update delivery status
