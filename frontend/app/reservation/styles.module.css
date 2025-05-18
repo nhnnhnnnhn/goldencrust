@@ -628,3 +628,39 @@
   align-items: center;
   gap: 0.5rem;
 }
+
+.timePicker {
+  width: 100%;
+  border: 1px solid rgba(0, 78, 146, 0.2);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.timePicker:hover {
+  border-color: rgba(0, 78, 146, 0.4);
+}
+
+.timePicker:focus-within {
+  border-color: #004e92;
+  box-shadow: 0 0 0 2px rgba(0, 78, 146, 0.1);
+  outline: none;
+}
+
+.tableSelection {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.tablePicker {
+  margin-top: 1rem;
+}
+
+.noTables {
+  text-align: center;
+  padding: 2rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  color: #6b7280;
+}

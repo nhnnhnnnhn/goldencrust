@@ -1,4 +1,5 @@
 const Reservation = require('../models/reservation.model');
+const Table = require('../models/table.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
 
 // Get all reservations
@@ -22,6 +23,31 @@ module.exports.getReservations = controllerHandler(async (req, res) => {
     }
 });
 
+// Helper function to release tables after 2 hours
+const scheduleTableRelease = async (tableIds, reservationTime) => {
+    const releaseTime = new Date(reservationTime);
+    releaseTime.setHours(releaseTime.getHours() + 2);
+    
+    const now = new Date();
+    const delay = Math.max(0, releaseTime.getTime() - now.getTime());
+    
+    setTimeout(async () => {
+        try {
+            // Update status of all tables to 'available'
+            await Promise.all(tableIds.map(tableId => 
+                Table.findByIdAndUpdate(tableId, { 
+                    status: 'available',
+                    reservationTime: null
+                })
+            ));
+            
+            console.log(`Tables released successfully: ${tableIds.join(', ')}`);
+        } catch (error) {
+            console.error('Error releasing tables:', error);
+        }
+    }, delay);
+};
+
 // Create reservation
 module.exports.createReservation = controllerHandler(async (req, res) => {
     try {
@@ -32,17 +58,19 @@ module.exports.createReservation = controllerHandler(async (req, res) => {
             reservationTime,
             numberOfGuests,
             specialRequests,
-            restaurantId
+            restaurantId,
+            tableIds
         } = req.body;
 
         // Validate required fields
-        if (!customerName || !customerPhone || !reservationDate || !reservationTime || !numberOfGuests || !restaurantId) {
+        if (!customerName || !customerPhone || !reservationDate || !reservationTime || !numberOfGuests || !restaurantId || !tableIds || !tableIds.length) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields'
             });
         }
 
+        // Create reservation
         const reservation = await Reservation.create({
             customerName,
             customerPhone,
@@ -51,9 +79,22 @@ module.exports.createReservation = controllerHandler(async (req, res) => {
             numberOfGuests,
             specialRequests,
             restaurantId,
+            tableIds,
             createdBy: req.user.id,
             updatedBy: req.user.id
         });
+
+        // Update status of all selected tables to 'reserved'
+        await Promise.all(tableIds.map(tableId => 
+            Table.findByIdAndUpdate(tableId, { 
+                status: 'reserved',
+                reservationTime: `${reservationDate}T${reservationTime}`
+            })
+        ));
+
+        // Schedule table release after 2 hours
+        const reservationDateTime = new Date(`${reservationDate}T${reservationTime}`);
+        await scheduleTableRelease(tableIds, reservationDateTime);
 
         res.status(201).json({
             success: true,
@@ -61,6 +102,7 @@ module.exports.createReservation = controllerHandler(async (req, res) => {
             data: reservation
         });
     } catch (error) {
+        console.error('Error in createReservation:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -281,6 +323,12 @@ module.exports.getReservationsByDateRange = controllerHandler(async (req, res) =
     try {
         const { startDate, endDate } = req.query;
         
+        console.log('Fetching reservations with date range:', {
+            startDate,
+            endDate,
+            query: req.query
+        });
+        
         // Create date range (start of day to end of day)
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
@@ -291,7 +339,22 @@ module.exports.getReservationsByDateRange = controllerHandler(async (req, res) =
         const reservations = await Reservation.find({
             reservationDate: { $gte: start, $lte: end },
             deleted: false
-        }).populate('restaurantId');
+        })
+        .populate({
+            path: 'restaurantId',
+            match: { deleted: false },
+            select: 'name address phone email status'
+        })
+        .lean();
+
+        console.log('Found reservations:', {
+            count: reservations.length,
+            reservations: reservations.map(r => ({
+                id: r._id,
+                restaurantId: r.restaurantId?._id,
+                hasRestaurant: !!r.restaurantId
+            }))
+        });
         
         res.status(200).json({
             success: true,
@@ -299,6 +362,11 @@ module.exports.getReservationsByDateRange = controllerHandler(async (req, res) =
             data: reservations
         });
     } catch (error) {
+        console.error('Error in getReservationsByDateRange:', {
+            error: error.message,
+            stack: error.stack,
+            query: req.query
+        });
         return res.status(500).json({
             success: false,
             message: 'Internal server error',

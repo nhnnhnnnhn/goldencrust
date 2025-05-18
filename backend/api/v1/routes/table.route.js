@@ -8,6 +8,15 @@ router.get('/', tableController.getTables);
 // Create new table
 router.post('/', tableController.createTable);
 
+// Get available tables
+router.get('/available/:restaurantId', tableController.getAvailableTables);
+
+// Get tables by restaurant id
+router.get('/restaurant/:restaurantId', tableController.getTablesByRestaurant);
+
+// Get tables by capacity
+router.get('/capacity/:seats', tableController.getTablesByCapacity);
+
 // Get table by id
 router.get('/:id', tableController.getTableById);
 
@@ -19,14 +28,5 @@ router.patch('/:id/status', tableController.updateTableStatus);
 
 // Delete table
 router.delete('/:id', tableController.deleteTable);
-
-// Get tables by restaurant id
-router.get('/restaurant/:restaurantId', tableController.getTablesByRestaurant);
-
-// Get available tables
-router.get('/available/:restaurantId', tableController.getAvailableTables);
-
-// Get tables by capacity
-router.get('/capacity/:seats', tableController.getTablesByCapacity);
 
 module.exports = router;

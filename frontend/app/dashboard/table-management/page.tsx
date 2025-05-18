@@ -9,12 +9,13 @@ import {
   ChevronDown,
   X,
   Users,
-  CheckCircle,
-  XCircle,
   Utensils,
   Printer,
   Building,
   MapPin,
+  Edit,
+  Trash2,
+  Eye
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,16 +31,10 @@ import {
   useGetTablesByRestaurantQuery,
   useCreateTableMutation,
   useUpdateTableMutation,
-  useUpdateTableStatusMutation,
   useDeleteTableMutation,
   useGetAvailableTablesQuery,
 } from '@/redux/api/tableApi'
-import {
-  useCreateReservedTableMutation,
-  useUpdateReservedTableStatusMutation,
-  useGetReservedTablesByTableQuery,
-  useCheckTableAvailabilityMutation
-} from '@/redux/api/reservedTableApi'
+import type { Table as APITable } from '@/redux/api/tableApi'
 
 // Định nghĩa kiểu dữ liệu cho Restaurant
 interface Restaurant {
@@ -53,7 +48,6 @@ interface Restaurant {
     open: string
     close: string
   }
-  status: 'open' | 'closed'
   rating?: number
   cuisine?: string[]
   images?: string[]
@@ -63,66 +57,27 @@ interface Restaurant {
   tableNumber: number
 }
 
-interface ReservedTable {
-  _id: string
-  tableId: string
-  userId?: string
-  date: string | Date
-  time: string
-  status: 'reserved' | 'completed' | 'cancelled'
-  createdAt?: Date
-  updatedAt?: Date
-}
-
 interface RestaurantFormData {
-  _id?: string; // Optional for new restaurants
+  _id?: string;
   name: string;
   address: string;
   phone: string;
   email: string;
-  status: 'open' | 'closed';
   tableNumber: number;
 }
 
 // Danh sách các khu vực
 const locations = ["All", "Main Hall", "Terrace", "Private Room", "Bar Area"]
 
-// Danh sách trạng thái
-const statuses = ["All", "available", "occupied", "reserved"]
-const statusLabels = {
-  available: "Available",
-  occupied: "Occupied",
-  reserved: "Reserved",
-}
-const statusColors = {
-  available: "bg-green-100 text-green-800",
-  occupied: "bg-red-100 text-red-800",
-  reserved: "bg-yellow-100 text-yellow-800",
-}
-const statusIcons = {
-  available: <CheckCircle size={16} className="text-green-600" />,
-  occupied: <XCircle size={16} className="text-red-600" />,
-  reserved: <Users size={16} className="text-yellow-600" />,
-}
-
 // Update the Table interface
-interface Table {
-  _id?: string
-  restaurantId: string
+interface Table extends Omit<APITable, 'tableNumber'> {
   tableNumber: string
-  capacity: number
-  status: 'available' | 'occupied' | 'reserved'
-  location: string
-  customerName?: string | null
-  reservationTime?: string | null
 }
 
 export default function TableManagement() {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedStatus, setSelectedStatus] = useState("All")
   const [selectedLocation, setSelectedLocation] = useState("All")
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [showAddEditModal, setShowAddEditModal] = useState(false)
   const [showAddRestaurantModal, setShowAddRestaurantModal] = useState(false)
@@ -132,20 +87,13 @@ export default function TableManagement() {
 
   // API Hooks
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
-  const { data: tables = [], isLoading: isLoadingTables } = useGetTablesByRestaurantQuery(selectedRestaurantId, {
+  const [createRestaurant] = useCreateRestaurantMutation()
+  const { data: tables = [], isLoading: isLoadingTables, refetch: refetchTables } = useGetTablesByRestaurantQuery(selectedRestaurantId, {
     skip: !selectedRestaurantId
   })
   const [createTable] = useCreateTableMutation()
   const [updateTable] = useUpdateTableMutation()
-  const [updateTableStatus] = useUpdateTableStatusMutation()
   const [deleteTable] = useDeleteTableMutation()
-  const [createReservedTable] = useCreateReservedTableMutation()
-  const [updateReservedTableStatus] = useUpdateReservedTableStatusMutation()
-  const [checkTableAvailability] = useCheckTableAvailabilityMutation()
-  const { data: reservedTables = [] } = useGetReservedTablesByTableQuery(currentTable?._id || '', {
-    skip: !currentTable?._id
-  })
-  const [createRestaurant] = useCreateRestaurantMutation()
 
   // Add console logs for debugging
   useEffect(() => {
@@ -161,16 +109,15 @@ export default function TableManagement() {
   }, [restaurants, selectedRestaurantId])
 
   // Filtered tables with type check
-  const filteredTables = Array.isArray(tables) ? tables.filter((table: Table) => {
+  const filteredTables = Array.isArray(tables) ? tables.filter((apiTable: APITable) => {
+    const table = apiTable as unknown as Table
     console.log('Filtering table:', table)
-    const matchesSearch = table.tableNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      table.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (table.customerName && table.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesSearch = (table.tableNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (table.location?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     
-    const matchesStatus = selectedStatus === "All" || table.status === selectedStatus
     const matchesLocation = selectedLocation === "All" || table.location === selectedLocation
 
-    return matchesSearch && matchesStatus && matchesLocation
+    return matchesSearch && matchesLocation
   }) : []
 
   // Xử lý thêm bàn mới
@@ -188,10 +135,7 @@ export default function TableManagement() {
       restaurantId: selectedRestaurantId,
       tableNumber: "",
       capacity: 4,
-      status: "available" as const,
-      location: "Main Hall",
-      customerName: null,
-      reservationTime: null
+      location: "Main Hall"
     }
     
     setCurrentTable(newTable)
@@ -201,24 +145,25 @@ export default function TableManagement() {
   // Xử lý thêm nhà hàng mới
   const handleAddRestaurant = () => {
     setCurrentRestaurant({
-      name: "",
+      name: "Golden Crust ",
       address: "",
       phone: "",
       email: "",
-      status: "closed",
-      tableNumber: 0,
+      tableNumber: 15,
     })
     setShowAddRestaurantModal(true)
   }
 
   // Xử lý sửa bàn
-  const handleEditTable = (table: Table) => {
+  const handleEditTable = (apiTable: APITable) => {
+    const table = apiTable as unknown as Table
     setCurrentTable(table)
     setShowAddEditModal(true)
   }
 
   // Xử lý xóa bàn
-  const handleDeleteClick = async (table: Table) => {
+  const handleDeleteClick = async (apiTable: APITable) => {
+    const table = apiTable as unknown as Table
     if (!table._id) return;
     
     if (confirm("Are you sure you want to delete this table?")) {
@@ -228,6 +173,8 @@ export default function TableManagement() {
           title: "Success",
           description: `Table ${table.tableNumber} has been deleted.`,
         })
+        // Refetch tables after successful deletion
+        await refetchTables()
       } catch (error) {
         toast({
           title: "Error",
@@ -261,6 +208,8 @@ export default function TableManagement() {
           title: "Success",
           description: `Table ${currentTable.tableNumber} has been updated.`,
         })
+        // Refetch tables after successful update
+        await refetchTables()
       } else {
         // Create new table - only send required fields
         const newTableData = {
@@ -277,6 +226,8 @@ export default function TableManagement() {
             title: "Success",
             description: `Table ${currentTable.tableNumber} has been created.`,
           })
+          // Refetch tables after successful creation
+          await refetchTables()
         } catch (error) {
           const err = error as { 
             status?: number;
@@ -313,76 +264,6 @@ export default function TableManagement() {
     }
   }
 
-  // Xử lý cập nhật trạng thái bàn
-  const handleUpdateStatus = async (id: string | undefined, newStatus: "available" | "occupied" | "reserved") => {
-    if (!id) {
-      toast({
-        title: "Error",
-        description: "Table ID is required",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      await updateTableStatus({
-        id,
-        data: { status: newStatus }
-      }).unwrap()
-
-      // Nếu bàn trở thành available, kiểm tra và cập nhật trạng thái đặt bàn
-      if (newStatus === "available") {
-        const activeReservation = reservedTables.find((rt: ReservedTable) => rt.status === "reserved")
-        if (activeReservation) {
-          await updateReservedTableStatus({
-            id: activeReservation._id,
-            status: "completed"
-          }).unwrap()
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: `Table status has been updated to ${statusLabels[newStatus]}.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update table status",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Xử lý kiểm tra tình trạng bàn
-  const handleCheckAvailability = async (tableId: string, date: string, time: string) => {
-    try {
-      const { isAvailable, existingReservation } = await checkTableAvailability({
-        tableId,
-        date,
-        time
-      }).unwrap()
-
-      if (!isAvailable && existingReservation) {
-        toast({
-          title: "Table Not Available",
-          description: `This table is already reserved by ${existingReservation.userId} at ${existingReservation.time}`,
-        })
-      } else {
-        toast({
-          title: "Table Available",
-          description: "This table is available for reservation",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to check table availability",
-        variant: "destructive",
-      })
-    }
-  }
-
   // Xử lý xem chi tiết bàn
   const handleViewDetails = (table: Table) => {
     // Implement view details logic here
@@ -392,9 +273,53 @@ export default function TableManagement() {
     // Implement edit restaurant logic here
   }
 
+  // Validate restaurant form
+  const validateRestaurantForm = (data: RestaurantFormData): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    // Validate name
+    if (!data.name.startsWith('Golden Crust ')) {
+      errors.push('Restaurant name must start with "Golden Crust"');
+    }
+
+    // Validate phone
+    const phoneRegex = /^\d{10,11}$/;
+    if (!phoneRegex.test(data.phone)) {
+      errors.push('Phone number must be 10-11 digits');
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+      errors.push('Please enter a valid email address');
+    }
+
+    // Validate number of tables
+    if (data.tableNumber < 15) {
+      errors.push('Number of tables must be at least 15');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
   // Xử lý lưu nhà hàng
   const handleSaveRestaurant = async () => {
     if (!currentRestaurant) return
+
+    const validation = validateRestaurantForm(currentRestaurant);
+    if (!validation.isValid) {
+      validation.errors.forEach(error => {
+        toast({
+          title: "Validation Error",
+          description: error,
+          variant: "destructive",
+        });
+      });
+      return;
+    }
 
     try {
       const restaurantData: Partial<Restaurant> = {
@@ -402,7 +327,6 @@ export default function TableManagement() {
         address: currentRestaurant.address,
         phone: currentRestaurant.phone,
         email: currentRestaurant.email,
-        status: currentRestaurant.status,
         tableNumber: currentRestaurant.tableNumber,
       }
       
@@ -412,7 +336,6 @@ export default function TableManagement() {
         description: "Restaurant added successfully",
       })
       
-      // Tự động chọn nhà hàng mới tạo
       if (response?._id) {
         setSelectedRestaurantId(response._id)
       }
@@ -429,11 +352,6 @@ export default function TableManagement() {
 
   const handleDeleteRestaurantClick = async (restaurant: Restaurant) => {
     // Implement delete restaurant logic here
-  }
-
-  // Xử lý in hóa đơn cho bàn
-  const handlePrintTableReceipt = (table: Table) => {
-    // Implement print receipt logic here
   }
 
   return (
@@ -476,7 +394,7 @@ export default function TableManagement() {
                 <span className="font-medium">
                   {restaurants.find(r => r._id === selectedRestaurantId)?.name}
                 </span>
-      </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <MapPin className="h-5 w-5 text-gray-500" />
                 <span>
@@ -505,7 +423,7 @@ export default function TableManagement() {
                 <Select
                   value={currentTable.restaurantId}
                   onValueChange={(value) => setCurrentTable({ ...currentTable, restaurantId: value })}
-                  disabled={!!currentTable._id} // Không cho phép đổi nhà hàng khi chỉnh sửa bàn
+                  disabled={!!currentTable._id}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a restaurant" />
@@ -521,12 +439,13 @@ export default function TableManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Table Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
                 <Input
                   type="text"
                   value={currentTable.tableNumber || ""}
                   onChange={(e) => setCurrentTable({ ...currentTable, tableNumber: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter table name"
                 />
               </div>
 
@@ -560,63 +479,6 @@ export default function TableManagement() {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <Select
-                  value={currentTable.status}
-                  onValueChange={(value: "available" | "reserved" | "occupied") => {
-                    const newStatus = value
-                    const updatedTable = { ...currentTable, status: newStatus }
-
-                    // Nếu bàn trở thành available, xóa thông tin đặt bàn
-                    if (newStatus === "available") {
-                      updatedTable.reservationTime = null
-                      updatedTable.customerName = null
-                    }
-
-                    setCurrentTable(updatedTable)
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statuses
-                      .filter((status) => status !== "All")
-                      .map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {statusLabels[status as keyof typeof statusLabels]}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {currentTable.status !== "available" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                    <Input
-                      type="text"
-                      value={currentTable.customerName || ""}
-                      onChange={(e) => setCurrentTable({ ...currentTable, customerName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reservation Time</label>
-                    <Input
-                      type="text"
-                      value={currentTable.reservationTime || ""}
-                      onChange={(e) => setCurrentTable({ ...currentTable, reservationTime: e.target.value })}
-                      placeholder="e.g. 18:30"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </>
-              )}
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
@@ -648,9 +510,18 @@ export default function TableManagement() {
                 <Input
                   type="text"
                   value={currentRestaurant?.name || ""}
-                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, name: e.target.value }))}
+                  onChange={(e) => {
+                    let newName = e.target.value;
+                    // Ensure name always starts with "Golden Crust "
+                    if (!newName.startsWith('Golden Crust ')) {
+                      newName = 'Golden Crust ' + newName.replace('Golden Crust ', '');
+                    }
+                    setCurrentRestaurant(prev => ({ ...prev!, name: newName }));
+                  }}
                   className="w-full"
+                  placeholder="Golden Crust Branch Name"
                 />
+                <p className="text-sm text-gray-500 mt-1">Name will start with "Golden Crust"</p>
               </div>
 
               <div>
@@ -668,9 +539,14 @@ export default function TableManagement() {
                 <Input
                   type="text"
                   value={currentRestaurant?.phone || ""}
-                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, phone: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    setCurrentRestaurant(prev => ({ ...prev!, phone: value }));
+                  }}
                   className="w-full"
+                  placeholder="10-11 digits"
                 />
+                <p className="text-sm text-gray-500 mt-1">Enter 10-11 digits</p>
               </div>
 
               <div>
@@ -680,35 +556,23 @@ export default function TableManagement() {
                   value={currentRestaurant?.email || ""}
                   onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, email: e.target.value }))}
                   className="w-full"
+                  placeholder="example@goldencrust.com"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <Select
-                  value={currentRestaurant?.status || "closed"}
-                  onValueChange={(value: 'open' | 'closed') => 
-                    setCurrentRestaurant(prev => ({ ...prev!, status: value }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Number of Tables</label>
                 <Input
                   type="number"
-                  value={currentRestaurant?.tableNumber || 0}
-                  onChange={(e) => setCurrentRestaurant(prev => ({ ...prev!, tableNumber: parseInt(e.target.value) }))}
+                  value={currentRestaurant?.tableNumber || 15}
+                  onChange={(e) => {
+                    const value = Math.max(15, parseInt(e.target.value) || 15);
+                    setCurrentRestaurant(prev => ({ ...prev!, tableNumber: value }));
+                  }}
+                  min={15}
                   className="w-full"
                 />
+                <p className="text-sm text-gray-500 mt-1">Minimum 15 tables required</p>
               </div>
             </div>
 
@@ -729,41 +593,12 @@ export default function TableManagement() {
         <div className="relative flex-1">
           <input
             type="text"
-            placeholder="Search by table number or customer name..."
+            placeholder="Search by table name or customer name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
-          >
-            <Filter size={20} />
-            <span>Status: {selectedStatus}</span>
-            <ChevronDown size={16} />
-          </button>
-
-          {showStatusDropdown && (
-            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-              {statuses.map((status) => (
-                <div
-                  key={status}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
-                  onClick={() => {
-                    setSelectedStatus(status)
-                    setShowStatusDropdown(false)
-                  }}
-                >
-                  {status !== "All" && statusIcons[status as keyof typeof statusIcons]}
-                  {status}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="relative">
@@ -797,41 +632,58 @@ export default function TableManagement() {
 
       {/* Hiển thị bàn dạng lưới */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filteredTables.map((table) => (
-          <div
-            key={table._id}
-            className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => handleViewDetails(table)}
-          >
-            <div className="p-4 border-b">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium">Table {table.tableNumber}</h3>
-                <span
-                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[table.status]}`}
+        {filteredTables.map((apiTable: APITable) => {
+          const table = apiTable as unknown as Table
+          return (
+            <div
+              key={table._id}
+              className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-medium">{table.tableNumber}</h3>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                  <Users size={16} />
+                  <span>Capacity: {table.capacity}</span>
+                </div>
+
+                <div className="text-sm text-gray-600">
+                  <span>Location: {table.location}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="border-t px-4 py-3 bg-gray-50 flex justify-between gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditTable(apiTable);
+                  }}
                 >
-                  {statusIcons[table.status]}
-                  <span className="ml-1">{statusLabels[table.status]}</span>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                <Users size={16} />
-                <span>Capacity: {table.capacity}</span>
-              </div>
-
-              <div className="text-sm text-gray-600">
-                <span>Location: {table.location}</span>
+                  <Edit size={16} className="mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-red-600 hover:text-red-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(apiTable);
+                  }}
+                >
+                  <Trash2 size={16} className="mr-1" />
+                  Delete
+                </Button>
               </div>
             </div>
-
-            {table.status !== "available" && (
-              <div className="p-4 bg-gray-50">
-                {table.customerName && <div className="text-sm font-medium">{table.customerName}</div>}
-                {table.reservationTime && <div className="text-sm text-gray-600">Time: {table.reservationTime}</div>}
-              </div>
-            )}
-          </div>
-        ))}
+          )
+        })}
 
         {filteredTables.length === 0 && (
           <div className="col-span-full text-center py-8 bg-white rounded-lg shadow">

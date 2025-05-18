@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -36,6 +36,8 @@ import {
   useDeleteReservationMutation,
   useGetReservationsByDateRangeQuery,
   useGetReservationsByStatusQuery,
+  useGetRestaurantByIdQuery,
+  useGetUserByIdQuery,
   type Restaurant,
   type Reservation
 } from '@/redux/api'
@@ -43,6 +45,8 @@ import { useAppSelector } from "@/redux/hooks"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { vi } from "date-fns/locale"
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
+import { SerializedError } from '@reduxjs/toolkit';
 
 // Định nghĩa kiểu dữ liệu cho Table
 interface Table {
@@ -111,6 +115,127 @@ const reservedTableStatusColors = {
   cancelled: "bg-red-100 text-red-800",
 }
 
+function RestaurantInfo({ restaurantId }: { restaurantId: string | Restaurant }) {
+  // If restaurantId is actually a Restaurant object (populated data), display it directly
+  if (typeof restaurantId !== 'string' && restaurantId?.name) {
+    return (
+      <>
+        <div className="font-medium">{restaurantId.name}</div>
+        <div className="text-xs text-gray-500">{restaurantId.address}</div>
+        <div className="text-xs text-gray-500">{restaurantId.phone}</div>
+      </>
+    );
+  }
+
+  // Otherwise, fetch the restaurant data
+  const { data: restaurantData, error, isLoading } = useGetRestaurantByIdQuery(
+    restaurantId as string,
+    {
+      // Skip the query if restaurantId is not a valid string
+      skip: typeof restaurantId !== 'string' || !restaurantId || restaurantId.length !== 24
+    }
+  );
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-900 border-t-transparent"></div>
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    let errorMessage = 'Không thể tải thông tin nhà hàng';
+    
+    if ('status' in error) {
+      // Handle FetchBaseQueryError
+      const fetchError = error as { status: number; data?: any };
+      if (fetchError.status === 404) {
+        errorMessage = 'Nhà hàng không tồn tại';
+      } else if (fetchError.status === 400) {
+        errorMessage = 'ID nhà hàng không hợp lệ';
+      } else if (fetchError.status === 401) {
+        errorMessage = 'Vui lòng đăng nhập lại';
+      } else if (fetchError.data?.message) {
+        errorMessage = fetchError.data.message;
+      }
+    } else if ('message' in error) {
+      // Handle SerializedError
+      errorMessage = error.message || errorMessage;
+    }
+
+    console.error('Restaurant fetch error:', {
+      error,
+      restaurantId,
+      errorMessage
+    });
+
+    return (
+      <div className="text-red-600 text-sm">
+        {errorMessage}
+      </div>
+    );
+  }
+
+  // Show not found state
+  if (!restaurantData) {
+    return (
+      <div className="text-yellow-600 text-sm">
+        {typeof restaurantId !== 'string' || !restaurantId || restaurantId.length !== 24
+          ? 'ID nhà hàng không hợp lệ'
+          : 'Không tìm thấy thông tin nhà hàng'
+        }
+      </div>
+    );
+  }
+
+  // Show restaurant data
+  return (
+    <>
+      <div className="font-medium">{restaurantData.name}</div>
+      <div className="text-xs text-gray-500">{restaurantData.address}</div>
+      <div className="text-xs text-gray-500">{restaurantData.phone}</div>
+    </>
+  );
+}
+
+function UserInfo({ userId }: { userId: string | undefined }) {
+  const { data: userData, error, isLoading } = useGetUserByIdQuery(userId || '', {
+    skip: !userId || userId.length !== 24
+  });
+
+  if (!userId) {
+    return <span className="text-gray-500">N/A</span>;
+  }
+
+  if (isLoading) {
+    return <span className="text-gray-500">Đang tải...</span>;
+  }
+
+  if (error) {
+    console.error('Error fetching user:', error);
+    return <span className="text-gray-500">{userId}</span>;
+  }
+
+  if (!userData) {
+    return <span className="text-gray-500">{userId}</span>;
+  }
+
+  return <span>{userData.fullName || userData.email}</span>;
+}
+
+// Helper functions to check error types
+function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
+  return typeof error === 'object' && error != null && 'status' in error;
+}
+
+function isSerializedError(error: unknown): error is SerializedError {
+  return typeof error === 'object' && error != null && 'message' in error;
+}
+
 export default function ReservationsManagement() {
   const { toast } = useToast()
   const { user } = useAppSelector((state) => state.auth)
@@ -124,7 +249,7 @@ export default function ReservationsManagement() {
   const [isAssignTablesModalOpen, setIsAssignTablesModalOpen] = useState(false)
 
   // Queries
-  const { data: restaurants } = useGetRestaurantsQuery()
+  const { data: restaurants, isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
   const { data: reservations, isLoading, error, refetch } = useGetReservationsByDateRangeQuery({
     startDate: format(selectedDate, 'yyyy-MM-dd'),
     endDate: format(selectedDate, 'yyyy-MM-dd')
@@ -135,6 +260,20 @@ export default function ReservationsManagement() {
     selectedStatus as 'pending' | 'confirmed' | 'cancelled',
     { skip: selectedStatus === 'Tất cả' }
   )
+
+  // Debug logs
+  useEffect(() => {
+    console.log('Restaurants data:', restaurants);
+    console.log('Reservations data:', reservations);
+    if (error) {
+      console.error('Reservations error:', error);
+      toast({
+        title: "Lỗi tải dữ liệu",
+        description: "Không thể tải danh sách đặt bàn. Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
+    }
+  }, [restaurants, reservations, error, toast]);
 
   // Mutations
   const [updateReservationStatus] = useUpdateReservationStatusMutation()
@@ -147,8 +286,44 @@ export default function ReservationsManagement() {
     // Implement view details modal
   }
 
+  // Helper function to check if reservation is in the past
+  const isReservationInPast = (reservation: Reservation) => {
+    const reservationDate = new Date(reservation.reservationDate);
+    reservationDate.setHours(
+      parseInt(reservation.reservationTime.split(':')[0]),
+      parseInt(reservation.reservationTime.split(':')[1]),
+      0,
+      0
+    );
+    const now = new Date();
+    
+    // For debugging
+    console.log('Checking if reservation is in past:', {
+      reservationDate: reservationDate.toISOString(),
+      reservationTime: reservation.reservationTime,
+      now: now.toISOString(),
+      isPast: reservationDate < now
+    });
+    
+    return reservationDate < now;
+  };
+
   const handleUpdateStatus = async (id: string, newStatus: "pending" | "confirmed" | "cancelled") => {
     try {
+      // Get the reservation details
+      const reservation = selectedReservation;
+      if (!reservation) return;
+
+      // Check if reservation is in the past
+      if (isReservationInPast(reservation)) {
+        toast({
+          title: "Không thể cập nhật trạng thái",
+          description: "Không thể thay đổi trạng thái đơn đặt bàn trong quá khứ",
+          variant: "destructive",
+        });
+        return;
+      }
+
       console.log('Updating status:', { id, newStatus });
       const result = await updateReservationStatus({ 
         id, 
@@ -182,10 +357,16 @@ export default function ReservationsManagement() {
         stack: error?.stack
       });
       
+      let errorMessage = 'Đã có lỗi xảy ra khi cập nhật trạng thái đơn đặt bàn';
+      
       // Try to get a meaningful error message
-      const errorMessage = error?.data?.message 
-        || error?.message 
-        || "Đã có lỗi xảy ra khi cập nhật trạng thái đơn đặt bàn";
+      if (error.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.data?.error) {
+        errorMessage = error.data.error;
+      }
       
       toast({
         title: "Lỗi cập nhật trạng thái",
@@ -200,14 +381,28 @@ export default function ReservationsManagement() {
   }
 
   const handleEditReservation = (reservation: Reservation) => {
-    setSelectedReservation(null) // Close details modal
-    setIsEditModalOpen(true)
-    setSelectedReservation(reservation) // Set the reservation to edit
+    // Check if reservation is in the past and confirmed
+    const reservationDateTime = new Date(`${reservation.reservationDate}T${reservation.reservationTime}`);
+    const now = new Date();
+    
+    if (reservationDateTime < now && reservation.status === 'confirmed') {
+      toast({
+        title: "Không thể chỉnh sửa",
+        description: "Không thể chỉnh sửa đơn đặt bàn đã xác nhận trong quá khứ",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedReservation(null); // Close details modal
+    setIsEditModalOpen(true);
+    setSelectedReservation(reservation); // Set the reservation to edit
   }
 
   const handleSaveReservation = async (formData: any) => {
     try {
       console.log('Form data being submitted:', formData);
+      
       if (isAddModalOpen) {
         if (!user?.id) {
           toast({
@@ -224,26 +419,66 @@ export default function ReservationsManagement() {
           updatedBy: user.id
         }).unwrap()
         console.log('Create reservation response:', result);
+        
+        // First refetch to get updated data
+        await refetch()
+        
+        // Then close modal and show success message
+        setIsAddModalOpen(false)
         toast({
           title: "Thêm đặt bàn thành công",
           description: "Đơn đặt bàn mới đã được tạo",
         })
-        setIsAddModalOpen(false)
       } else if (isEditModalOpen && selectedReservation) {
-        await updateReservation({
+        console.log('Updating reservation:', {
           id: selectedReservation._id,
-          reservation: formData
+          formData
+        });
+        
+        const result = await updateReservation({
+          id: selectedReservation._id,
+          reservation: {
+            ...formData,
+            updatedBy: user?.id
+          }
         }).unwrap()
+        console.log('Update result:', result);
+        
+        // First refetch to get updated data
+        await refetch()
+        
+        // Then close modal and show success message
+        setIsEditModalOpen(false)
+        setSelectedReservation(null) // Clear selected reservation
         toast({
           title: "Cập nhật đơn đặt bàn thành công",
           description: "Thông tin đơn đặt bàn đã được cập nhật",
         })
-        setIsEditModalOpen(false)
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error saving reservation:', {
+        error,
+        name: error?.name,
+        message: error?.message,
+        status: error?.status,
+        data: error?.data,
+        stack: error?.stack
+      });
+      
+      let errorMessage = 'Đã có lỗi xảy ra khi lưu đơn đặt bàn';
+      
+      // Try to get a meaningful error message
+      if (error.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.data?.error) {
+        errorMessage = error.data.error;
+      }
+      
       toast({
         title: "Lỗi",
-        description: "Đã có lỗi xảy ra khi lưu đơn đặt bàn",
+        description: errorMessage,
         variant: "destructive",
       })
     }
@@ -255,31 +490,96 @@ export default function ReservationsManagement() {
   }
 
   const confirmDelete = async () => {
-    if (!selectedReservation) return
+    if (!selectedReservation) return;
 
     try {
-      await deleteReservation(selectedReservation._id).unwrap()
+      console.log('Deleting reservation:', selectedReservation._id);
+      await deleteReservation(selectedReservation._id).unwrap();
+      console.log('Delete successful');
+
+      // Refetch to ensure data consistency
+      await refetch();
+      
       toast({
         title: "Xóa đơn đặt bàn thành công",
         description: "Đơn đặt bàn đã được xóa",
-      })
-      setIsDeleteModalOpen(false)
-      setSelectedReservation(null)
-    } catch (error) {
+      });
+      
+      setIsDeleteModalOpen(false);
+      setSelectedReservation(null);
+    } catch (error: any) {
+      console.error('Error deleting reservation:', {
+        error,
+        name: error?.name,
+        message: error?.message,
+        status: error?.status,
+        data: error?.data,
+        stack: error?.stack
+      });
+      
+      let errorMessage = 'Đã có lỗi xảy ra khi xóa đơn đặt bàn';
+      
+      // Try to get a meaningful error message
+      if (error.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.data?.error) {
+        errorMessage = error.data.error;
+      }
+      
       toast({
         title: "Lỗi xóa đơn đặt bàn",
-        description: "Đã có lỗi xảy ra khi xóa đơn đặt bàn",
+        description: errorMessage,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
-  // Lọc reservations theo search query
-  const displayedReservations = (selectedStatus === "Tất cả" ? reservations : filteredReservations)?.filter(
-    (reservation) =>
-      reservation.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reservation.customerPhone.includes(searchQuery)
-  ) || []
+  // Lọc reservations theo search query và status
+  const displayedReservations = useMemo(() => {
+    let filtered = reservations || [];
+    
+    console.log('Filtering reservations:', {
+      total: filtered.length,
+      selectedStatus,
+      searchQuery,
+      currentReservations: filtered.map(r => ({
+        id: r._id,
+        status: r.status,
+        name: r.customerName
+      }))
+    });
+
+    // Filter by status if not "Tất cả"
+    if (selectedStatus !== "Tất cả") {
+      filtered = filtered.filter(reservation => reservation.status === selectedStatus);
+      console.log('After status filter:', {
+        status: selectedStatus,
+        count: filtered.length,
+        filtered: filtered.map(r => ({
+          id: r._id,
+          status: r.status,
+          name: r.customerName
+        }))
+      });
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(
+        reservation =>
+          reservation.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          reservation.customerPhone.includes(searchQuery)
+      );
+      console.log('After search filter:', {
+        searchQuery,
+        count: filtered.length
+      });
+    }
+
+    return filtered;
+  }, [reservations, selectedStatus, searchQuery]);
 
   // Helper function to format date
   const formatDate = (dateString: string | Date) => {
@@ -309,11 +609,47 @@ export default function ReservationsManagement() {
     return formatDistanceToNow(expiryDate, { addSuffix: true })
   }
 
-  // Show loading state while loading restaurants
-  if (isLoading) {
+  // Show loading state while loading restaurants or reservations
+  if (isLoading || isLoadingRestaurants) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-900 border-t-transparent"></div>
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-900 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there was an error loading data
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-4">
+            <AlertCircle size={48} className="mx-auto" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Không thể tải dữ liệu đặt bàn</h2>
+          <p className="text-gray-600">Vui lòng thử lại sau hoặc liên hệ hỗ trợ</p>
+          <Button 
+            onClick={() => refetch()} 
+            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Thử lại
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if restaurants failed to load
+  if (!restaurants || restaurants.length === 0) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-800">Không thể tải dữ liệu nhà hàng</h2>
+          <p className="text-gray-600 mt-2">Vui lòng thử lại sau</p>
+        </div>
       </div>
     )
   }
@@ -321,12 +657,8 @@ export default function ReservationsManagement() {
   return (
     <div className="p-6">
       <Tabs value="reservations" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="reservations">Quản Lý Đặt Bàn</TabsTrigger>
-        </TabsList>
-
         <TabsContent value="reservations">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold">Quản Lý Đặt Bàn</h1>
             <Button
               onClick={handleAddReservation}
@@ -338,7 +670,7 @@ export default function ReservationsManagement() {
           </div>
 
           {/* Thanh tìm kiếm và lọc */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="relative flex-1">
               <input
                 type="text"
@@ -351,19 +683,45 @@ export default function ReservationsManagement() {
             </div>
 
             <div className="relative">
-              <button
-                onClick={() => setSelectedStatus(selectedStatus === "Tất cả" ? "Tất cả" : selectedStatus)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
-              >
-                <Filter size={20} />
-                <span>
-                  Trạng thái:{" "}
-                  {selectedStatus === "Tất cả"
-                    ? selectedStatus
-                    : reservationStatusLabels[selectedStatus as keyof typeof reservationStatusLabels]}
-                </span>
-                <ChevronDown size={16} />
-              </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Filter size={20} />
+                    <span>
+                      Trạng thái:{" "}
+                      {selectedStatus === "Tất cả"
+                        ? selectedStatus
+                        : reservationStatusLabels[selectedStatus as keyof typeof reservationStatusLabels]}
+                    </span>
+                    <ChevronDown size={16} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2">
+                  <div className="flex flex-col gap-1">
+                    {reservationStatuses.map((status) => (
+                      <Button
+                        key={status}
+                        variant={selectedStatus === status ? "default" : "ghost"}
+                        className="justify-start"
+                        onClick={() => {
+                          setSelectedStatus(status);
+                          // Reset search when changing status
+                          setSearchQuery("");
+                        }}
+                      >
+                        {status === "Tất cả" ? (
+                          status
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {reservationStatusIcons[status as keyof typeof reservationStatusIcons]}
+                            <span>{reservationStatusLabels[status as keyof typeof reservationStatusLabels]}</span>
+                          </div>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -441,9 +799,6 @@ export default function ReservationsManagement() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Trạng thái
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Hết hạn
-                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Thao tác
                     </th>
@@ -458,7 +813,7 @@ export default function ReservationsManagement() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
-                          {restaurants?.find((r) => r._id === reservation.restaurantId)?.name || "N/A"}
+                          <RestaurantInfo restaurantId={reservation.restaurantId} />
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -483,13 +838,6 @@ export default function ReservationsManagement() {
                           <span className="ml-1">{reservationStatusLabels[reservation.status]}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className={`text-sm ${isReservationExpired(reservation) ? "text-red-600" : "text-gray-500"}`}
-                        >
-                          {getTimeUntilExpiry(reservation)}
-                        </div>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleViewDetails(reservation)}
@@ -502,7 +850,7 @@ export default function ReservationsManagement() {
                   ))}
                   {displayedReservations.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
                         Không có đặt bàn nào vào ngày này
                       </td>
                     </tr>
@@ -548,9 +896,9 @@ export default function ReservationsManagement() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Building size={16} className="text-red-600" />
-                  <p className="text-sm">
-                    {restaurants?.find((r) => r._id === selectedReservation.restaurantId)?.name || "N/A"}
-                  </p>
+                  <div className="text-sm">
+                    <RestaurantInfo restaurantId={selectedReservation.restaurantId} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -576,18 +924,6 @@ export default function ReservationsManagement() {
                   </span>
                 </div>
               </div>
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Thời hạn</h3>
-                <div
-                  className={`flex items-center gap-2 ${
-                    isReservationExpired(selectedReservation) ? "text-red-600" : "text-gray-600"
-                  }`}
-                >
-                  <Clock3 size={16} />
-                  <p className="text-sm">{getTimeUntilExpiry(selectedReservation)}</p>
-                </div>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -595,7 +931,13 @@ export default function ReservationsManagement() {
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Người tạo</h3>
                 <div className="flex items-center gap-2 text-gray-600">
                   <User size={16} />
-                  <p className="text-sm">{restaurants?.find((u) => u._id === selectedReservation.createdBy)?.name || "N/A"}</p>
+                  <p className="text-sm">
+                    {selectedReservation.createdBy ? (
+                      <UserInfo userId={selectedReservation.createdBy} />
+                    ) : (
+                      <span className="text-gray-500">N/A</span>
+                    )}
+                  </p>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.createdAt).toLocaleString()}</p>
               </div>
@@ -604,7 +946,13 @@ export default function ReservationsManagement() {
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Cập nhật cuối</h3>
                 <div className="flex items-center gap-2 text-gray-600">
                   <User size={16} />
-                  <p className="text-sm">{restaurants?.find((u) => u._id === selectedReservation.updatedBy)?.name || "N/A"}</p>
+                  <p className="text-sm">
+                    {selectedReservation.updatedBy ? (
+                      <UserInfo userId={selectedReservation.updatedBy} />
+                    ) : (
+                      <span className="text-gray-500">N/A</span>
+                    )}
+                  </p>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.updatedAt).toLocaleString()}</p>
               </div>
@@ -618,6 +966,22 @@ export default function ReservationsManagement() {
             </div>
 
             <div className="flex justify-end gap-2">
+              {/* Show warning if reservation is in the past */}
+              {isReservationInPast(selectedReservation) && (
+                <div className="w-full bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <AlertCircle className="h-5 w-5 text-yellow-400" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        Đơn đặt bàn này đã qua thời gian đặt. Không thể thay đổi trạng thái.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {selectedReservation.status !== "cancelled" && (
                 <Button
                   onClick={async () => {
@@ -625,6 +989,7 @@ export default function ReservationsManagement() {
                     setSelectedReservation(null)
                   }}
                   className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+                  disabled={isReservationInPast(selectedReservation)}
                 >
                   <XCircle size={16} />
                   <span>Hủy đặt bàn</span>
@@ -638,6 +1003,7 @@ export default function ReservationsManagement() {
                     setSelectedReservation(null)
                   }}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  disabled={isReservationInPast(selectedReservation)}
                 >
                   <CheckCircle size={16} />
                   <span>Xác nhận</span>
@@ -647,6 +1013,9 @@ export default function ReservationsManagement() {
               <Button
                 onClick={() => handleEditReservation(selectedReservation)}
                 className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
+                disabled={
+                  (selectedReservation.status === 'confirmed' && isReservationInPast(selectedReservation))
+                }
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

@@ -1,4 +1,5 @@
 const Table = require('../models/table.model');
+const Reservation = require('../models/reservation.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
 
 // Get all tables
@@ -229,22 +230,131 @@ module.exports.getTablesByRestaurant = controllerHandler(async (req, res) => {
 module.exports.getAvailableTables = controllerHandler(async (req, res) => {
     try {
         const { restaurantId } = req.params;
-        const tables = await Table.find({ 
+        const { date, time } = req.query;
+
+        console.log('[Backend] getAvailableTables called with:', {
             restaurantId,
-            status: 'available',
+            date,
+            time,
+            params: req.params,
+            query: req.query,
+            url: req.url
+        });
+
+        if (!date || !time) {
+            return res.status(400).json({
+                success: false,
+                message: 'Date and time are required',
+                error: {
+                    type: 'ValidationError',
+                    details: {
+                        date: !date ? 'Date is required' : undefined,
+                        time: !time ? 'Time is required' : undefined
+                    }
+                }
+            });
+        }
+
+        // First get all tables for the restaurant
+        const allTables = await Table.find({ 
+            restaurantId,
             deleted: false 
         }).sort('tableNumber');
 
-        res.status(200).json({
+        if (!allTables || allTables.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No tables found for this restaurant',
+                error: {
+                    type: 'NotFoundError',
+                    details: {
+                        restaurantId,
+                        tablesCount: 0
+                    }
+                }
+            });
+        }
+
+        // Get all reservations for the date that are not cancelled
+        const reservations = await Reservation.find({
+            restaurantId,
+            reservationDate: date,
+            status: { $ne: 'cancelled' }
+        });
+
+        console.log('[Backend] Found reservations:', {
+            count: reservations.length,
+            reservations: reservations.map(r => ({
+                id: r._id,
+                date: r.reservationDate,
+                time: r.reservationTime,
+                tableIds: r.tableIds
+            }))
+        });
+
+        // Parse the requested time
+        const [hours, minutes] = time.split(':').map(Number);
+        const requestedTimeInMinutes = hours * 60 + minutes;
+
+        // Mark tables as reserved if they have a reservation within 2 hours before or after
+        const availableTables = allTables.map(table => {
+            // Safely check if the table is reserved
+            const tableReservations = reservations.filter(res => {
+                // Skip reservations without tableIds
+                if (!res.tableIds || !Array.isArray(res.tableIds)) {
+                    console.warn('[Backend] Reservation missing tableIds:', res._id);
+                    return false;
+                }
+                return res.tableIds.some(id => id.toString() === table._id.toString());
+            });
+
+            const isReserved = tableReservations.some(res => {
+                const [resHours, resMinutes] = res.reservationTime.split(':').map(Number);
+                const resTimeInMinutes = resHours * 60 + resMinutes;
+                const timeDiff = Math.abs(resTimeInMinutes - requestedTimeInMinutes);
+                return timeDiff <= 120; // Within 2 hours
+            });
+
+            return {
+                ...table.toObject(),
+                status: isReserved ? 'reserved' : (table.status || 'available')
+            };
+        });
+
+        console.log('[Backend] Available tables:', {
+            total: allTables.length,
+            available: availableTables.filter(t => t.status === 'available').length,
+            reserved: availableTables.filter(t => t.status === 'reserved').length,
+            time: time,
+            tables: availableTables.map(t => ({
+                id: t._id,
+                number: t.tableNumber,
+                status: t.status,
+                capacity: t.capacity
+            }))
+        });
+
+        return res.status(200).json({
             success: true,
             message: 'Available tables fetched successfully',
-            data: tables
+            data: availableTables
         });
+
     } catch (error) {
+        console.error('[Backend] Error in getAvailableTables:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error',
-            error: error.message
+            message: 'Error checking table availability',
+            error: {
+                type: 'ServerError',
+                message: error.message,
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+                details: {
+                    restaurantId: req.params.restaurantId,
+                    date: req.query.date,
+                    time: req.query.time
+                }
+            }
         });
     }
 });

@@ -1,5 +1,6 @@
 const Restaurant = require('../models/restaurant.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
+const mongoose = require('mongoose');
 
 // [GET] /api/v1/restaurants
 module.exports.getRestaurant = controllerHandler(async (req, res) => {
@@ -46,21 +47,39 @@ module.exports.createRestaurant = controllerHandler(async (req, res) => {
 module.exports.getRestaurantById = controllerHandler(async (req, res) => {
     try {
         const { id } = req.params;
-        const restaurant = await Restaurant.findById(id);
+        console.log(`[getRestaurantById] Fetching restaurant with ID: ${id}`);
+        
+        // Validate MongoDB ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            console.log(`[getRestaurantById] Invalid MongoDB ID format: ${id}`);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid restaurant ID format'
+            });
+        }
+
+        console.log(`[getRestaurantById] Looking for restaurant with query:`, { _id: id, deleted: false });
+        const restaurant = await Restaurant.findOne({ 
+            _id: id,
+            deleted: false 
+        });
+
         if (!restaurant) {
+            console.log(`[getRestaurantById] Restaurant not found for ID: ${id}`);
             return res.status(404).json({
                 success: false,
                 message: 'Restaurant not found'
             });
         }
-        res.status(200).json(
-            {
-                success: true,
-                message: 'Restaurant fetched successfully',
-                data: restaurant
-            }
-        );
+
+        console.log(`[getRestaurantById] Successfully found restaurant:`, restaurant);
+        res.status(200).json({
+            success: true,
+            message: 'Restaurant fetched successfully',
+            data: restaurant
+        });
     } catch (error) {
+        console.error('[getRestaurantById] Error:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error',
