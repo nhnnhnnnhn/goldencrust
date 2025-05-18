@@ -42,6 +42,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/login")
+    } else if (!isLoading && user && !user.role.includes("admin") && window.location.pathname === "/dashboard") {
+      // Redirect non-admin users from dashboard to profile
+      router.push("/dashboard/profile")
     }
   }, [user, isLoading, router])
 
@@ -62,13 +65,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const t = getTranslation(language)
 
   const userNavItems = [
-    { href: "/dashboard", label: t.dashboard.dashboard, icon: <Home className="h-5 w-5" /> },
     { href: "/dashboard/profile", label: t.dashboard.profile, icon: <User className="h-5 w-5" /> },
     { href: "/dashboard/reservations", label: t.dashboard.myReservations, icon: <Calendar className="h-5 w-5" /> },
     { href: "/dashboard/orders", label: t.dashboard.myOrders, icon: <ShoppingBag className="h-5 w-5" /> },
     { href: "/dashboard/my-delivery", label: t.dashboard.myDelivery, icon: <Truck className="h-5 w-5" /> },
-    { href: "/dashboard/history", label: t.dashboard.orderHistory, icon: <Clock className="h-5 w-5" /> },
-    { href: "/dashboard/loyalty", label: t.dashboard.loyaltyProgram, icon: <Award className="h-5 w-5" /> },
   ]
 
   const adminNavItems = [
@@ -81,7 +81,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/dashboard/delivery", label: t.dashboard.delivery, icon: <Truck className="h-5 w-5" /> },
     { href: "/dashboard/table-management", label: t.dashboard.table, icon: <Settings className="h-5 w-5" /> },
     { href: "/dashboard/payment", label: t.dashboard.payment, icon: <CreditCard className="h-5 w-5" /> },
-    { href: "/dashboard/settings", label: t.dashboard.settings, icon: <Settings className="h-5 w-5" /> },
   ]
 
   const navItems = isAdmin ? adminNavItems : userNavItems
