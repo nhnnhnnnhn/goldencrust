@@ -1,11 +1,29 @@
 const Order = require('../models/order.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
 
-
 // [POST] /api/v1/orders
 module.exports.createOrder = controllerHandler(async (req, res) => {
-    const { tableId, customerId, restaurantId, status, totalAmount, paymentMethod, orderType } = req.body;
-    const order = await Order.create({ tableId, customerId, restaurantId, status, totalAmount, paymentMethod,orderType });
+    const { userId, restaurantId, items, orderType, totalAmount } = req.body;
+
+    if (!userId || !restaurantId || !items || !orderType || !totalAmount) {
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required fields'
+        });
+    }
+
+    // Set order date to today
+    const orderDate = new Date();
+    orderDate.setHours(0, 0, 0, 0);
+
+    const order = await Order.create({
+        userId,
+        restaurantId,
+        orderDate,
+        items,
+        orderType,
+        totalAmount
+    });
 
     res.status(201).json({
         success: true,
@@ -24,10 +42,29 @@ module.exports.getOrders = controllerHandler(async (req, res) => {
     });
 });
 
+// [GET] /api/v1/orders/today
+module.exports.getTodayOrders = controllerHandler(async (req, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const orders = await Order.find({
+        orderDate: {
+            $gte: today,
+            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        }
+    });
+
+    res.status(200).json({
+        success: true,
+        message: 'Today\'s orders fetched successfully',
+        data: orders
+    });
+});
+
 // [GET] /api/v1/orders/:id
 module.exports.getOrderById = controllerHandler(async (req, res) => {
     const { id } = req.params;
-    const order = await Order.findOne({ _id: id, deleted: false });
+    const order = await Order.findById(id);
     
     if (!order) {
         return res.status(404).json({
@@ -80,8 +117,8 @@ module.exports.updateOrderStatus = controllerHandler(async (req, res) => {
         });
     }
     
-    const order = await Order.findOneAndUpdate(
-        { _id: id, deleted: false },
+    const order = await Order.findByIdAndUpdate(
+        id,
         { status },
         { new: true }
     );
@@ -104,9 +141,9 @@ module.exports.updateOrderStatus = controllerHandler(async (req, res) => {
 module.exports.deleteOrder = controllerHandler(async (req, res) => {
     const { id } = req.params;
     
-    const order = await Order.findOneAndUpdate(
-        { _id: id, deleted: false },
-        { deleted: true, deletedAt: new Date() },
+    const order = await Order.findByIdAndUpdate(
+        id,
+        { status: 'cancelled' },
         { new: true }
     );
     
@@ -119,7 +156,7 @@ module.exports.deleteOrder = controllerHandler(async (req, res) => {
 
     res.status(200).json({
         success: true,
-        message: 'Order deleted successfully',
+        message: 'Order cancelled successfully',
         data: order
     });
 });
@@ -195,6 +232,48 @@ module.exports.getOrdersByDate = controllerHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: 'Orders fetched successfully',
+        data: orders
+    });
+});
+
+// [GET] /api/v1/orders/restaurant/:restaurantId/today
+module.exports.getRestaurantTodayOrders = controllerHandler(async (req, res) => {
+    const { restaurantId } = req.params;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const orders = await Order.find({
+        restaurantId,
+        orderDate: {
+            $gte: today,
+            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        }
+    });
+    
+    res.status(200).json({
+        success: true,
+        message: 'Restaurant\'s today orders fetched successfully',
+        data: orders
+    });
+});
+
+// [GET] /api/v1/orders/type/:orderType/today
+module.exports.getTodayOrdersByType = controllerHandler(async (req, res) => {
+    const { orderType } = req.params;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const orders = await Order.find({
+        orderType,
+        orderDate: {
+            $gte: today,
+            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        }
+    });
+    
+    res.status(200).json({
+        success: true,
+        message: `Today's ${orderType} orders fetched successfully`,
         data: orders
     });
 });

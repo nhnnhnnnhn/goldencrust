@@ -24,6 +24,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useRouter } from 'next/navigation';
+import { useGetTodayOrdersQuery } from '@/redux/api/order';
 
 // Types
 interface MenuItem {
@@ -44,16 +45,23 @@ interface CartItem extends MenuItem {
 
 const MenuOrderPage = () => {
   const router = useRouter();
+  const searchParams = new URLSearchParams(window.location.search);
   
+  // Get parameters from URL
+  const urlRestaurantId = searchParams.get('restaurantId');
+  const urlOrderType = searchParams.get('orderType') as 'Dine-in' | 'Takeaway';
+  const urlUserId = searchParams.get('userId');
+
   // States for menu display
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // States for order type modal
   const [isOrderTypeModalOpen, setIsOrderTypeModalOpen] = useState(false);
-  const [orderStep, setOrderStep] = useState<'initial' | 'dineInDetails' | 'confirmed'>('initial');
-  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway' | null>(null);
-  const [restaurantId, setRestaurantId] = useState<string>('');
+  const [orderStep, setOrderStep] = useState<'initial' | 'dineInDetails' | 'confirmed'>('confirmed'); // Set to confirmed since we have the params
+  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway' | null>(urlOrderType?.toLowerCase() as 'dine-in' | 'takeaway' | null);
+  const [restaurantId, setRestaurantId] = useState<string>(urlRestaurantId || '');
+  const [userId, setUserId] = useState<string>(urlUserId || '');
   const [restaurantName, setRestaurantName] = useState<string>('');
   const [tableId, setTableId] = useState<string>('');
   const [tableNumber, setTableNumber] = useState<string>('');
@@ -68,6 +76,7 @@ const MenuOrderPage = () => {
   // Fetch data using RTK Query
   const { data: menuItemsData, isLoading: menuLoading, error: menuError } = useGetMenuItemsQuery();
   const { data: categoriesData, isLoading: categoryLoading } = useGetCategoriesQuery();
+  const { refetch: refetchOrders } = useGetTodayOrdersQuery();
 
   // Load cart and order info from localStorage on initial render
   useEffect(() => {
@@ -115,7 +124,15 @@ const MenuOrderPage = () => {
     ) {
       setOrderStep('confirmed');
     }
-  }, []);
+
+    // Set order information from URL parameters
+    if (urlRestaurantId && urlOrderType && urlUserId) {
+      setRestaurantId(urlRestaurantId);
+      setOrderType(urlOrderType.toLowerCase() as 'dine-in' | 'takeaway');
+      setUserId(urlUserId);
+      setOrderStep('confirmed');
+    }
+  }, [urlRestaurantId, urlOrderType, urlUserId]);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -253,41 +270,66 @@ const MenuOrderPage = () => {
     );
   };
 
-  const handleConfirmOrder = () => {
-    // Lấy các món chưa được xác nhận
-    const unconfirmedItems = cartItems.filter(item => !item.confirmed);
-    
-    if (unconfirmedItems.length === 0) {
-      alert(t('noNewItemsToConfirm'));
-      return;
-    }
-
-    if (!orderType) {
-      setIsOrderTypeModalOpen(true);
-      return;
-    }
-
-    // Đánh dấu tất cả các món mới là đã xác nhận
-    const updatedCart = cartItems.map(item => {
-      if (!item.confirmed) {
-        return { ...item, confirmed: true };
+  const handleConfirmOrder = async () => {
+    try {
+      // Validate cart items
+      if (cartItems.length === 0) {
+        alert(t('emptyCart'));
+        return;
       }
-      return item;
-    });
 
-    // Cập nhật giỏ hàng
-    setCartItems(updatedCart);
-    
-    // Đánh dấu đơn hàng đã được xác nhận
-    setIsOrderConfirmed(true);
-    
-    // Đóng modal xác nhận
-    setIsConfirmOrderModalOpen(false);
-    
-    // Đóng modal giỏ hàng
-    setIsCartModalOpen(false);
+      // Prepare order items
+      const orderItems = cartItems.map(item => ({
+        menuItemId: item._id,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity * (1 - (item.discountPercentage || 0) / 100)
+      }));
 
-    alert(t('orderConfirmation'));
+      // Calculate total amount
+      const totalAmount = orderItems.reduce((sum, item) => sum + item.total, 0);
+
+      // Create order request
+      const orderData = {
+        userId,
+        restaurantId,
+        items: orderItems,
+        orderType: orderType === 'dine-in' ? 'Dine-in' : 'Takeaway',
+        totalAmount
+      };
+
+      // Make API call to create order
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const result = await response.json();
+      
+      // Clear cart after successful order
+      setCartItems([]);
+      localStorage.removeItem('cartItems');
+      
+      // Show success message
+      alert(t('orderSuccess'));
+      
+      // Refetch orders to update the list
+      await refetchOrders();
+      
+      // Redirect back to orders page
+      router.push('/dashboard/orders');
+      
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      alert('Failed to create order. Please try again.');
+    }
   };
 
   const handleProceedToCheckout = () => {

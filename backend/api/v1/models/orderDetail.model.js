@@ -1,32 +1,51 @@
 const mongoose = require('mongoose');
 
 const orderDetailSchema = new mongoose.Schema({
-    orderId: String,
-    restaurantId: String,
-    items: [{
-        menuItemId: String,
-        quantity: Number,
-        price: Number,
-        discountPercentage: Number,
-        total: Number,
-    }],
-    totalAmount: Number,
-    status: {
+    date: {
+        type: Date,
+        required: true,
+        unique: true,
+        validate: {
+            validator: function(value) {
+                // Ensure the date is today
+                const today = new Date();
+                return value.toDateString() === today.toDateString();
+            },
+            message: 'OrderDetail can only be created for today'
+        }
+    },
+    restaurantId: {
         type: String,
-        enum: ['pending', 'completed', 'cancelled'],
-        default: 'pending'
+        required: true
     },
-    orderType: {
-        type: String,
-        enum: ['dine-in', 'takeaway', 'delivery'],
-        default: 'dine-in'
+    totalOrders: {
+        type: Number,
+        default: 0
     },
-    deleted: { 
-        type: Boolean,
-        default: false
+    dailyTotal: {
+        type: Number,
+        default: 0
     },
-    deletedAt: Date,
-    
+    paymentSummary: {
+        cash: {
+            count: { type: Number, default: 0 },
+            total: { type: Number, default: 0 }
+        },
+        card: {
+            count: { type: Number, default: 0 },
+            total: { type: Number, default: 0 }
+        }
+    },
+    orderTypeSummary: {
+        dineIn: {
+            count: { type: Number, default: 0 },
+            total: { type: Number, default: 0 }
+        },
+        takeaway: {
+            count: { type: Number, default: 0 },
+            total: { type: Number, default: 0 }
+        }
+    }
 }, {
     timestamps: true
 });
