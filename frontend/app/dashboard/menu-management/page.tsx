@@ -18,6 +18,7 @@ import {
   useUpdateMenuItemStatusMutation
 } from "@/redux/api/menuItems"
 import { useGetCategoriesQuery } from "@/redux/api/categoryApi"
+import type { Category } from "@/redux/api/categoryApi"
 
 // Định nghĩa kiểu dữ liệu cho MenuItem
 interface MenuItem {
@@ -31,18 +32,6 @@ interface MenuItem {
   images: string[]
   status: "active" | "inactive" | "out_of_stock"
   tags: string[]
-  deleted?: boolean
-  deletedAt?: string
-  createdAt: string
-  updatedAt: string
-}
-
-// Định nghĩa kiểu dữ liệu cho Category
-interface Category {
-  _id: string
-  name: string
-  description?: string
-  status: string
   deleted?: boolean
   deletedAt?: string
   createdAt: string
@@ -442,7 +431,7 @@ export default function MenuManagement() {
       {/* Modal thêm/sửa món ăn */}
       {showAddEditModal && currentItem && (
         <Dialog open={showAddEditModal} onOpenChange={setShowAddEditModal}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {menuItems.find((i) => i._id === currentItem._id) ? "Chỉnh Sửa Món Ăn" : "Thêm Món Ăn Mới"}
@@ -450,8 +439,8 @@ export default function MenuManagement() {
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tên món *</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Tên món *</label>
                 <Input
                   type="text"
                   value={currentItem.title || ""}
@@ -467,8 +456,8 @@ export default function MenuManagement() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục *</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Danh mục *</label>
                 <select
                   value={currentItem.categoryId || ""}
                   onChange={(e) => setCurrentItem({ ...currentItem, categoryId: e.target.value })}
@@ -486,8 +475,8 @@ export default function MenuManagement() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Giá (VNĐ) *</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Giá (VNĐ) *</label>
                 <Input
                   type="number"
                   value={currentItem.price || ""}
@@ -497,8 +486,8 @@ export default function MenuManagement() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Giảm giá (%)</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Giảm giá (%)</label>
                 <Input
                   type="number"
                   min="0"
@@ -514,8 +503,8 @@ export default function MenuManagement() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
                 <select
                   value={currentItem.status || "active"}
                   onChange={(e) =>
@@ -530,8 +519,8 @@ export default function MenuManagement() {
               </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium text-gray-700">Mô tả</label>
               <Textarea
                 value={currentItem.description || ""}
                 onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
@@ -540,8 +529,8 @@ export default function MenuManagement() {
               />
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium text-gray-700">Tags</label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {(currentItem.tags || []).map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center gap-1">
@@ -576,15 +565,19 @@ export default function MenuManagement() {
               </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh đại diện</label>
-              <div className="flex items-center space-x-4">
-                <div className="h-32 w-32 relative rounded-md overflow-hidden border border-gray-300">
-                  {imagePreview && (
-                    <Image src={imagePreview || "/placeholder.svg"} alt="Preview" fill className="object-cover" />
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium text-gray-700">Hình ảnh đại diện</label>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                <div className="h-32 w-32 relative rounded-md overflow-hidden border border-gray-300 flex-shrink-0">
+                  {imagePreview ? (
+                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center bg-gray-50">
+                      <ImageIcon size={24} className="text-gray-400" />
+                    </div>
                   )}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 w-full">
                   <Input
                     type="file"
                     accept="image/*"
@@ -596,12 +589,12 @@ export default function MenuManagement() {
               </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh bổ sung</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium text-gray-700">Hình ảnh bổ sung</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {additionalImages.map((img, index) => (
-                  <div key={index} className="relative h-24 rounded-md overflow-hidden border border-gray-300">
-                    <Image src={img || "/placeholder.svg"} alt={`Additional ${index}`} fill className="object-cover" />
+                  <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-gray-300">
+                    <Image src={img} alt={`Additional ${index}`} fill className="object-cover" />
                     <button
                       type="button"
                       onClick={() => handleRemoveImage(index)}
@@ -611,7 +604,7 @@ export default function MenuManagement() {
                     </button>
                   </div>
                 ))}
-                <div className="h-24 border border-dashed border-gray-300 rounded-md flex items-center justify-center">
+                <div className="aspect-square border border-dashed border-gray-300 rounded-md flex items-center justify-center">
                   <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
                     <ImageIcon size={24} className="text-gray-400" />
                     <span className="text-xs text-gray-500 mt-1">Thêm ảnh</span>
@@ -622,12 +615,14 @@ export default function MenuManagement() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddEditModal(false)}>
-                Hủy
-              </Button>
-              <Button onClick={handleSaveItem} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Lưu
-              </Button>
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setShowAddEditModal(false)} className="sm:mr-2">
+                  Hủy
+                </Button>
+                <Button onClick={handleSaveItem} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Lưu
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
