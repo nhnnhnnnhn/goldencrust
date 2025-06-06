@@ -13,7 +13,7 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
     networks:
-      - app-network
+      - nhn
 
   # Frontend Service
   frontend:
@@ -30,8 +30,8 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - app-network
+      - nhn
 
 networks:
-  app-network:
-    driver: bridge
+  nhn:
+    external: true
