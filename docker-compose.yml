@@ -14,11 +14,7 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
     networks:
-      nhn:
-        aliases:
-          - localhost
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - nhn
 
   # Frontend Service
   frontend:
@@ -37,11 +33,6 @@ services:
     restart: unless-stopped
     networks:
       - nhn
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
 
 networks:
   nhn:
