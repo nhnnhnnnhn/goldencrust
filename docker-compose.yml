@@ -4,34 +4,46 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: backend
+    container_name: goldencrust_backend
+    hostname: goldencrust_backend
     ports:
       - "5000:5000"
     env_file:
-      - .env
+      - ./.env
     environment:
       - NODE_ENV=production
     restart: unless-stopped
     networks:
-      - nhn
+      nhn:
+        aliases:
+          - localhost
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Frontend Service
   frontend:
     build:
       context: .
       dockerfile: ./frontend/Dockerfile
-    container_name: frontend
+    container_name: goldencrust_frontend
+    hostname: goldencrust_frontend
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://backend:5000
+      - NEXT_PUBLIC_API_URL=http://goldencrust_backend:5000
     depends_on:
       - backend
     restart: unless-stopped
     networks:
       - nhn
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
 networks:
   nhn:
     external: true
+    name: nhn
