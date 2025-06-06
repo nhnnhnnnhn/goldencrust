@@ -36,17 +36,22 @@ interface ApiMenuItem {
   categoryId: string;
   status: 'active' | 'inactive' | 'out_of_stock';
   discountPercentage: number;
+  images?: string[];
+  tags?: string[];
+  deleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface MenuItem {
-  _id: string;
-  title: string;
+  id: string;
+  name: string;
   description: string;
   price: number;
-  thumbnail: string;
-  categoryId: string;
-  status: 'active' | 'inactive' | 'out_of_stock';
-  discountPercentage: number;
+  image: string;
+  category: string;
+  ingredients: string[];
+  discountPercentage?: number;
 }
 
 interface CartItem extends MenuItem {
@@ -60,6 +65,126 @@ interface Category {
   status: string;
   slug: string;
 }
+
+interface DeliveryItem {
+  menuItemId: string;
+  menuItemName: string;
+  quantity: number;
+  price: number;
+  discountPercentage?: number;
+  total: number;
+}
+
+interface User {
+  _id: string;
+  fullName: string;
+  phone?: string;
+  address?: string;
+}
+
+type PaymentMethod = "cash on delivery" | "online payment";
+
+const mockMenuItems = [
+  {
+    id: 1,
+    name: "Golden Margherita",
+    description: "Our signature pizza featuring fresh mozzarella, vine-ripened tomatoes, and fragrant basil on our golden crust. A timeless classic that never disappoints.",
+    price: 12.99,
+    image: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?q=80&w=1000",
+    category: "Pizzas",
+    ingredients: ["Fresh Mozzarella", "Vine Tomatoes", "Fresh Basil", "Extra Virgin Olive Oil"]
+  },
+  {
+    id: 2,
+    name: "Truffle Delight",
+    description: "A luxurious combination of wild mushrooms, black truffle, aged parmesan, and our signature golden crust. An indulgent experience for the senses.",
+    price: 18.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Pizzas",
+    ingredients: ["Wild Mushrooms", "Black Truffle", "Aged Parmesan", "Fresh Thyme"]
+  },
+  {
+    id: 3,
+    name: "Mediterranean Feast",
+    description: "Sun-dried tomatoes, artichoke hearts, kalamata olives, and feta cheese on our golden crust. A taste of the Mediterranean in every bite.",
+    price: 15.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Pizzas",
+    ingredients: ["Sun-dried Tomatoes", "Artichoke Hearts", "Kalamata Olives", "Feta Cheese"]
+  },
+  {
+    id: 4,
+    name: "Golden Garlic Knots",
+    description: "Freshly baked garlic knots brushed with our special garlic butter and sprinkled with parmesan. Perfect for sharing or indulging solo.",
+    price: 6.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Sides",
+    ingredients: ["Fresh Dough", "Garlic Butter", "Parmesan", "Italian Herbs"]
+  },
+  {
+    id: 5,
+    name: "Crispy Wings",
+    description: "Golden-fried chicken wings tossed in your choice of sauce. Served with our house-made ranch dressing and celery sticks.",
+    price: 9.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Sides",
+    ingredients: ["Chicken Wings", "House Sauce", "Ranch Dressing", "Celery"]
+  },
+  {
+    id: 6,
+    name: "Caesar Salad",
+    description: "Crisp romaine lettuce, aged parmesan, house-made croutons, and our signature Caesar dressing. A fresh and satisfying choice.",
+    price: 8.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Salads",
+    ingredients: ["Romaine Lettuce", "Aged Parmesan", "House Croutons", "Caesar Dressing"]
+  },
+  {
+    id: 7,
+    name: "Tiramisu",
+    description: "Classic Italian dessert featuring layers of coffee-soaked ladyfingers and mascarpone cream, dusted with cocoa powder.",
+    price: 7.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Desserts",
+    ingredients: ["Ladyfingers", "Mascarpone", "Espresso", "Cocoa Powder"]
+  },
+  {
+    id: 8,
+    name: "Chocolate Lava Cake",
+    description: "Warm chocolate cake with a molten center, served with vanilla ice cream and fresh berries. A decadent treat for chocolate lovers.",
+    price: 8.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Desserts",
+    ingredients: ["Dark Chocolate", "Vanilla Ice Cream", "Fresh Berries", "Powdered Sugar"]
+  },
+  {
+    id: 9,
+    name: "Sparkling Lemonade",
+    description: "Freshly squeezed lemonade with a splash of sparkling water and mint leaves. Refreshing and perfect for any occasion.",
+    price: 4.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Drinks",
+    ingredients: ["Fresh Lemons", "Sparkling Water", "Mint", "Honey"]
+  },
+  {
+    id: 10,
+    name: "Berry Blast Smoothie",
+    description: "A vibrant blend of mixed berries, yogurt, and honey. Packed with antioxidants and bursting with flavor.",
+    price: 5.99,
+    image: "https://images.unsplash.com/photo-1601924582970-9238bcb495d9?q=80&w=1000",
+    category: "Drinks",
+    ingredients: ["Mixed Berries", "Greek Yogurt", "Honey", "Ice"]
+  }
+];
+
+const categories = [
+  { id: "all", name: "All Items" },
+  { id: "pizzas", name: "Pizzas" },
+  { id: "sides", name: "Sides" },
+  { id: "salads", name: "Salads" },
+  { id: "desserts", name: "Desserts" },
+  { id: "drinks", name: "Drinks" }
+];
 
 export default function DeliveryPage() {
   // Router and Auth hooks
@@ -81,9 +206,21 @@ export default function DeliveryPage() {
 
   // Transform API data
   const availableCategories = categoriesResponse?.categories || []
-  const menuItems: MenuItem[] = apiMenuItems.map(item => ({
+  const apiMenuItemsTransformed: MenuItem[] = apiMenuItems.map(item => ({
+    id: item._id,
+    name: item.title,
+    description: item.description || '',
+    price: item.price,
+    image: item.thumbnail,
+    category: item.categoryId,
+    ingredients: item.tags || [],
+    discountPercentage: item.discountPercentage
+  }))
+
+  // Use either API data or mock data
+  const menuItems = apiMenuItemsTransformed.length > 0 ? apiMenuItemsTransformed : mockMenuItems.map(item => ({
     ...item,
-    description: item.description || ''
+    id: item.id.toString()
   }))
 
   // Local state hooks
@@ -109,11 +246,12 @@ export default function DeliveryPage() {
     address: ''
   })
   const [isMounted, setIsMounted] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState("all")
 
   // Filter active menu items by category and status
-  const filteredItems = menuItems.filter(
-    (item) => item.categoryId === activeCategory && item.status === "active"
-  )
+  const filteredItems = selectedCategory === "all" 
+    ? menuItems 
+    : menuItems.filter(item => item.category.toLowerCase() === selectedCategory.toLowerCase())
 
   // Effect hooks
   useEffect(() => {
@@ -302,10 +440,10 @@ export default function DeliveryPage() {
 
   const addToCart = (item: MenuItem) => {
     setCart((prevCart) => {
-      const existingItem = prevCart.find((cartItem) => cartItem._id === item._id)
+      const existingItem = prevCart.find((cartItem) => cartItem.id === item.id)
       if (existingItem) {
         return prevCart.map((cartItem) =>
-          cartItem._id === item._id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
+          cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
         )
       } else {
         return [...prevCart, { ...item, quantity: 1 }]
@@ -313,16 +451,16 @@ export default function DeliveryPage() {
     })
   }
 
-  const removeFromCart = (itemId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item._id !== itemId))
+  const removeFromCart = (itemId: string | number) => {
+    setCart((prevCart) => prevCart.filter((item) => item.id !== itemId))
   }
 
-  const updateQuantity = (itemId: string, newQuantity: number) => {
+  const updateQuantity = (itemId: string | number, newQuantity: number) => {
     if (newQuantity < 1) {
       removeFromCart(itemId)
       return
     }
-    setCart((prevCart) => prevCart.map((item) => (item._id === itemId ? { ...item, quantity: newQuantity } : item)))
+    setCart((prevCart) => prevCart.map((item) => (item.id === itemId ? { ...item, quantity: newQuantity } : item)))
   }
 
   const getTotalItems = () => {
@@ -353,11 +491,11 @@ export default function DeliveryPage() {
         // Create checkout session for card payment
         const checkoutData = {
           items: cart.map(item => ({
-            id: item._id,
-            name: item.title,
+            id: item.id.toString(),
+            name: item.name,
             description: item.description,
             price: item.price,
-            image: item.thumbnail,
+            image: item.image,
             quantity: item.quantity
           })),
           customer: {
@@ -376,11 +514,11 @@ export default function DeliveryPage() {
         if (response.url) {
           // Store delivery info in localStorage for after payment
           const pendingDeliveryInfo = {
-            userId: user?._id,
+            userId: (user as User)?._id,
             customerName: deliveryInfo.name,
             items: cart.map(item => ({
-              menuItemId: item._id,
-              menuItemName: item.title,
+              menuItemId: item.id.toString(),
+              menuItemName: item.name,
               quantity: item.quantity,
               price: item.price,
               discountPercentage: item.discountPercentage || 0,
@@ -407,22 +545,22 @@ export default function DeliveryPage() {
       } else {
         // Create delivery for cash on delivery
         const deliveryData = {
-          userId: user?._id,
+          userId: user?._id || '',
           customerName: deliveryInfo.name,
           items: cart.map(item => ({
-            menuItemId: item._id,
-            menuItemName: item.title,
+            menuItemId: item.id,
+            menuItemName: item.name,
             quantity: item.quantity,
             price: item.price,
             discountPercentage: item.discountPercentage || 0,
             total: item.price * item.quantity
           })),
-          totalAmount: getTotalPrice() + 5, // Including delivery fee
-          expectedDeliveryTime: new Date(Date.now() + 1000 * 60 * 30), // 30 minutes from now
+          totalAmount: getTotalPrice() + 5,
+          expectedDeliveryTime: new Date(Date.now() + 1000 * 60 * 30),
           notes: deliveryInfo.notes,
           deliveryAddress: deliveryInfo.address,
           deliveryPhone: deliveryInfo.phone,
-          paymentMethod: "cash on delivery" as const,
+          paymentMethod: deliveryInfo.paymentMethod === "card" ? "online payment" : "cash on delivery" as PaymentMethod,
           paymentStatus: "pending" as const
         }
 
@@ -561,7 +699,7 @@ export default function DeliveryPage() {
                         <div className={styles.menuGrid}>
                           {filteredItems.map((item) => (
                             <div
-                              key={item._id}
+                              key={item.id}
                               className={styles.menuItem}
                               onClick={() => {
                                 setSelectedMenuItem(item)
@@ -571,15 +709,15 @@ export default function DeliveryPage() {
                             >
                               <div className={styles.menuItemImageContainer}>
                                 <Image
-                                  src={item.thumbnail || "/placeholder.svg"}
-                                  alt={item.title || "Menu item image"}
+                                  src={item.image || "/placeholder.svg"}
+                                  alt={item.name || "Menu item image"}
                                   width={300}
                                   height={300}
                                   className={styles.menuItemImage}
                                 />
                               </div>
                               <div className={styles.menuItemContent}>
-                                <h3 className={styles.menuItemName}>{item.title}</h3>
+                                <h3 className={styles.menuItemName}>{item.name}</h3>
                                 <p className={styles.menuItemDescription}>{item.description}</p>
                                 <div className={styles.menuItemFooter}>
                                   <span className={styles.menuItemPrice}>${item.price.toFixed(2)}</span>
@@ -708,9 +846,9 @@ export default function DeliveryPage() {
                       <h2 className={styles.summaryTitle}>Order Summary</h2>
                       <div className={styles.orderItems}>
                         {cart.map((item) => (
-                          <div key={item._id} className={styles.orderItem}>
+                          <div key={item.id} className={styles.orderItem}>
                             <div className={styles.orderItemQuantity}>{item.quantity}x</div>
-                            <div className={styles.orderItemName}>{item.title}</div>
+                            <div className={styles.orderItemName}>{item.name}</div>
                             <div className={styles.orderItemPrice}>${(item.price * item.quantity).toFixed(2)}</div>
                           </div>
                         ))}
@@ -877,25 +1015,25 @@ export default function DeliveryPage() {
             <>
               <div className={styles.cartItems}>
                 {cart.map((item) => (
-                  <div key={item._id} className={styles.cartItem}>
+                  <div key={item.id} className={styles.cartItem}>
                     <div className={styles.cartItemImage}>
                       <Image
-                        src={item.thumbnail || "/placeholder.svg"}
-                        alt={item.title}
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
                         width={64}
                         height={64}
                         className={styles.itemImage}
                       />
                     </div>
                     <div className={styles.cartItemDetails}>
-                      <h4 className={styles.cartItemName}>{item.title}</h4>
+                      <h4 className={styles.cartItemName}>{item.name}</h4>
                       <div className={styles.cartItemControls}>
                         <div className={styles.quantityControls}>
                           <Button
                             variant="outline"
                             size="icon"
                             className={styles.quantityButton}
-                            onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           >
                             <Minus className={styles.quantityIcon} />
                           </Button>
@@ -903,7 +1041,7 @@ export default function DeliveryPage() {
                             type="text"
                             className={styles.quantityInput}
                             value={item.quantity}
-                            onChange={(e) => updateQuantity(item._id, parseInt(e.target.value) || 1)}
+                            onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
                             min="1"
                             inputMode="numeric"
                             pattern="[0-9]*"
@@ -912,7 +1050,7 @@ export default function DeliveryPage() {
                             variant="outline"
                             size="icon"
                             className={styles.quantityButton}
-                            onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           >
                             <Plus className={styles.quantityIcon} />
                           </Button>
@@ -924,7 +1062,7 @@ export default function DeliveryPage() {
                       variant="ghost"
                       size="icon"
                       className={styles.removeButton}
-                      onClick={() => removeFromCart(item._id)}
+                      onClick={() => removeFromCart(item.id)}
                     >
                       <X className={styles.removeIcon} />
                     </Button>
@@ -974,13 +1112,13 @@ export default function DeliveryPage() {
           {selectedMenuItem && (
             <div className={styles.menuItemDetails}>
               <DialogHeader>
-                <DialogTitle className={styles.menuItemDialogTitle}>{selectedMenuItem.title}</DialogTitle>
+                <DialogTitle className={styles.menuItemDialogTitle}>{selectedMenuItem.name}</DialogTitle>
               </DialogHeader>
               
               <div className={styles.menuItemDialogImage}>
                 <Image
-                  src={selectedMenuItem.thumbnail || "/placeholder.svg"}
-                  alt={selectedMenuItem.title || "Menu item image"}
+                  src={selectedMenuItem.image || "/placeholder.svg"}
+                  alt={selectedMenuItem.name || "Menu item image"}
                   width={400}
                   height={300}
                   className={styles.detailsImage}

@@ -31,9 +31,7 @@ interface Category {
   name: string;
   description: string;
   status: string;
-  slug: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 interface CategoryDataTableProps {
