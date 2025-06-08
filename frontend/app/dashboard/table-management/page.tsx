@@ -81,10 +81,11 @@ export default function TableManagement() {
   const [showAddEditModal, setShowAddEditModal] = useState(false)
   const [currentTable, setCurrentTable] = useState<Partial<Table> | null>(null)
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("")
+  const [tableNumberError, setTableNumberError] = useState<string>("")
 
   // API Hooks
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
-  const { data: tables = [], isLoading: isLoadingTables, error: tablesError } = useGetTablesByRestaurantQuery(selectedRestaurantId, {
+  const { data: tables = [], isLoading: isLoadingTables, error: tablesError, refetch } = useGetTablesByRestaurantQuery(selectedRestaurantId, {
     skip: !selectedRestaurantId
   })
   const [createTable] = useCreateTableMutation()
@@ -133,6 +134,32 @@ export default function TableManagement() {
       selectedStatus
     })
   }, [tables, filteredTables, searchTerm, selectedStatus])
+
+  // Kiểm tra trùng số bàn
+  const checkDuplicateTableNumber = (tableNumber: string, excludeTableId?: string) => {
+    if (!tables || !Array.isArray(tables)) return false
+    
+    return tables.some(table => 
+      table.tableNumber === tableNumber && 
+      table.restaurantId === selectedRestaurantId &&
+      (!excludeTableId || table._id !== excludeTableId)
+    )
+  }
+
+  // Xử lý thay đổi số bàn
+  const handleTableNumberChange = (value: string) => {
+    if (!currentTable) return
+
+    // Reset error
+    setTableNumberError("")
+
+    // Kiểm tra trùng số bàn
+    if (value && checkDuplicateTableNumber(value, currentTable._id)) {
+      setTableNumberError("This table number already exists in the restaurant")
+    }
+
+    setCurrentTable({ ...currentTable, tableNumber: value })
+  }
 
   // Xử lý thêm bàn mới
   const handleAddTable = () => {
@@ -194,14 +221,38 @@ export default function TableManagement() {
       return
     }
 
+    // Kiểm tra trùng số bàn trước khi lưu
+    if (checkDuplicateTableNumber(currentTable.tableNumber, currentTable._id)) {
+      toast({
+        title: "Error",
+        description: "This table number already exists in the restaurant",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       if (currentTable._id) {
         // Update existing table
         const { _id, ...updateData } = currentTable
+        // Ensure status is included in the update
+        const dataToUpdate = {
+          ...updateData,
+          status: updateData.status || 'available'
+        }
         await updateTable({
           id: _id,
-          data: updateData
+          data: dataToUpdate
         }).unwrap()
+        
+        // Also update the table status if it has changed
+        if (dataToUpdate.status) {
+          await updateTableStatus({
+            id: _id,
+            data: { status: dataToUpdate.status }
+          }).unwrap()
+        }
+        
         toast({
           title: "Success",
           description: `Table ${currentTable.tableNumber} has been updated.`,
@@ -211,7 +262,8 @@ export default function TableManagement() {
         const newTableData = {
           restaurantId: currentTable.restaurantId,
           tableNumber: currentTable.tableNumber,
-          capacity: Number(currentTable.capacity)
+          capacity: Number(currentTable.capacity),
+          status: currentTable.status || 'available'
         }
         console.log('Creating table with data:', newTableData)
         try {
@@ -237,6 +289,8 @@ export default function TableManagement() {
         }
       }
       setShowAddEditModal(false)
+      // Force refetch tables after update
+      refetch()
     } catch (error) {
       const err = error as { 
         status?: number;
@@ -278,6 +332,9 @@ export default function TableManagement() {
         title: "Success",
         description: `Table status has been updated to ${statusLabels[newStatus]}.`,
       })
+      
+      // Force refetch tables after status update
+      refetch()
     } catch (error) {
       toast({
         title: "Error",
@@ -377,9 +434,15 @@ export default function TableManagement() {
                 <Input
                   type="text"
                   value={currentTable.tableNumber || ""}
-                  onChange={(e) => setCurrentTable({ ...currentTable, tableNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => handleTableNumberChange(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    tableNumberError ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  disabled={!!currentTable._id}
                 />
+                {tableNumberError && (
+                  <p className="mt-1 text-sm text-red-500">{tableNumberError}</p>
+                )}
               </div>
 
               <div>
@@ -420,7 +483,11 @@ export default function TableManagement() {
               <Button variant="outline" onClick={() => setShowAddEditModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveTable} className="bg-[#003087] hover:bg-[#002266] text-white">
+              <Button 
+                onClick={handleSaveTable} 
+                className="bg-[#003087] hover:bg-[#002266] text-white"
+                disabled={!!tableNumberError}
+              >
                 Save
               </Button>
             </div>
