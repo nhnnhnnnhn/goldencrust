@@ -2,13 +2,12 @@ const mongoose = require('mongoose');
 
 const tableSchema = new mongoose.Schema({
     restaurantId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Restaurant'  // Sửa thành Restaurant để khớp với model
+        type: String,
+        required: true
     },
     tableNumber: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
     capacity: {
         type: Number,
@@ -19,18 +18,17 @@ const tableSchema = new mongoose.Schema({
         enum: ['available', 'reserved', 'occupied'],
         default: 'available'
     },
-    location: {
-        type: String,
-        required: true
-    },
     deleted: { 
         type: Boolean,
         default: false
-    },
-    deletedAt: Date
+    }
 }, {
-    timestamps: true
+    timestamps: false
 });
 
+// Tạo compound index để đảm bảo tableNumber unique trong một nhà hàng
+tableSchema.index({ restaurantId: 1, tableNumber: 1 }, { unique: true });
+
 const Table = mongoose.model('Table', tableSchema, 'table');
+
 module.exports = Table;

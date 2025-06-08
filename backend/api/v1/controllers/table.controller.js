@@ -24,10 +24,10 @@ module.exports.getTables = controllerHandler(async (req, res) => {
 // Create table
 module.exports.createTable = controllerHandler(async (req, res) => {
     try {
-        const { restaurantId, tableNumber, capacity, location } = req.body;
+        const { restaurantId, tableNumber, capacity } = req.body;
 
         // Validate required fields
-        if (!restaurantId || !tableNumber || !capacity || !location) {
+        if (!restaurantId || !tableNumber || !capacity) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields'
@@ -52,7 +52,6 @@ module.exports.createTable = controllerHandler(async (req, res) => {
             restaurantId,
             tableNumber,
             capacity,
-            location,
             status: 'available'
         });
 
@@ -102,13 +101,13 @@ module.exports.getTableById = controllerHandler(async (req, res) => {
 module.exports.updateTable = controllerHandler(async (req, res) => {
     try {
         const { id } = req.params;
-        const { capacity, location } = req.body;
+        const { capacity } = req.body;
 
         const table = await Table.findOneAndUpdate(
             { _id: id, deleted: false },
-            { capacity, location },
+            { capacity },
             { new: true }
-        ).populate('restaurantId');
+        );
 
         if (!table) {
             return res.status(404).json({
@@ -178,7 +177,7 @@ module.exports.deleteTable = controllerHandler(async (req, res) => {
         
         const table = await Table.findOneAndUpdate(
             { _id: id, deleted: false },
-            { deleted: true, deletedAt: new Date() },
+            { deleted: true },
             { new: true }
         );
 
