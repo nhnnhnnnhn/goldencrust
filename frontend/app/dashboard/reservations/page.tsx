@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -14,9 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Building,
-  User,
+  User as UserIcon,
   Clock3,
   Trash2,
+  Edit,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -37,12 +38,15 @@ import {
   useGetReservationsByDateRangeQuery,
   useGetReservationsByStatusQuery,
   type Restaurant,
-  type Reservation
+  type Reservation,
+  useGetUserByIdQuery,
+  type User as ApiUser
 } from '@/redux/api'
 import { useAppSelector } from "@/redux/hooks"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { vi } from "date-fns/locale"
+import { useRouter } from "next/navigation"
 
 // Định nghĩa kiểu dữ liệu cho Table
 interface Table {
@@ -60,14 +64,6 @@ interface Table {
   updatedAt: Date
 }
 
-// Định nghĩa kiểu dữ liệu cho User
-interface UserType {
-  _id: string
-  name: string
-  email: string
-  role: string
-}
-
 // Định nghĩa kiểu dữ liệu cho ReservedTable
 interface ReservedTable {
   _id: string
@@ -82,20 +78,21 @@ interface ReservedTable {
 
 // Danh sách trạng thái đặt bàn
 const reservationStatuses = ["Tất cả", "pending", "confirmed", "cancelled"]
-const reservationStatusLabels = {
+const reservationStatusLabels: Record<string, string> = {
   pending: "Chờ xác nhận",
   confirmed: "Đã xác nhận",
   cancelled: "Đã hủy",
+  "Tất cả": "Tất cả"
 }
-const reservationStatusColors = {
+const reservationStatusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  cancelled: "bg-red-100 text-red-800"
 }
-const reservationStatusIcons = {
-  pending: <AlertCircle size={16} className="text-yellow-600" />,
-  confirmed: <CheckCircle size={16} className="text-green-600" />,
-  cancelled: <XCircle size={16} className="text-red-600" />,
+const reservationStatusIcons: Record<string, React.JSX.Element> = {
+  pending: <AlertCircle size={12} />,
+  confirmed: <CheckCircle size={12} />,
+  cancelled: <XCircle size={12} />
 }
 
 // Danh sách trạng thái bàn đã đặt
@@ -111,30 +108,65 @@ const reservedTableStatusColors = {
   cancelled: "bg-red-100 text-red-800",
 }
 
+// ReservationStatusBadge component
+const ReservationStatusBadge = ({ status }: { status: string }) => (
+  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full items-center ${reservationStatusColors[status]}`}>
+    {reservationStatusIcons[status]}
+    <span className="ml-1">{reservationStatusLabels[status]}</span>
+  </span>
+)
+
+interface PopulatedUser {
+  _id: string;
+  name: string;
+  email: string;
+  nickname: string;
+}
+
 export default function ReservationsManagement() {
+  const router = useRouter()
   const { toast } = useToast()
   const { user } = useAppSelector((state) => state.auth)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedStatus, setSelectedStatus] = useState("Tất cả")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [isAssignTablesModalOpen, setIsAssignTablesModalOpen] = useState(false)
 
   // Queries
-  const { data: restaurants } = useGetRestaurantsQuery()
+  const { data: restaurants, isLoading: isLoadingRestaurants, error: restaurantsError } = useGetRestaurantsQuery()
   const { data: reservations, isLoading, error, refetch } = useGetReservationsByDateRangeQuery({
     startDate: format(selectedDate, 'yyyy-MM-dd'),
     endDate: format(selectedDate, 'yyyy-MM-dd')
   }, {
     refetchOnMountOrArgChange: true
   })
+  
   const { data: filteredReservations } = useGetReservationsByStatusQuery(
     selectedStatus as 'pending' | 'confirmed' | 'cancelled',
     { skip: selectedStatus === 'Tất cả' }
   )
+
+  // Get user data for creator and updater
+  const { data: creatorData } = useGetUserByIdQuery(
+    selectedReservation?.createdBy as string || '',
+    { skip: !selectedReservation?.createdBy }
+  )
+  const { data: updaterData } = useGetUserByIdQuery(
+    selectedReservation?.updatedBy as string || '',
+    { skip: !selectedReservation?.updatedBy }
+  )
+
+  // Debug logs
+  useEffect(() => {
+    console.log('Selected date:', selectedDate)
+    console.log('Date query params:', {
+      startDate: format(selectedDate, 'yyyy-MM-dd'),
+      endDate: format(selectedDate, 'yyyy-MM-dd')
+    })
+    console.log('Raw reservations:', reservations)
+  }, [selectedDate, reservations])
 
   // Mutations
   const [updateReservationStatus] = useUpdateReservationStatusMutation()
@@ -142,9 +174,58 @@ export default function ReservationsManagement() {
   const [updateReservation] = useUpdateReservationMutation()
   const [deleteReservation, { isLoading: isDeleting }] = useDeleteReservationMutation()
 
+  // Helper function to get restaurant name
+  const getRestaurantName = (restaurantId: string | Restaurant): string => {
+    if (!restaurantId) {
+      console.log('No restaurant ID provided')
+      return "Không có thông tin"
+    }
+
+    // If restaurantId is an object (populated), return its name directly
+    if (typeof restaurantId === 'object' && 'name' in restaurantId) {
+      return restaurantId.name
+    }
+
+    // If restaurantId is a string, find the restaurant in the list
+    if (isLoadingRestaurants) {
+      console.log('Restaurants are still loading')
+      return "Đang tải..."
+    }
+
+    if (!restaurants) {
+      console.log('No restaurants data available')
+      return "Đang tải..."
+    }
+
+    if (!Array.isArray(restaurants)) {
+      console.error('Restaurants data is not an array:', restaurants)
+      return "Lỗi dữ liệu"
+    }
+
+    console.log('Looking for restaurant with ID:', restaurantId)
+    console.log('Available restaurants:', restaurants.map(r => ({ id: r._id, name: r.name })))
+    
+    const restaurant = restaurants.find(r => r._id === restaurantId)
+
+    if (!restaurant) {
+      console.log('Restaurant not found for ID:', restaurantId)
+      return "Không tìm thấy"
+    }
+
+    console.log('Found restaurant:', restaurant)
+    return restaurant.name
+  }
+
+  // Helper function to get restaurant ID as string
+  const getRestaurantId = (restaurantId: string | Restaurant): string => {
+    if (typeof restaurantId === 'object' && '_id' in restaurantId) {
+      return restaurantId._id
+    }
+    return restaurantId
+  }
+
   const handleViewDetails = (reservation: Reservation) => {
     setSelectedReservation(reservation)
-    // Implement view details modal
   }
 
   const handleUpdateStatus = async (id: string, newStatus: "pending" | "confirmed" | "cancelled") => {
@@ -196,49 +277,67 @@ export default function ReservationsManagement() {
   };
 
   const handleAddReservation = () => {
-    setIsAddModalOpen(true)
+    router.push('/reservation')
   }
 
   const handleEditReservation = (reservation: Reservation) => {
+    // Prevent editing cancelled reservations
+    if (reservation.status === "cancelled") {
+      toast({
+        title: "Không thể chỉnh sửa",
+        description: "Không thể chỉnh sửa đơn đặt bàn đã hủy",
+        variant: "destructive",
+      })
+      return
+    }
+    
     setSelectedReservation(null) // Close details modal
     setIsEditModalOpen(true)
-    setSelectedReservation(reservation) // Set the reservation to edit
+    setSelectedReservation(reservation)
   }
 
   const handleSaveReservation = async (formData: any) => {
     try {
       console.log('Form data being submitted:', formData);
-      if (isAddModalOpen) {
-        if (!user?.id) {
-          toast({
-            title: "Lỗi",
-            description: "Bạn cần đăng nhập để thực hiện thao tác này",
-            variant: "destructive",
-          })
-          return
-        }
-
-        const result = await createReservation({
-          ...formData,
-          createdBy: user.id,
-          updatedBy: user.id
-        }).unwrap()
-        console.log('Create reservation response:', result);
+      if (!user?.id) {
         toast({
-          title: "Thêm đặt bàn thành công",
-          description: "Đơn đặt bàn mới đã được tạo",
+          title: "Lỗi",
+          description: "Bạn cần đăng nhập để thực hiện thao tác này",
+          variant: "destructive",
         })
-        setIsAddModalOpen(false)
-      } else if (isEditModalOpen && selectedReservation) {
+        return
+      }
+
+      if (isEditModalOpen && selectedReservation) {
+        // Update existing reservation
         await updateReservation({
           id: selectedReservation._id,
-          reservation: formData
+          reservation: {
+            ...formData,
+            restaurantId: getRestaurantId(formData.restaurantId)
+          }
         }).unwrap()
+        
+        // Close edit modal first
+        setIsEditModalOpen(false)
+        
+        // Refetch data and update UI
+        await refetch()
+        
+        // Get the updated reservation data
+        const updatedReservations = await refetch()
+        const updatedReservation = updatedReservations.data?.find(
+          (r) => r._id === selectedReservation._id
+        )
+        
+        if (updatedReservation) {
+          setSelectedReservation(updatedReservation)
+        }
+        
         toast({
           title: "Cập nhật đơn đặt bàn thành công",
           description: "Thông tin đơn đặt bàn đã được cập nhật",
         })
-        setIsEditModalOpen(false)
       }
     } catch (error) {
       toast({
@@ -274,12 +373,37 @@ export default function ReservationsManagement() {
     }
   }
 
-  // Lọc reservations theo search query
-  const displayedReservations = (selectedStatus === "Tất cả" ? reservations : filteredReservations)?.filter(
-    (reservation) =>
-      reservation.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reservation.customerPhone.includes(searchQuery)
-  ) || []
+  // Filter and sort reservations
+  const displayedReservations = useMemo(() => {
+    console.log('Filtering reservations with status:', selectedStatus)
+    console.log('Available reservations:', reservations)
+    
+    let result = reservations || []
+    
+    // Filter by status if not "Tất cả"
+    if (selectedStatus !== "Tất cả") {
+      result = result.filter(r => r.status === selectedStatus.toLowerCase())
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(r => 
+        r.customerName.toLowerCase().includes(query) ||
+        r.customerPhone.toLowerCase().includes(query)
+      )
+    }
+    
+    // Sort by date and time
+    result = [...result].sort((a, b) => {
+      const dateA = new Date(`${a.reservationDate} ${a.reservationTime}`)
+      const dateB = new Date(`${b.reservationDate} ${b.reservationTime}`)
+      return dateA.getTime() - dateB.getTime()
+    })
+    
+    console.log('Filtered reservations:', result)
+    return result
+  }, [reservations, selectedStatus, searchQuery])
 
   // Helper function to format date
   const formatDate = (dateString: string | Date) => {
@@ -295,20 +419,6 @@ export default function ReservationsManagement() {
     setSelectedDate(newDate)
   }
 
-  // Helper function to check if reservation is expired
-  const isReservationExpired = (reservation: Reservation) => {
-    if (!reservation.expiredAt) return false
-    const expiryDate = typeof reservation.expiredAt === "string" ? new Date(reservation.expiredAt) : reservation.expiredAt
-    return isPast(expiryDate)
-  }
-
-  // Helper function to get time until expiry
-  const getTimeUntilExpiry = (reservation: Reservation) => {
-    if (!reservation.expiredAt) return "N/A"
-    const expiryDate = typeof reservation.expiredAt === "string" ? new Date(reservation.expiredAt) : reservation.expiredAt
-    return formatDistanceToNow(expiryDate, { addSuffix: true })
-  }
-
   // Show loading state while loading restaurants
   if (isLoading) {
     return (
@@ -321,10 +431,6 @@ export default function ReservationsManagement() {
   return (
     <div className="p-6">
       <Tabs value="reservations" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="reservations">Quản Lý Đặt Bàn</TabsTrigger>
-        </TabsList>
-
         <TabsContent value="reservations">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Quản Lý Đặt Bàn</h1>
@@ -351,19 +457,26 @@ export default function ReservationsManagement() {
             </div>
 
             <div className="relative">
-              <button
-                onClick={() => setSelectedStatus(selectedStatus === "Tất cả" ? "Tất cả" : selectedStatus)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
+              <Select
+                value={selectedStatus}
+                onValueChange={setSelectedStatus}
               >
-                <Filter size={20} />
-                <span>
-                  Trạng thái:{" "}
-                  {selectedStatus === "Tất cả"
-                    ? selectedStatus
-                    : reservationStatusLabels[selectedStatus as keyof typeof reservationStatusLabels]}
-                </span>
-                <ChevronDown size={16} />
-              </button>
+                <SelectTrigger className="w-[200px]">
+                  <div className="flex items-center gap-2">
+                    <Filter size={20} />
+                    <span>
+                      Trạng thái: {reservationStatusLabels[selectedStatus]}
+                    </span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {reservationStatuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {reservationStatusLabels[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -421,94 +534,43 @@ export default function ReservationsManagement() {
           </div>
 
           {/* Bảng đặt bàn */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Khách hàng
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nhà hàng
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Thời gian
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Số người
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Trạng thái
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Hết hạn
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Thao tác
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {displayedReservations.map((reservation) => (
-                    <tr key={reservation._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{reservation.customerName}</div>
-                        <div className="text-sm text-gray-500">{reservation.customerPhone}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
-                          {restaurants?.find((r) => r._id === reservation.restaurantId)?.name || "N/A"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Clock size={16} className="mr-1" />
-                          {reservation.reservationTime}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Users size={16} className="mr-1" />
-                          {reservation.numberOfGuests} người
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            reservationStatusColors[reservation.status]
-                          }`}
-                        >
-                          {reservationStatusIcons[reservation.status]}
-                          <span className="ml-1">{reservationStatusLabels[reservation.status]}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className={`text-sm ${isReservationExpired(reservation) ? "text-red-600" : "text-gray-500"}`}
-                        >
-                          {getTimeUntilExpiry(reservation)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleViewDetails(reservation)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-2"
-                        >
-                          Chi tiết
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {displayedReservations.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                        Không có đặt bàn nào vào ngày này
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          <div className="bg-white rounded-lg shadow-sm">
+            <div className="grid grid-cols-7 gap-4 p-4 border-b text-sm font-medium text-gray-500">
+              <div>KHÁCH HÀNG</div>
+              <div>NHÀ HÀNG</div>
+              <div>THỜI GIAN</div>
+              <div>SỐ NGƯỜI</div>
+              <div>TRẠNG THÁI</div>
+              <div className="text-right">THAO TÁC</div>
+            </div>
+            <div className="divide-y">
+              {displayedReservations.map((reservation) => (
+                <div key={reservation._id} className="grid grid-cols-7 gap-4 p-4 text-sm items-center">
+                  <div>
+                    <div className="font-medium">{reservation.customerName}</div>
+                    <div className="text-gray-500">{reservation.customerPhone}</div>
+                  </div>
+                  <div>{getRestaurantName(reservation.restaurantId)}</div>
+                  <div>
+                    <div>{reservation.reservationTime}</div>
+                    <div className="text-gray-500">{format(new Date(reservation.reservationDate), 'dd/MM/yyyy')}</div>
+                  </div>
+                  <div>{reservation.numberOfGuests} người</div>
+                  <div>
+                    <ReservationStatusBadge status={reservation.status} />
+                  </div>
+                  <div className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(reservation)}>
+                      Chi tiết
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {(!displayedReservations || displayedReservations.length === 0) && (
+                <div className="col-span-7 p-4 text-center text-sm text-gray-500">
+                  Không có đặt bàn nào vào ngày này
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -549,7 +611,7 @@ export default function ReservationsManagement() {
                 <div className="flex items-center gap-2">
                   <Building size={16} className="text-red-600" />
                   <p className="text-sm">
-                    {restaurants?.find((r) => r._id === selectedReservation.restaurantId)?.name || "N/A"}
+                    {getRestaurantName(selectedReservation.restaurantId)}
                   </p>
                 </div>
               </div>
@@ -576,26 +638,14 @@ export default function ReservationsManagement() {
                   </span>
                 </div>
               </div>
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Thời hạn</h3>
-                <div
-                  className={`flex items-center gap-2 ${
-                    isReservationExpired(selectedReservation) ? "text-red-600" : "text-gray-600"
-                  }`}
-                >
-                  <Clock3 size={16} />
-                  <p className="text-sm">{getTimeUntilExpiry(selectedReservation)}</p>
-                </div>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Người tạo</h3>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <User size={16} />
-                  <p className="text-sm">{restaurants?.find((u) => u._id === selectedReservation.createdBy)?.name || "N/A"}</p>
+                  <UserIcon size={16} />
+                  <p className="text-sm">{creatorData?.fullName || "N/A"}</p>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.createdAt).toLocaleString()}</p>
               </div>
@@ -603,8 +653,8 @@ export default function ReservationsManagement() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Cập nhật cuối</h3>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <User size={16} />
-                  <p className="text-sm">{restaurants?.find((u) => u._id === selectedReservation.updatedBy)?.name || "N/A"}</p>
+                  <UserIcon size={16} />
+                  <p className="text-sm">{updaterData?.fullName || "N/A"}</p>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.updatedAt).toLocaleString()}</p>
               </div>
@@ -619,62 +669,51 @@ export default function ReservationsManagement() {
 
             <div className="flex justify-end gap-2">
               {selectedReservation.status !== "cancelled" && (
-                <Button
-                  onClick={async () => {
-                    await handleUpdateStatus(selectedReservation._id, "cancelled")
-                    setSelectedReservation(null)
-                  }}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-                >
-                  <XCircle size={16} />
-                  <span>Hủy đặt bàn</span>
-                </Button>
+                <>
+                  <Button
+                    onClick={async () => {
+                      await handleUpdateStatus(selectedReservation._id, "cancelled")
+                      setSelectedReservation(null)
+                    }}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <XCircle size={16} />
+                    <span>Hủy đặt bàn</span>
+                  </Button>
+
+                  {selectedReservation.status === "pending" && (
+                    <Button
+                      onClick={async () => {
+                        await handleUpdateStatus(selectedReservation._id, "confirmed")
+                        setSelectedReservation(null)
+                      }}
+                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle size={16} />
+                      <span>Xác nhận</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    onClick={() => handleEditReservation(selectedReservation)}
+                    className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
+                  >
+                    <Edit size={16} />
+                    <span>Chỉnh sửa</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setSelectedReservation(null)
+                      handleDeleteClick(selectedReservation)
+                    }}
+                    className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
+                  >
+                    <Trash2 size={16} />
+                    <span>Xóa</span>
+                  </Button>
+                </>
               )}
-
-              {selectedReservation.status === "pending" && (
-                <Button
-                  onClick={async () => {
-                    await handleUpdateStatus(selectedReservation._id, "confirmed")
-                    setSelectedReservation(null)
-                  }}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <CheckCircle size={16} />
-                  <span>Xác nhận</span>
-                </Button>
-              )}
-
-              <Button
-                onClick={() => handleEditReservation(selectedReservation)}
-                className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-                <span>Chỉnh sửa</span>
-              </Button>
-
-              <Button
-                onClick={() => {
-                  setSelectedReservation(null)
-                  handleDeleteClick(selectedReservation)
-                }}
-                className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
-              >
-                <Trash2 size={16} />
-                <span>Xóa</span>
-              </Button>
 
               <Button
                 onClick={() => setSelectedReservation(null)}
@@ -688,14 +727,13 @@ export default function ReservationsManagement() {
       )}
 
       {/* Modal thêm/sửa đặt bàn */}
-      {(isAddModalOpen || isEditModalOpen) && (
+      {isEditModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{isAddModalOpen ? "Thêm Đặt Bàn Mới" : "Chỉnh Sửa Đặt Bàn"}</h2>
+              <h2 className="text-xl font-bold">Chỉnh Sửa Đặt Bàn</h2>
               <button 
                 onClick={() => {
-                  setIsAddModalOpen(false)
                   setIsEditModalOpen(false)
                   setSelectedReservation(null)
                 }} 
@@ -709,7 +747,6 @@ export default function ReservationsManagement() {
               restaurants={restaurants || []}
               onSubmit={handleSaveReservation}
               onCancel={() => {
-                setIsAddModalOpen(false)
                 setIsEditModalOpen(false)
                 setSelectedReservation(null)
               }}

@@ -4,7 +4,7 @@ const controllerHandler = require('../../../helpers/controllerHandler');
 // [GET] /api/v1/restaurants
 module.exports.getRestaurant = controllerHandler(async (req, res) => {
     try {
-        const restaurants = await Restaurant.find();
+        const restaurants = await Restaurant.find({ deleted: false });
         res.status(200).json(
             {
                 success: true,

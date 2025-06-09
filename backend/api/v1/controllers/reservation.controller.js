@@ -281,6 +281,8 @@ module.exports.getReservationsByDateRange = controllerHandler(async (req, res) =
     try {
         const { startDate, endDate } = req.query;
         
+        console.log('Date range query:', { startDate, endDate });
+        
         // Create date range (start of day to end of day)
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
@@ -288,10 +290,14 @@ module.exports.getReservationsByDateRange = controllerHandler(async (req, res) =
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         
+        console.log('Converted date range:', { start, end });
+        
         const reservations = await Reservation.find({
             reservationDate: { $gte: start, $lte: end },
             deleted: false
         }).populate('restaurantId');
+        
+        console.log('Found reservations:', reservations);
         
         res.status(200).json({
             success: true,
@@ -299,6 +305,7 @@ module.exports.getReservationsByDateRange = controllerHandler(async (req, res) =
             data: reservations
         });
     } catch (error) {
+        console.error('Error in getReservationsByDateRange:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error',
