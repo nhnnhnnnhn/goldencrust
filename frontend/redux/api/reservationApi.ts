@@ -46,7 +46,7 @@ interface UpdateReservationRequest {
 export const reservationApi = createApi({
   reducerPath: 'reservationApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+    baseUrl: process.env.NEXT_PUBLIC_API_URL,
     credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
       const token = localStorage.getItem('token');

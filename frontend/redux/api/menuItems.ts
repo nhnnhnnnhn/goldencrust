@@ -19,7 +19,7 @@ interface MenuItem {
 export const menuItemApi = createApi({
   reducerPath: 'menuItemApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+    baseUrl: process.env.NEXT_PUBLIC_API_URL,
     credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
       // Get token from localStorage

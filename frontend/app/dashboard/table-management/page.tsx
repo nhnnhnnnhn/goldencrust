@@ -112,8 +112,8 @@ export default function TableManagement() {
       restaurantsData: restaurants,
       authToken: localStorage.getItem('token'),
       authUser: localStorage.getItem('user'),
-      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
-      fullApiUrl: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/tables/restaurant/${selectedRestaurantId}`
+      apiUrl: process.env.NEXT_PUBLIC_API_URL,
+      fullApiUrl: `${process.env.NEXT_PUBLIC_API_URL}/tables/restaurant/${selectedRestaurantId}`
     })
   }, [selectedRestaurantId, tables, isLoadingTables, tablesError, restaurants])
 

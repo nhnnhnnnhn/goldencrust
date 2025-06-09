@@ -53,7 +53,7 @@ interface UpdateOrderTypeRequest {
 export const orderDetailApi = createApi({
   reducerPath: 'orderDetailApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+    baseUrl: process.env.NEXT_PUBLIC_API_URL,
     credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
       const token = localStorage.getItem('token');

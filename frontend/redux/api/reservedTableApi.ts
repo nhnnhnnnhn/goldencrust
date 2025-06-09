@@ -27,7 +27,7 @@ interface UpdateReservedTableRequest {
 export const reservedTableApi = createApi({
   reducerPath: 'reservedTableApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/reserved-tables`,
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/reserved-tables`,
     prepareHeaders: (headers, { getState }) => {
       // Thêm token vào header nếu có
       const token = (getState() as any).auth.token;

@@ -62,7 +62,7 @@ const handleGoogleLogin = () => {
     localStorage.setItem("redirectAfterLogin", redirect);
     
     // Chuyển hướng đến endpoint backend xử lý OAuth Google
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL;
     window.location.href = `${backendUrl}/auth/google`;
   } catch (error) {
     setIsGoogleLoading(false);
