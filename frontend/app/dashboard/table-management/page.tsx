@@ -489,21 +489,31 @@ export default function TableManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Table Number
                 </label>
-                <div className="flex">
-                  <div className="flex items-center justify-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md min-w-[40px]">
-                    {getCurrentRestaurantPrefix()}
-                  </div>
+                {currentTable._id ? (
+                  // Khi edit: hiển thị tên bàn đầy đủ
                   <Input
                     type="text"
-                    value={tableNumberSuffix}
-                    onChange={(e) => handleTableNumberChange(getCurrentRestaurantPrefix() + e.target.value)}
-                    className={`rounded-l-none ${
-                      tableNumberError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                    }`}
-                    disabled={!!currentTable._id}
-                    placeholder="Enter table number"
+                    value={currentTable.tableNumber || ""}
+                    className="w-full bg-gray-100"
+                    disabled={true}
                   />
-                </div>
+                ) : (
+                  // Khi thêm mới: hiển thị prefix và cho phép nhập phần sau
+                  <div className="flex">
+                    <div className="flex items-center justify-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md min-w-[40px]">
+                      {getCurrentRestaurantPrefix()}
+                    </div>
+                    <Input
+                      type="text"
+                      value={tableNumberSuffix}
+                      onChange={(e) => handleTableNumberChange(getCurrentRestaurantPrefix() + e.target.value)}
+                      className={`rounded-l-none ${
+                        tableNumberError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                      }`}
+                      placeholder="Enter table number"
+                    />
+                  </div>
+                )}
                 {tableNumberError && (
                   <p className="mt-1 text-sm text-red-500 font-medium">{tableNumberError}</p>
                 )}
