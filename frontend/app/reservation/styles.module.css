@@ -414,25 +414,44 @@
   gap: 0.75rem;
 }
 
+.selectedTablesInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.selectedTablesInfo span {
+  color: #4b5563;
+}
+
+.totalSeats {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e5e7eb;
+  color: #1f2937;
+  font-weight: 500;
+}
+
 .summaryRow {
   display: flex;
   justify-content: space-between;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(0, 78, 146, 0.1);
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .summaryRow:last-child {
   border-bottom: none;
-  padding-bottom: 0;
 }
 
 .summaryLabel {
-  color: #666;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 .summaryValue {
+  color: #1f2937;
   font-weight: 500;
-  color: #333;
+  text-align: right;
 }
 
 /* Confirmation styles */
@@ -627,4 +646,162 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.tableGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.tableCard {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tableCard:hover:not(.disabledTable) {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.selectedTable {
+  border-color: #3b82f6;
+  background-color: #f0f7ff;
+}
+
+.selectedTable::after {
+  content: "✓";
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+}
+
+.disabledTable {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #f9fafb;
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tableHeader h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tableStatus {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.tableInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tableCapacity {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.tableIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.tableWarning {
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.noTables {
+  text-align: center;
+  padding: 2rem;
+  background: #f9fafb;
+  border-radius: 0.75rem;
+  color: #6b7280;
+  grid-column: 1 / -1;
+}
+
+.noTables p:first-child {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.sectionDescription {
+  color: #6b7280;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.selectionSummary {
+  background-color: #f9fafb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.selectionSummary p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.validCapacity {
+  color: #059669 !important;
+  font-weight: 500;
+}
+
+.invalidCapacity {
+  color: #dc2626 !important;
+  font-weight: 500;
+}
+
+.inputError {
+  border-color: #ef4444 !important;
+}
+
+.inputError:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1px #ef4444 !important;
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
 }
