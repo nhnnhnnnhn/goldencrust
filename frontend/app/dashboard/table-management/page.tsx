@@ -73,6 +73,14 @@ const statusIcons = {
   reserved: <Users size={16} className="text-yellow-600" />,
 }
 
+// Thêm mapping cho prefix của mỗi nhà hàng
+const RESTAURANT_PREFIX_MAP: { [key: string]: string } = {
+  "GC Dong Da": "A",
+  "GC Ha Dong": "B",
+  "GC Dong Anh": "N",
+  "GC Quoc Oai": "L"
+}
+
 export default function TableManagement() {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
@@ -82,6 +90,7 @@ export default function TableManagement() {
   const [currentTable, setCurrentTable] = useState<Partial<Table> | null>(null)
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("")
   const [tableNumberError, setTableNumberError] = useState<string>("")
+  const [tableNumberSuffix, setTableNumberSuffix] = useState("")
 
   // API Hooks
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
@@ -139,11 +148,23 @@ export default function TableManagement() {
   const checkDuplicateTableNumber = (tableNumber: string, excludeTableId?: string) => {
     if (!tables || !Array.isArray(tables)) return false
     
-    return tables.some(table => 
+    // Lọc các bàn trong cùng nhà hàng
+    const tablesInSameRestaurant = tables.filter(table => 
+      table.restaurantId === currentTable?.restaurantId
+    )
+
+    // Kiểm tra trùng số bàn
+    return tablesInSameRestaurant.some(table => 
       table.tableNumber === tableNumber && 
-      table.restaurantId === selectedRestaurantId &&
       (!excludeTableId || table._id !== excludeTableId)
     )
+  }
+
+  // Lấy prefix cho nhà hàng hiện tại
+  const getCurrentRestaurantPrefix = () => {
+    if (!currentTable?.restaurantId) return ""
+    const currentRestaurant = restaurants.find(r => r._id === currentTable.restaurantId)
+    return currentRestaurant ? RESTAURANT_PREFIX_MAP[currentRestaurant.name] || "" : ""
   }
 
   // Xử lý thay đổi số bàn
@@ -153,12 +174,21 @@ export default function TableManagement() {
     // Reset error
     setTableNumberError("")
 
+    const prefix = getCurrentRestaurantPrefix()
+    
+    // Chỉ lấy phần sau prefix
+    const newSuffix = value.slice(prefix.length)
+    setTableNumberSuffix(newSuffix)
+    
+    const fullTableNumber = prefix + newSuffix
+
     // Kiểm tra trùng số bàn
-    if (value && checkDuplicateTableNumber(value, currentTable._id)) {
-      setTableNumberError("This table number already exists in the restaurant")
+    if (fullTableNumber && checkDuplicateTableNumber(fullTableNumber, currentTable._id)) {
+      setTableNumberError(`Table ${fullTableNumber} already exists in ${restaurants.find(r => r._id === currentTable.restaurantId)?.name}`)
+      return
     }
 
-    setCurrentTable({ ...currentTable, tableNumber: value })
+    setCurrentTable({ ...currentTable, tableNumber: fullTableNumber })
   }
 
   // Xử lý thêm bàn mới
@@ -172,11 +202,14 @@ export default function TableManagement() {
       return
     }
 
+    const prefix = getCurrentRestaurantPrefix()
+    setTableNumberSuffix("")
+    
     const newTable: Partial<Table> = {
       restaurantId: selectedRestaurantId,
-      tableNumber: "",
+      tableNumber: prefix,
       capacity: 4,
-      status: "available" as const
+      status: "available" // Mặc định là available
     }
     
     setCurrentTable(newTable)
@@ -223,9 +256,10 @@ export default function TableManagement() {
 
     // Kiểm tra trùng số bàn trước khi lưu
     if (checkDuplicateTableNumber(currentTable.tableNumber, currentTable._id)) {
+      const restaurantName = restaurants.find(r => r._id === currentTable.restaurantId)?.name
       toast({
         title: "Error",
-        description: "This table number already exists in the restaurant",
+        description: `Table ${currentTable.tableNumber} already exists in ${restaurantName}`,
         variant: "destructive",
       })
       return
@@ -349,6 +383,28 @@ export default function TableManagement() {
     handleEditTable(table)
   }
 
+  // Xử lý khi đổi nhà hàng trong modal
+  const handleRestaurantChange = (value: string) => {
+    if (!currentTable) return
+
+    // Cập nhật restaurantId
+    const newRestaurantId = value
+    
+    // Tìm prefix của nhà hàng mới
+    const newRestaurant = restaurants.find(r => r._id === newRestaurantId)
+    const newPrefix = newRestaurant ? RESTAURANT_PREFIX_MAP[newRestaurant.name] || "" : ""
+    
+    // Reset suffix khi đổi nhà hàng
+    setTableNumberSuffix("")
+    
+    // Cập nhật currentTable với restaurantId mới và prefix mới
+    setCurrentTable({
+      ...currentTable,
+      restaurantId: newRestaurantId,
+      tableNumber: newPrefix
+    })
+  }
+
   return (
     <div className="space-y-6 p-6">
       {/* Restaurant Selection */}
@@ -413,7 +469,7 @@ export default function TableManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant</label>
                 <Select
                   value={currentTable.restaurantId}
-                  onValueChange={(value) => setCurrentTable({ ...currentTable, restaurantId: value })}
+                  onValueChange={handleRestaurantChange}
                   disabled={!!currentTable._id}
                 >
                   <SelectTrigger className="w-full">
@@ -430,18 +486,26 @@ export default function TableManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Table Number</label>
-                <Input
-                  type="text"
-                  value={currentTable.tableNumber || ""}
-                  onChange={(e) => handleTableNumberChange(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    tableNumberError ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  disabled={!!currentTable._id}
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Table Number
+                </label>
+                <div className="flex">
+                  <div className="flex items-center justify-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md min-w-[40px]">
+                    {getCurrentRestaurantPrefix()}
+                  </div>
+                  <Input
+                    type="text"
+                    value={tableNumberSuffix}
+                    onChange={(e) => handleTableNumberChange(getCurrentRestaurantPrefix() + e.target.value)}
+                    className={`rounded-l-none ${
+                      tableNumberError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    disabled={!!currentTable._id}
+                    placeholder="Enter table number"
+                  />
+                </div>
                 {tableNumberError && (
-                  <p className="mt-1 text-sm text-red-500">{tableNumberError}</p>
+                  <p className="mt-1 text-sm text-red-500 font-medium">{tableNumberError}</p>
                 )}
               </div>
 
@@ -452,31 +516,35 @@ export default function TableManagement() {
                   value={currentTable.capacity || 0}
                   onChange={(e) => setCurrentTable({ ...currentTable, capacity: Number(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min={1}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <Select
-                  value={currentTable.status}
-                  onValueChange={(value: "available" | "reserved" | "occupied") => {
-                    setCurrentTable({ ...currentTable, status: value })
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statuses
-                      .filter((status) => status !== "All")
-                      .map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {statusLabels[status as keyof typeof statusLabels]}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Chỉ hiển thị status khi edit bàn */}
+              {currentTable._id && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <Select
+                    value={currentTable.status}
+                    onValueChange={(value: "available" | "reserved" | "occupied") => {
+                      setCurrentTable({ ...currentTable, status: value })
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statuses
+                        .filter((status) => status !== "All")
+                        .map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {statusLabels[status as keyof typeof statusLabels]}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
@@ -486,7 +554,7 @@ export default function TableManagement() {
               <Button 
                 onClick={handleSaveTable} 
                 className="bg-[#003087] hover:bg-[#002266] text-white"
-                disabled={!!tableNumberError}
+                disabled={!!tableNumberError || !currentTable.tableNumber || !currentTable.capacity}
               >
                 Save
               </Button>
