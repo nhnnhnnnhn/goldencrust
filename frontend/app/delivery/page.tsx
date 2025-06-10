@@ -229,21 +229,34 @@ export default function DeliveryPage() {
     }
   }, [searchParams, createDelivery, paymentStatusData])
 
-  // Add this effect to filter out deleted items from cart
+  // Effect to sync cart with available menu items and their current prices
   useEffect(() => {
     if (apiMenuItems.length > 0 && cart.length > 0) {
-      const availableMenuItemIds = new Set(apiMenuItems.map(item => item._id))
-      const updatedCart = cart.filter(cartItem => availableMenuItemIds.has(cartItem._id))
+      const availableMenuItems = new Map(apiMenuItems.map(item => [item._id, item]))
+      const updatedCart = cart.map(cartItem => {
+        const currentMenuItem = availableMenuItems.get(cartItem._id)
+        if (currentMenuItem) {
+          return {
+            ...cartItem,
+            price: currentMenuItem.price,
+            discountPercentage: currentMenuItem.discountPercentage || 0,
+            title: currentMenuItem.title,
+            description: currentMenuItem.description || '',
+            thumbnail: currentMenuItem.thumbnail,
+            status: currentMenuItem.status
+          }
+        }
+        return cartItem
+      }).filter(cartItem => availableMenuItems.has(cartItem._id))
       
-      // Only update cart if items were removed
-      if (updatedCart.length !== cart.length) {
+      // Only update cart if there are changes
+      if (JSON.stringify(updatedCart) !== JSON.stringify(cart)) {
         setCart(updatedCart)
         localStorage.setItem("deliveryCart", JSON.stringify(updatedCart))
         
-        // Show toast notification if items were removed
         toast({
           title: "Cart Updated",
-          description: "Some items in your cart are no longer available and have been removed.",
+          description: "Your cart has been updated with current prices.",
           variant: "default",
         })
       }
@@ -322,14 +335,25 @@ export default function DeliveryPage() {
   }
 
   const addToCart = (item: MenuItem) => {
+    const itemToAdd = {
+      ...item,
+      price: item.price,
+      discountPercentage: item.discountPercentage || 0
+    };
+    
     setCart((prevCart) => {
       const existingItem = prevCart.find((cartItem) => cartItem._id === item._id)
       if (existingItem) {
         return prevCart.map((cartItem) =>
-          cartItem._id === item._id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
+          cartItem._id === item._id 
+            ? { 
+                ...itemToAdd,
+                quantity: cartItem.quantity + 1 
+              } 
+            : cartItem
         )
       } else {
-        return [...prevCart, { ...item, quantity: 1 }]
+        return [...prevCart, { ...itemToAdd, quantity: 1 }]
       }
     })
   }
@@ -350,8 +374,17 @@ export default function DeliveryPage() {
     return cart.reduce((total, item) => total + item.quantity, 0)
   }
 
+  const calculateDiscountedPrice = (price: number, discountPercentage: number) => {
+    if (!discountPercentage) return price
+    const discount = price * (discountPercentage / 100)
+    return price - discount
+  }
+
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0)
+    return cart.reduce((total, item) => {
+      const discountedPrice = calculateDiscountedPrice(item.price, item.discountPercentage)
+      return total + discountedPrice * item.quantity
+    }, 0)
   }
 
   const handleCheckout = () => {
@@ -622,7 +655,16 @@ export default function DeliveryPage() {
                                 <h3 className={styles.menuItemName}>{item.title}</h3>
                                 <p className={styles.menuItemDescription}>{item.description}</p>
                                 <div className={styles.menuItemFooter}>
-                                  <span className={styles.menuItemPrice}>${item.price.toFixed(2)}</span>
+                                  <span className={styles.menuItemPrice}>
+                                    {item.discountPercentage > 0 ? (
+                                      <div className="flex flex-col">
+                                        <span className="line-through text-gray-500 text-sm">${item.price.toFixed(2)}</span>
+                                        <span className="text-primary">${calculateDiscountedPrice(item.price, item.discountPercentage).toFixed(2)}</span>
+                                      </div>
+                                    ) : (
+                                      <span>${item.price.toFixed(2)}</span>
+                                    )}
+                                  </span>
                                   <Button className={styles.addButton} onClick={e => { e.stopPropagation(); addToCart(item); }}>
                                     Add to Cart
                                   </Button>
@@ -957,7 +999,16 @@ export default function DeliveryPage() {
                             <Plus className={styles.quantityIcon} />
                           </Button>
                         </div>
-                        <div className={styles.cartItemPrice}>${(item.price * item.quantity).toFixed(2)}</div>
+                        <div className={styles.cartItemPrice}>
+                          {item.discountPercentage > 0 ? (
+                            <div className="flex flex-col items-end">
+                              <span className="line-through text-gray-500 text-sm">${(item.price * item.quantity).toFixed(2)}</span>
+                              <span>${(calculateDiscountedPrice(item.price, item.discountPercentage) * item.quantity).toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -1074,7 +1125,13 @@ export default function DeliveryPage() {
                       setSelectedItemQuantity(1) // Reset quantity
                     }}
                   >
-                    Add to Cart - ${(selectedMenuItem.price * selectedItemQuantity).toFixed(2)}
+                    {selectedMenuItem.discountPercentage > 0 ? (
+                      <span>
+                        Add to Cart - <span className="line-through text-gray-300">${(selectedMenuItem.price * selectedItemQuantity).toFixed(2)}</span> ${(calculateDiscountedPrice(selectedMenuItem.price, selectedMenuItem.discountPercentage) * selectedItemQuantity).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span>Add to Cart - ${(selectedMenuItem.price * selectedItemQuantity).toFixed(2)}</span>
+                    )}
                   </Button>
                 </div>
               </div>
