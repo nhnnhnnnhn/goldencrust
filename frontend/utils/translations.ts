@@ -473,57 +473,6 @@ type TranslationKeys = {
       message: string
     }
   }
-  tableManagement: {
-    title: string
-    description: string
-    searchPlaceholder: string
-    addTable: string
-    editTable: string
-    deleteTable: string
-    status: {
-      all: string
-      available: string
-      occupied: string
-      reserved: string
-    }
-    fields: {
-      tableNumber: string
-      capacity: string
-      status: string
-      restaurant: string
-    }
-    placeholders: {
-      tableNumber: string
-      capacity: string
-      selectRestaurant: string
-    }
-    validation: {
-      tableNumberRequired: string
-      tableNumberExists: string
-      capacityRequired: string
-      capacityMin: string
-      capacityMax: string
-      restaurantRequired: string
-    }
-    actions: {
-      add: string
-      edit: string
-      delete: string
-      save: string
-      cancel: string
-      confirm: string
-    }
-    messages: {
-      deleteSuccess: string
-      deleteError: string
-      saveSuccess: string
-      saveError: string
-      confirmDelete: string
-      confirmDeleteNote: string
-      selectRestaurantFirst: string
-      errorTitle: string
-    }
-  }
 }
 
 export const translations: Record<"en" | "vi", TranslationKeys> = {
@@ -1010,57 +959,6 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
         message: "Are you sure you want to proceed with this action?"
       }
     },
-    tableManagement: {
-      title: "Table Management",
-      description: "Manage restaurant tables and their status",
-      searchPlaceholder: "Search tables...",
-      addTable: "Add Table",
-      editTable: "Edit Table",
-      deleteTable: "Delete Table",
-      status: {
-        all: "All",
-        available: "Available",
-        occupied: "Occupied",
-        reserved: "Reserved"
-      },
-      fields: {
-        tableNumber: "Table Number",
-        capacity: "Capacity",
-        status: "Status",
-        restaurant: "Restaurant"
-      },
-      placeholders: {
-        tableNumber: "Enter table number",
-        capacity: "Enter capacity",
-        selectRestaurant: "Select restaurant"
-      },
-      validation: {
-        tableNumberRequired: "Table number is required",
-        tableNumberExists: "Table number already exists",
-        capacityRequired: "Capacity is required",
-        capacityMin: "Capacity must be at least 1",
-        capacityMax: "Capacity cannot exceed 20",
-        restaurantRequired: "Restaurant is required"
-      },
-      actions: {
-        add: "Add",
-        edit: "Edit",
-        delete: "Delete",
-        save: "Save",
-        cancel: "Cancel",
-        confirm: "Confirm"
-      },
-      messages: {
-        deleteSuccess: "Table deleted successfully",
-        deleteError: "Failed to delete table",
-        saveSuccess: "Table saved successfully",
-        saveError: "Failed to save table",
-        confirmDelete: "Are you sure you want to delete this table?",
-        confirmDeleteNote: "This action cannot be undone",
-        selectRestaurantFirst: "Please select a restaurant first",
-        errorTitle: "Error"
-      }
-    }
   },
   vi: {
     navigation: {
@@ -1545,57 +1443,6 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
         message: "Bạn có chắc chắn muốn thực hiện hành động này?"
       }
     },
-    tableManagement: {
-      title: "Quản Lý Bàn",
-      description: "Quản lý bàn nhà hàng và trạng thái",
-      searchPlaceholder: "Tìm kiếm bàn...",
-      addTable: "Thêm Bàn",
-      editTable: "Sửa Bàn",
-      deleteTable: "Xóa Bàn",
-      status: {
-        all: "Tất cả",
-        available: "Còn trống",
-        occupied: "Đã đặt",
-        reserved: "Đã đặt trước"
-      },
-      fields: {
-        tableNumber: "Số Bàn",
-        capacity: "Sức Chứa",
-        status: "Trạng Thái",
-        restaurant: "Nhà Hàng"
-      },
-      placeholders: {
-        tableNumber: "Nhập số bàn",
-        capacity: "Nhập sức chứa",
-        selectRestaurant: "Chọn nhà hàng"
-      },
-      validation: {
-        tableNumberRequired: "Vui lòng nhập số bàn",
-        tableNumberExists: "Số bàn đã tồn tại",
-        capacityRequired: "Vui lòng nhập sức chứa",
-        capacityMin: "Sức chứa tối thiểu là 1",
-        capacityMax: "Sức chứa tối đa là 20",
-        restaurantRequired: "Vui lòng chọn nhà hàng"
-      },
-      actions: {
-        add: "Thêm",
-        edit: "Sửa",
-        delete: "Xóa",
-        save: "Lưu",
-        cancel: "Hủy",
-        confirm: "Xác nhận"
-      },
-      messages: {
-        deleteSuccess: "Xóa bàn thành công",
-        deleteError: "Xóa bàn thất bại",
-        saveSuccess: "Lưu bàn thành công",
-        saveError: "Lưu bàn thất bại",
-        confirmDelete: "Bạn có chắc muốn xóa bàn này?",
-        confirmDeleteNote: "Hành động này không thể hoàn tác",
-        selectRestaurantFirst: "Vui lòng chọn nhà hàng trước",
-        errorTitle: "Lỗi"
-      }
-    }
   },
 }
 
