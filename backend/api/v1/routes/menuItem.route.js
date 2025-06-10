@@ -8,6 +8,9 @@ const uploadCloud = require('../middlewares/uploadCloud.middleware');
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// Get active menu items for customers
+router.get('/active', menuItemController.getActiveMenuItems);
+
 // Get all menu items
 router.get('/', menuItemController.getMenuItems);
 
