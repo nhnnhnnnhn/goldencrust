@@ -47,7 +47,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { vi } from "date-fns/locale"
 import { useRouter } from "next/navigation"
-import { getTranslation } from "@/utils/translations"
 
 // Định nghĩa kiểu dữ liệu cho Table
 interface Table {
@@ -78,7 +77,7 @@ interface ReservedTable {
 }
 
 // Danh sách trạng thái đặt bàn
-const reservationStatuses = ["all", "pending", "confirmed", "cancelled"]
+const reservationStatuses = ["Tất cả", "pending", "confirmed", "cancelled"]
 const reservationStatusLabels: Record<string, string> = {
   pending: "Chờ xác nhận",
   confirmed: "Đã xác nhận",
@@ -128,44 +127,12 @@ export default function ReservationsManagement() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAppSelector((state) => state.auth)
-  const [language, setLanguage] = useState<"en" | "vi">("en")
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [selectedStatus, setSelectedStatus] = useState("all")
+  const [selectedStatus, setSelectedStatus] = useState("Tất cả")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | undefined>(undefined)
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-
-  // Listen for language changes
-  useEffect(() => {
-    // Get initial language
-    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
-    if (savedLanguage === "en" || savedLanguage === "vi") {
-      setLanguage(savedLanguage)
-    }
-
-    // Listen for storage changes (from other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "language" && (e.newValue === "en" || e.newValue === "vi")) {
-        setLanguage(e.newValue)
-      }
-    }
-
-    // Listen for custom language change event (from same tab)
-    const handleLanguageChange = (e: CustomEvent<"en" | "vi">) => {
-      setLanguage(e.detail)
-    }
-
-    window.addEventListener("storage", handleStorageChange)
-    window.addEventListener("languageChange", handleLanguageChange as EventListener)
-    
-    return () => {
-      window.removeEventListener("storage", handleStorageChange)
-      window.removeEventListener("languageChange", handleLanguageChange as EventListener)
-    }
-  }, [])
-
-  const t = getTranslation(language)
 
   // Queries
   const { data: restaurants, isLoading: isLoadingRestaurants, error: restaurantsError } = useGetRestaurantsQuery()
@@ -211,7 +178,7 @@ export default function ReservationsManagement() {
   const getRestaurantName = (restaurantId: string | Restaurant): string => {
     if (!restaurantId) {
       console.log('No restaurant ID provided')
-      return t.reservations.messages.noData
+      return "Không có thông tin"
     }
 
     // If restaurantId is an object (populated), return its name directly
@@ -222,17 +189,17 @@ export default function ReservationsManagement() {
     // If restaurantId is a string, find the restaurant in the list
     if (isLoadingRestaurants) {
       console.log('Restaurants are still loading')
-      return t.reservations.messages.loading
+      return "Đang tải..."
     }
 
     if (!restaurants) {
       console.log('No restaurants data available')
-      return t.reservations.messages.loading
+      return "Đang tải..."
     }
 
     if (!Array.isArray(restaurants)) {
       console.error('Restaurants data is not an array:', restaurants)
-      return t.reservations.messages.error
+      return "Lỗi dữ liệu"
     }
 
     console.log('Looking for restaurant with ID:', restaurantId)
@@ -242,7 +209,7 @@ export default function ReservationsManagement() {
 
     if (!restaurant) {
       console.log('Restaurant not found for ID:', restaurantId)
-      return t.reservations.messages.noData
+      return "Không tìm thấy"
     }
 
     console.log('Found restaurant:', restaurant)
@@ -314,8 +281,19 @@ export default function ReservationsManagement() {
   }
 
   const handleEditReservation = (reservation: Reservation) => {
-    setSelectedReservation(reservation)
+    // Prevent editing cancelled reservations
+    if (reservation.status === "cancelled") {
+      toast({
+        title: "Không thể chỉnh sửa",
+        description: "Không thể chỉnh sửa đơn đặt bàn đã hủy",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setSelectedReservation(null) // Close details modal
     setIsEditModalOpen(true)
+    setSelectedReservation(reservation)
   }
 
   const handleSaveReservation = async (formData: any) => {
@@ -381,14 +359,15 @@ export default function ReservationsManagement() {
     try {
       await deleteReservation(selectedReservation._id).unwrap()
       toast({
-        title: t.reservations.messages.deleteSuccess,
-        variant: "default",
+        title: "Xóa đơn đặt bàn thành công",
+        description: "Đơn đặt bàn đã được xóa",
       })
       setIsDeleteModalOpen(false)
-      setSelectedReservation(undefined)
+      setSelectedReservation(null)
     } catch (error) {
       toast({
-        title: t.reservations.messages.error,
+        title: "Lỗi xóa đơn đặt bàn",
+        description: "Đã có lỗi xảy ra khi xóa đơn đặt bàn",
         variant: "destructive",
       })
     }
@@ -426,22 +405,12 @@ export default function ReservationsManagement() {
     return result
   }, [reservations, selectedStatus, searchQuery])
 
-  // Helper function to safely format date
-  const formatDate = (dateString: string | Date | undefined) => {
-    if (!dateString) return t.reservations.messages.noData;
-    
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        console.error('Invalid date:', dateString);
-        return t.reservations.messages.noData;
-      }
-      return format(date, "dd/MM/yyyy");
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return t.reservations.messages.noData;
-    }
-  };
+  // Helper function to format date
+  const formatDate = (dateString: string | Date) => {
+    if (!dateString) return "N/A"
+    const date = typeof dateString === "string" ? new Date(dateString) : dateString
+    return format(date, "dd/MM/yyyy")
+  }
 
   // Chuyển đổi ngày
   const changeDate = (days: number) => {
@@ -460,221 +429,351 @@ export default function ReservationsManagement() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">{t.reservations.title}</h1>
-        <p className="mt-2 text-gray-600">{t.reservations.description}</p>
-      </div>
+    <div className="p-6">
+      <Tabs value="reservations" className="w-full">
+        <TabsContent value="reservations">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Quản Lý Đặt Bàn</h1>
+            <Button
+              onClick={handleAddReservation}
+              className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
+            >
+              <Users size={20} />
+              <span>Thêm Đặt Bàn</span>
+            </Button>
+          </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <div className="flex items-center space-x-2">
-          <CalendarIcon className="h-5 w-5 text-gray-500" />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
-                {format(selectedDate, "PPP")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                initialFocus
+          {/* Thanh tìm kiếm và lọc */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tên, số điện thoại..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               />
-            </PopoverContent>
-          </Popover>
-        </div>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            </div>
 
-        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t.reservations.filters.status} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t.reservations.status.all}</SelectItem>
-            <SelectItem value="pending">{t.reservations.status.pending}</SelectItem>
-            <SelectItem value="confirmed">{t.reservations.status.confirmed}</SelectItem>
-            <SelectItem value="cancelled">{t.reservations.status.cancelled}</SelectItem>
-          </SelectContent>
-        </Select>
+            <div className="relative">
+              <Select
+                value={selectedStatus}
+                onValueChange={setSelectedStatus}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <div className="flex items-center gap-2">
+                    <Filter size={20} />
+                    <span>
+                      Trạng thái: {reservationStatusLabels[selectedStatus]}
+                    </span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {reservationStatuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {reservationStatusLabels[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <Input
-              type="text"
-              placeholder={t.reservations.filters.searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          {/* Chọn ngày */}
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <div className="flex items-center justify-center">
+              <div className="w-full max-w-md">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start text-left font-normal hover:bg-gray-50 py-6 text-lg border-2 border-gray-100"
+                    >
+                      <CalendarIcon className="mr-3 h-6 w-6 text-red-600" />
+                      <span className="text-gray-700 font-medium">{format(selectedDate, "EEEE, dd MMMM yyyy", { locale: vi })}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                      className="rounded-lg shadow-lg bg-white"
+                      classNames={{
+                        months: "space-y-4 px-5 py-5",
+                        month: "space-y-3",
+                        caption: "flex justify-center pt-1 relative items-center mb-4",
+                        caption_label: "text-base font-semibold text-gray-900",
+                        nav: "flex items-center gap-1",
+                        nav_button: "h-8 w-8 bg-transparent p-0 hover:bg-gray-50 text-gray-600 hover:text-gray-900 rounded-full transition-all duration-200 inline-flex items-center justify-center",
+                        nav_button_previous: "absolute left-1",
+                        nav_button_next: "absolute right-1",
+                        table: "w-full border-collapse",
+                        head_row: "flex border-b border-gray-100",
+                        head_cell: "text-gray-500 w-10 font-medium text-[0.8rem] pb-3",
+                        row: "flex w-full mt-2",
+                        cell: "text-center text-sm relative p-0 hover:bg-gray-50 rounded-full focus-within:relative focus-within:z-20 transition-colors duration-200",
+                        day: "h-10 w-10 p-0 font-normal hover:bg-gray-50 rounded-full transition-colors duration-200 inline-flex items-center justify-center",
+                        day_selected: "bg-red-600 text-white hover:bg-red-700 hover:text-white focus:bg-red-700 focus:text-white font-semibold",
+                        day_today: "bg-gray-50 text-red-600 font-semibold",
+                        day_outside: "text-gray-400 opacity-50 cursor-default",
+                        day_disabled: "text-gray-400 opacity-50 cursor-not-allowed",
+                        day_hidden: "invisible",
+                      }}
+                      components={{
+                        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+                        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </div>
+
+          {/* Bảng đặt bàn */}
+          <div className="bg-white rounded-lg shadow-sm">
+            <div className="grid grid-cols-7 gap-4 p-4 border-b text-sm font-medium text-gray-500">
+              <div>KHÁCH HÀNG</div>
+              <div>NHÀ HÀNG</div>
+              <div>THỜI GIAN</div>
+              <div>SỐ NGƯỜI</div>
+              <div>TRẠNG THÁI</div>
+              <div className="text-right">THAO TÁC</div>
+            </div>
+            <div className="divide-y">
+              {displayedReservations.map((reservation) => (
+                <div key={reservation._id} className="grid grid-cols-7 gap-4 p-4 text-sm items-center">
+                  <div>
+                    <div className="font-medium">{reservation.customerName}</div>
+                    <div className="text-gray-500">{reservation.customerPhone}</div>
+                  </div>
+                  <div>{getRestaurantName(reservation.restaurantId)}</div>
+                  <div>
+                    <div>{reservation.reservationTime}</div>
+                    <div className="text-gray-500">{format(new Date(reservation.reservationDate), 'dd/MM/yyyy')}</div>
+                  </div>
+                  <div>{reservation.numberOfGuests} người</div>
+                  <div>
+                    <ReservationStatusBadge status={reservation.status} />
+                  </div>
+                  <div className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(reservation)}>
+                      Chi tiết
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {(!displayedReservations || displayedReservations.length === 0) && (
+                <div className="col-span-7 p-4 text-center text-sm text-gray-500">
+                  Không có đặt bàn nào vào ngày này
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Modal chi tiết đặt bàn */}
+      {selectedReservation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Chi Tiết Đặt Bàn</h2>
+              <button onClick={() => setSelectedReservation(null)} className="text-gray-500 hover:text-gray-700">
+                <XCircle size={24} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Thông tin khách hàng</h3>
+                <p className="text-lg font-medium">{selectedReservation.customerName}</p>
+                <p className="text-sm text-gray-600">{selectedReservation.customerPhone}</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Thông tin đặt bàn</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <CalendarIcon size={16} className="text-red-600" />
+                  <p className="text-sm">{formatDate(selectedReservation.reservationDate)}</p>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock size={16} className="text-red-600" />
+                  <p className="text-sm">{selectedReservation.reservationTime}</p>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Users size={16} className="text-red-600" />
+                  <p className="text-sm">{selectedReservation.numberOfGuests} người</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building size={16} className="text-red-600" />
+                  <p className="text-sm">
+                    {getRestaurantName(selectedReservation.restaurantId)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {selectedReservation.specialRequests && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Ghi chú</h3>
+                <p className="text-sm bg-gray-50 p-3 rounded">{selectedReservation.specialRequests}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Trạng thái</h3>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      reservationStatusColors[selectedReservation.status]
+                    }`}
+                  >
+                    {reservationStatusIcons[selectedReservation.status]}
+                    <span className="ml-1">{reservationStatusLabels[selectedReservation.status]}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Người tạo</h3>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <UserIcon size={16} />
+                  <p className="text-sm">{creatorData?.fullName || "N/A"}</p>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.createdAt).toLocaleString()}</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Cập nhật cuối</h3>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <UserIcon size={16} />
+                  <p className="text-sm">{updaterData?.fullName || "N/A"}</p>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.updatedAt).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Bàn đã đặt</h3>
+              <div className="bg-gray-50 p-3 rounded">
+                {/* Implementation of reservedTables component */}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              {selectedReservation.status !== "cancelled" && (
+                <>
+                  <Button
+                    onClick={async () => {
+                      await handleUpdateStatus(selectedReservation._id, "cancelled")
+                      setSelectedReservation(null)
+                    }}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <XCircle size={16} />
+                    <span>Hủy đặt bàn</span>
+                  </Button>
+
+                  {selectedReservation.status === "pending" && (
+                    <Button
+                      onClick={async () => {
+                        await handleUpdateStatus(selectedReservation._id, "confirmed")
+                        setSelectedReservation(null)
+                      }}
+                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle size={16} />
+                      <span>Xác nhận</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    onClick={() => handleEditReservation(selectedReservation)}
+                    className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
+                  >
+                    <Edit size={16} />
+                    <span>Chỉnh sửa</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setSelectedReservation(null)
+                      handleDeleteClick(selectedReservation)
+                    }}
+                    className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
+                  >
+                    <Trash2 size={16} />
+                    <span>Xóa</span>
+                  </Button>
+                </>
+              )}
+
+              <Button
+                onClick={() => setSelectedReservation(null)}
+                className="bg-gray-200 text-gray-800 hover:bg-gray-300"
+              >
+                Đóng
+              </Button>
+            </div>
           </div>
         </div>
+      )}
 
-        <Button onClick={() => setIsEditModalOpen(true)}>
-          {t.reservations.actions.add}
-        </Button>
-      </div>
-
-      {/* Table */}
-      <div className="rounded-lg border bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                  {t.reservations.table.customer}
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                  {t.reservations.table.restaurant}
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                  {t.reservations.table.date}
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                  {t.reservations.table.time}
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                  {t.reservations.table.guests}
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                  {t.reservations.table.status}
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                  {t.reservations.table.actions}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                    {t.reservations.messages.loading}
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-red-500">
-                    {t.reservations.messages.error}
-                  </td>
-                </tr>
-              ) : !reservations || reservations.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                    {t.reservations.messages.noData}
-                  </td>
-                </tr>
-              ) : (
-                reservations.map((reservation) => (
-                  <tr key={reservation._id} className="border-b">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <UserIcon className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>{reservation.customerName}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Building className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>{getRestaurantName(reservation.restaurantId)}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>{formatDate(reservation.reservationDate)}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>{reservation.reservationTime}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Users className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>{reservation.numberOfGuests}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <ReservationStatusBadge status={reservation.status} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(reservation)}
-                        >
-                          {t.reservations.actions.view}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditReservation(reservation)}
-                        >
-                          {t.reservations.actions.edit}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(reservation)}
-                        >
-                          {t.reservations.actions.delete}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Edit Modal */}
+      {/* Modal thêm/sửa đặt bàn */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6">
-            <h2 className="mb-4 text-xl font-semibold">
-              {selectedReservation ? t.reservations.form.title : t.reservations.actions.add}
-            </h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Chỉnh Sửa Đặt Bàn</h2>
+              <button 
+                onClick={() => {
+                  setIsEditModalOpen(false)
+                  setSelectedReservation(null)
+                }} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle size={24} />
+              </button>
+            </div>
+
             <ReservationForm
-              initialData={selectedReservation}
+              restaurants={restaurants || []}
               onSubmit={handleSaveReservation}
               onCancel={() => {
                 setIsEditModalOpen(false)
-                setSelectedReservation(undefined)
+                setSelectedReservation(null)
               }}
-              restaurants={restaurants || []}
               isSubmitting={isCreating}
+              initialData={selectedReservation || undefined}
             />
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h2 className="mb-4 text-xl font-semibold text-red-600">
-              {t.reservations.messages.confirmDelete}
-            </h2>
-            <div className="flex justify-end space-x-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteModalOpen(false)}
-              >
-                {t.reservations.actions.cancel}
+      {/* Modal xác nhận xóa đặt bàn */}
+      {isDeleteModalOpen && selectedReservation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Xác nhận xóa</h2>
+            <p className="mb-6">Bạn có chắc chắn muốn xóa đặt bàn của {selectedReservation.customerName}?</p>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                Hủy
               </Button>
               <Button
-                variant="destructive"
                 onClick={confirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
                 disabled={isDeleting}
               >
-                {isDeleting ? t.reservations.messages.loading : t.reservations.actions.confirm}
+                {isDeleting ? "Đang xóa..." : "Xóa"}
               </Button>
             </div>
           </div>
