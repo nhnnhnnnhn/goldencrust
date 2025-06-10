@@ -464,7 +464,7 @@ export default function MenuManagement() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -474,19 +474,19 @@ export default function MenuManagement() {
             className="pl-8"
           />
         </div>
-        <div className="relative">
+        <div className="relative w-full sm:w-[200px]">
           <Button
             variant="outline"
             onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-            className="w-[200px] justify-between"
+            className="w-full justify-between"
           >
-            <span>{selectedCategory === "all" ? t.menuManagement.fields.category : getCategoryName(selectedCategory)}</span>
-            <ChevronDown className="h-4 w-4" />
+            <span className="truncate">{selectedCategory === "all" ? t.menuManagement.fields.category : getCategoryName(selectedCategory)}</span>
+            <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
           </Button>
           {showCategoryDropdown && (
-            <div className="absolute top-full left-0 mt-1 w-[200px] bg-white border rounded-md shadow-lg z-10">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-10">
               <div
-                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-2 hover:bg-gray-100 cursor-pointer truncate"
                 onClick={() => {
                   setSelectedCategory("all");
                   setShowCategoryDropdown(false);
@@ -497,7 +497,7 @@ export default function MenuManagement() {
               {categoriesData?.categories.map((category) => (
                 <div
                   key={category._id}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer truncate"
                   onClick={() => {
                     setSelectedCategory(category._id);
                     setShowCategoryDropdown(false);
@@ -512,33 +512,33 @@ export default function MenuManagement() {
       </div>
 
       {/* Bảng menu */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-lg shadow">
+        <div className="overflow-x-auto -mx-6 lg:mx-0">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.image}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.name}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.description}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.category}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.price}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.discount}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.status}
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t.menuManagement.table.actions}
                 </th>
               </tr>
@@ -546,8 +546,8 @@ export default function MenuManagement() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMenuItems.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-20 w-20 relative rounded-md overflow-hidden">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 relative rounded-md overflow-hidden">
                       <Image
                         src={item.thumbnail || "/placeholder.svg"}
                         alt={item.title}
@@ -556,32 +556,32 @@ export default function MenuManagement() {
                       />
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="text-sm font-medium text-gray-900 line-clamp-2">{item.title}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500 max-w-xs truncate">{item.description}</div>
+                  <td className="hidden md:table-cell px-3 sm:px-6 py-4">
+                    <div className="text-sm text-gray-500 max-w-xs line-clamp-2">{item.description}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                  <td className="hidden sm:table-cell px-3 sm:px-6 py-4">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 truncate max-w-[150px]">
                       {getCategoryName(item.categoryId)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {item.discountPercentage > 0 ? (
-                        <>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1">
                           <span className="line-through text-gray-500">{formatPrice(item.price)}</span>
-                          <span className="ml-2 font-medium">
+                          <span className="font-medium">
                             {formatPrice(calculateDiscountedPrice(item.price, item.discountPercentage))}
                           </span>
-                        </>
+                        </div>
                       ) : (
                         formatPrice(item.price)
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
                     {item.discountPercentage > 0 ? (
                       <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                         -{item.discountPercentage}%
@@ -590,7 +590,7 @@ export default function MenuManagement() {
                       <span className="text-gray-500 text-sm">Không có</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => toggleItemStatus(item)}
                       className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -604,26 +604,26 @@ export default function MenuManagement() {
                       {item.status === "active" 
                         ? "Có sẵn" 
                         : item.status === "inactive"
-                        ? "Không hoạt động"
+                        ? "Không HĐ"
                         : "Hết hàng"}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEditItem(item)}
                       className="text-indigo-600 hover:text-indigo-900 mr-4"
                     >
-                      <Pencil size={18} />
+                      <Pencil size={16} className="sm:w-[18px] sm:h-[18px]" />
                     </button>
                     <button onClick={() => handleDeleteClick(item)} className="text-red-600 hover:text-red-900">
-                      <Trash2 size={18} />
+                      <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
                     </button>
                   </td>
                 </tr>
               ))}
               {filteredMenuItems.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="px-3 sm:px-6 py-4 text-center text-sm text-gray-500">
                     Không tìm thấy món ăn nào
                   </td>
                 </tr>
@@ -636,7 +636,7 @@ export default function MenuManagement() {
       {/* Modal thêm/sửa món ăn */}
       {showAddEditModal && currentItem && (
         <Dialog open={showAddEditModal} onOpenChange={setShowAddEditModal}>
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>
                 {currentItem._id ? t.menuManagement.modal.editTitle : t.menuManagement.modal.addTitle}
@@ -652,7 +652,6 @@ export default function MenuManagement() {
                   onChange={(e) => {
                     const title = e.target.value;
                     setCurrentItem({ ...currentItem, title });
-                    // Clear error when user types
                     if (formErrors.title) {
                       setFormErrors(prev => ({ ...prev, title: undefined }));
                     }
@@ -751,7 +750,7 @@ export default function MenuManagement() {
                 </select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700">Mô tả</label>
                 <Textarea
                   value={currentItem.description || ""}
@@ -761,11 +760,11 @@ export default function MenuManagement() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Hình ảnh đại diện {!currentItem._id && '*'}
                 </label>
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className={`h-32 w-32 relative rounded-md overflow-hidden border flex-shrink-0 ${
                     formErrors.thumbnail ? 'border-red-500' : 'border-gray-300'
                   }`}>
@@ -783,7 +782,7 @@ export default function MenuManagement() {
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 w-full">
                     <Input
                       type="file"
                       onChange={handleImageChange}
@@ -801,11 +800,11 @@ export default function MenuManagement() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddEditModal(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setShowAddEditModal(false)} className="w-full sm:w-auto">
                 {t.menuManagement.modal.cancel}
               </Button>
-              <Button onClick={handleSaveItem}>
+              <Button onClick={handleSaveItem} className="w-full sm:w-auto">
                 {t.menuManagement.modal.save}
               </Button>
             </DialogFooter>
