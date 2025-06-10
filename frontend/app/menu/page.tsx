@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { useGetMenuItemsQuery } from '@/redux/api/menuItems';
-import { useGetCategoriesQuery } from '@/redux/api/categoryApi';
+import { useGetActiveMenuItemsQuery } from '@/redux/api/menuItems';
+import { useGetActiveCategoriesQuery } from '@/redux/api/categoryApi';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -20,8 +20,8 @@ const MenuPage = () => {
   const [language, setLanguage] = useState<"en" | "vi">("en");
 
   // Fetch data using RTK Query
-  const { data: menuItemsData, isLoading: menuLoading, error: menuError } = useGetMenuItemsQuery();
-  const { data: categoriesData, isLoading: categoryLoading } = useGetCategoriesQuery();
+  const { data: menuItemsData, isLoading: menuLoading, error: menuError } = useGetActiveMenuItemsQuery();
+  const { data: categoriesData, isLoading: categoryLoading } = useGetActiveCategoriesQuery();
 
   // Get language from localStorage
   useEffect(() => {
@@ -37,7 +37,7 @@ const MenuPage = () => {
   const filteredMenuItems = React.useMemo(() => {
     if (!menuItemsData) return [];
 
-    let filtered = menuItemsData.filter(item => !item.deleted);
+    let filtered = menuItemsData;
 
     // Filter by category
     if (selectedCategory !== 'all') {

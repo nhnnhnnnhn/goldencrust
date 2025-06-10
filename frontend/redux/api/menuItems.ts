@@ -32,6 +32,13 @@ export const menuItemApi = createApi({
   }),
   tagTypes: ['MenuItem'],
   endpoints: (builder) => ({
+    // Get active menu items for customers
+    getActiveMenuItems: builder.query<MenuItem[], void>({
+      query: () => '/menu-items/active',
+      transformResponse: (response: { success: boolean; message: string; data: MenuItem[] }) => response.data,
+      providesTags: ['MenuItem'],
+    }),
+
     // Get all menu items
     getMenuItems: builder.query<MenuItem[], void>({
       query: () => '/menu-items',
@@ -88,6 +95,7 @@ export const menuItemApi = createApi({
 });
 
 export const {
+  useGetActiveMenuItemsQuery,
   useGetMenuItemsQuery,
   useGetMenuItemByIdQuery,
   useCreateMenuItemMutation,

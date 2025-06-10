@@ -60,8 +60,10 @@ class GrokService {
       const tableQuery = { deleted: false, status: 'available' };
       if (restaurant) tableQuery.restaurantId = restaurant._id.toString();
       const availableTables = await Table.find(tableQuery);
-      // Menu dùng chung
-      const menuItems = await MenuItem.find({ deleted: false, status: 'active' });
+      // Menu dùng chung - chỉ lấy 15 món mới nhất
+      const menuItems = await MenuItem.find({ deleted: false, status: 'active' })
+        .sort({ createdAt: -1 })
+        .limit(15);
 
       let info = '';
       if (restaurant) {
@@ -98,7 +100,7 @@ class GrokService {
     const extraInfo = await this.getRestaurantPromptInfo(restaurantId);
     const systemMessage = {
       role: 'system',
-      content: `Bạn là trợ lý AI của nhà hàng Golden Crust. Hãy trả lời 1 cách aggressive (sẵn sàng chửi nhau), chính xác, bằng tiếng Việt.\n${extraInfo}`
+      content: `Bạn là trợ lý AI của nhà hàng Golden Crust. Hãy trả lời 1 cách aggressive (sẵn sàng chửi nhau), chính xác, bằng tiếng Việt.\n${extraInfo} `
     };
     const messages = [
       systemMessage,

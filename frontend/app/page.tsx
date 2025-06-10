@@ -72,8 +72,7 @@ export default function Home() {
       href: "/dashboard/reservations",
       icon: <CalendarDays className="mr-2 h-4 w-4" />,
     },
-    { label: t.dashboard.orderHistory, href: "/dashboard/history", icon: <History className="mr-2 h-4 w-4" /> },
-    { label: t.dashboard.loyaltyProgram, href: "/dashboard/loyalty", icon: <Award className="mr-2 h-4 w-4" /> },
+    { label: t.dashboard.myDelivery, href: "/dashboard/my-delivery", icon: <Truck className="mr-2 h-4 w-4" /> },
     { label: t.dashboard.profile, href: "/dashboard/profile", icon: <User className="mr-2 h-4 w-4" /> },
   ]
 

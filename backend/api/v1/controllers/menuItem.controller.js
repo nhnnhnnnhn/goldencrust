@@ -237,3 +237,25 @@ module.exports.deleteMenuItem = controllerHandler(async (req, res) => {
         });
     }
 });
+
+// Get active menu items for customers
+module.exports.getActiveMenuItems = controllerHandler(async (req, res) => {
+    try {
+        const menuItems = await MenuItem.find({ 
+            deleted: false,
+            status: 'active'
+        });
+        res.status(200).json({
+            success: true,
+            message: 'Active menu items fetched successfully',
+            data: menuItems
+        });
+    } catch (error) {
+        logger.error('Error fetching active menu items:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+});
