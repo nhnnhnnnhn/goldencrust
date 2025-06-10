@@ -69,8 +69,10 @@ export default function MenuManagement() {
 
   // Filter menu items
   const filteredMenuItems = menuItems.filter((item: MenuItem) => {
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    if (!item) return false;
+    
+    const matchesSearch = (item.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (item.description?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false)
     const matchesCategory = selectedCategory === "all" || item.categoryId === selectedCategory
     return matchesSearch && matchesCategory && !item.deleted
   })

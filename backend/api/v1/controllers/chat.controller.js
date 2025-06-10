@@ -5,7 +5,7 @@ const Chat = require('../models/chat.model');
 const User = require('../models/user.model');
 const Reservation = require('../models/reservation.model');
 const Order = require('../models/order.model');
-const deepseekService = require('../services/deepseek.service');
+const grokService = require('../services/grok.service');
 const { v4: uuidv4 } = require('uuid');
 const mongoose = require('mongoose');
 
@@ -125,11 +125,11 @@ exports.sendMessage = async (req, res) => {
         conversationHistory.push({ role: 'user', content: message });
       }
       
-      // Gọi deepseek service với lịch sử hoàn chỉnh
+      // Gọi grok service với lịch sử hoàn chỉnh
       let reply = '';
       let intent = 'general';
       
-      const response = await deepseekService.processMessage(
+      const response = await grokService.processMessage(
         message,
         sessionId,
         conversationHistory,
@@ -191,7 +191,7 @@ exports.sendMessage = async (req, res) => {
         sendPartialMessage('Xin lỗi, tôi không thể xử lý yêu cầu của bạn lúc này.', true, 'complete');
       }
     } catch (aiError) {
-      console.error('Lỗi khi gọi DeepSeek API:', aiError);
+      console.error('Lỗi khi gọi Grok API:', aiError);
       // Tin nhắn lỗi cuối cùng
       sendPartialMessage('Tôi đang gặp khó khăn khi xử lý yêu cầu. Vui lòng thử lại sau hoặc liên hệ trực tiếp với nhà hàng.', true, 'complete');
     }
