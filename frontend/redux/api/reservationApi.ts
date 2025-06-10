@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import type { Restaurant } from './restaurant';
+import type { Table } from './table';
 
 // Define interfaces
 export interface Reservation {
@@ -12,6 +13,7 @@ export interface Reservation {
   numberOfGuests: number;
   specialRequests?: string;
   restaurantId: string | Restaurant;
+  reservedTables: Table[];
   status: 'pending' | 'confirmed' | 'cancelled';
   createdBy?: string;
   updatedBy?: string;
@@ -30,6 +32,7 @@ interface CreateReservationRequest {
   numberOfGuests: number;
   specialRequests?: string;
   restaurantId: string;
+  reservedTables: string[];
 }
 
 interface UpdateReservationRequest {

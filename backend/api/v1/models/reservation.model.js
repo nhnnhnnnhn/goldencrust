@@ -34,6 +34,10 @@ const reservationSchema = new mongoose.Schema({
         ref: 'Restaurant',
         required: true
     },
+    reservedTables: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Table'
+    }],
     status: {
         type: String,
         enum: ['pending', 'confirmed', 'cancelled'],

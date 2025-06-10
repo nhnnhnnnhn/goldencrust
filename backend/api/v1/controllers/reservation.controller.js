@@ -1,4 +1,5 @@
 const Reservation = require('../models/reservation.model');
+const Table = require('../models/table.model');
 const controllerHandler = require('../../../helpers/controllerHandler');
 
 // Get all reservations
@@ -6,7 +7,8 @@ module.exports.getReservations = controllerHandler(async (req, res) => {
     try {
         const reservations = await Reservation.find({ deleted: false })
             .populate('restaurantId')
-            .populate('createdBy', 'fullName email');
+            .populate('createdBy', 'fullName email')
+            .populate('reservedTables');
         
         res.status(200).json({
             success: true,
@@ -32,17 +34,32 @@ module.exports.createReservation = controllerHandler(async (req, res) => {
             reservationTime,
             numberOfGuests,
             specialRequests,
-            restaurantId
+            restaurantId,
+            reservedTables
         } = req.body;
 
         // Validate required fields
-        if (!customerName || !customerPhone || !reservationDate || !reservationTime || !numberOfGuests || !restaurantId) {
+        if (!customerName || !customerPhone || !reservationDate || !reservationTime || !numberOfGuests || !restaurantId || !reservedTables || !reservedTables.length) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields'
             });
         }
 
+        // Check if all tables exist and are available
+        const tables = await Table.find({ 
+            _id: { $in: reservedTables },
+            status: 'available'
+        });
+
+        if (tables.length !== reservedTables.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'One or more tables are not available'
+            });
+        }
+
+        // Create reservation
         const reservation = await Reservation.create({
             customerName,
             customerPhone,
@@ -51,14 +68,27 @@ module.exports.createReservation = controllerHandler(async (req, res) => {
             numberOfGuests,
             specialRequests,
             restaurantId,
+            reservedTables,
             createdBy: req.user.id,
             updatedBy: req.user.id
         });
 
+        // Update tables status to reserved
+        await Table.updateMany(
+            { _id: { $in: reservedTables } },
+            { status: 'reserved' }
+        );
+
+        // Populate the reservation with table details
+        const populatedReservation = await Reservation.findById(reservation._id)
+            .populate('restaurantId')
+            .populate('reservedTables')
+            .populate('createdBy', 'fullName email');
+
         res.status(201).json({
             success: true,
             message: 'Reservation created successfully',
-            data: reservation
+            data: populatedReservation
         });
     } catch (error) {
         return res.status(500).json({
@@ -75,7 +105,8 @@ module.exports.getReservationById = controllerHandler(async (req, res) => {
         const { id } = req.params;
         const reservation = await Reservation.findOne({ _id: id, deleted: false })
             .populate('restaurantId')
-            .populate('createdBy', 'fullName email');
+            .populate('createdBy', 'fullName email')
+            .populate('reservedTables');
 
         if (!reservation) {
             return res.status(404).json({
@@ -295,7 +326,10 @@ module.exports.getReservationsByDateRange = controllerHandler(async (req, res) =
         const reservations = await Reservation.find({
             reservationDate: { $gte: start, $lte: end },
             deleted: false
-        }).populate('restaurantId');
+        })
+        .populate('restaurantId')
+        .populate('reservedTables')
+        .populate('createdBy', 'fullName email');
         
         console.log('Found reservations:', reservations);
         

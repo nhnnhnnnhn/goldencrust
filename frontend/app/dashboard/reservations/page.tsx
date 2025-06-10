@@ -544,8 +544,8 @@ export default function ReservationsManagement() {
               <div className="text-right">THAO TÁC</div>
             </div>
             <div className="divide-y">
-              {displayedReservations.map((reservation) => (
-                <div key={reservation._id} className="grid grid-cols-7 gap-4 p-4 text-sm items-center">
+              {displayedReservations.map((reservation, index) => (
+                <div key={`${reservation._id}-${index}`} className="grid grid-cols-7 gap-4 p-4 text-sm items-center">
                   <div>
                     <div className="font-medium">{reservation.customerName}</div>
                     <div className="text-gray-500">{reservation.customerPhone}</div>
@@ -663,7 +663,25 @@ export default function ReservationsManagement() {
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Bàn đã đặt</h3>
               <div className="bg-gray-50 p-3 rounded">
-                {/* Implementation of reservedTables component */}
+                {selectedReservation?.reservedTables && selectedReservation.reservedTables.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedReservation.reservedTables.map((table: any, index: number) => (
+                      <div key={`${table._id}-${index}`} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-blue-100 p-2 rounded-full">
+                            <Users size={16} className="text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Bàn {table.tableNumber}</p>
+                            <p className="text-sm text-gray-500">{table.capacity} chỗ ngồi</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-2">Chưa có bàn nào được đặt</p>
+                )}
               </div>
             </div>
 

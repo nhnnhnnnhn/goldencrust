@@ -132,8 +132,14 @@ export default function ReservationPage() {
   }
 
   const validatePhone = (phone: string) => {
-    if (!phone) return 'Phone number is required'
-    if (!/^[0-9]{10}$/.test(phone)) return 'Phone number must be 10 digits'
+    if (!phone) return 'Số điện thoại là bắt buộc'
+    // Kiểm tra định dạng số điện thoại Việt Nam
+    // Bắt đầu bằng 0, theo sau là 9 chữ số
+    // Hoặc bắt đầu bằng +84, theo sau là 9 chữ số
+    const phoneNumber = phone.toString().replace(/\s/g, '')
+    if (!/^(0|(\+84))[35789][0-9]{8}$/.test(phoneNumber)) {
+      return 'Số điện thoại không hợp lệ (VD: 0912345678 hoặc +84912345678)'
+    }
     return ''
   }
 
@@ -270,10 +276,10 @@ export default function ReservationPage() {
     
     try {
       // Validate form data
-      if (!formData.location || !formData.date || !formData.time || !formData.guests || !formData.name || !formData.phone) {
+      if (!formData.location || !formData.date || !formData.time || !formData.guests || !formData.name || !formData.phone || selectedTables.length === 0) {
         toast({
           title: "Error",
-          description: "Please fill in all required fields",
+          description: "Please fill in all required fields and select at least one table",
           variant: "destructive",
         })
         return
@@ -288,6 +294,7 @@ export default function ReservationPage() {
         numberOfGuests: parseInt(formData.guests),
         specialRequests: formData.specialRequests,
         restaurantId: formData.location,
+        reservedTables: selectedTables
       }).unwrap()
 
       // Show success message
