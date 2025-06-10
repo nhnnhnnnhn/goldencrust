@@ -24,9 +24,30 @@ export default function CategoriesPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Get initial language
     const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null;
     if (savedLanguage === "en" || savedLanguage === "vi") {
       setLanguage(savedLanguage);
+    }
+
+    // Listen for storage changes (from other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "language" && (e.newValue === "en" || e.newValue === "vi")) {
+        setLanguage(e.newValue);
+      }
+    }
+
+    // Listen for custom language change event (from same tab)
+    const handleLanguageChange = (e: CustomEvent<"en" | "vi">) => {
+      setLanguage(e.detail);
+    }
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("languageChange", handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("languageChange", handleLanguageChange as EventListener);
     }
   }, []);
 
@@ -38,19 +59,21 @@ export default function CategoriesPage() {
 
   if (!categoryData) {
     toast({
-      title: "Lỗi",
-      description: "Không thể tải danh sách danh mục. Vui lòng thử lại sau.",
+      title: t.dashboard.errorTitle,
+      description: t.dashboard.errorMessage,
       variant: "destructive",
     });
     return null;
   }
 
   const categories = categoryData.categories.map((category) => ({
-    id: category._id,
+    _id: category._id,
     name: category.name,
     description: category.description,
     status: category.status,
-    createdAt: new Date(category.createdAt).toLocaleDateString("vi-VN"),
+    slug: category.slug,
+    createdAt: new Date(category.createdAt).toLocaleDateString(language === "vi" ? "vi-VN" : "en-US"),
+    updatedAt: category.updatedAt
   }));
 
   return (

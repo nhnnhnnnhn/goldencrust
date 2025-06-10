@@ -132,8 +132,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
           </div>
           <div className="flex flex-1 justify-end">
-            <div className="flex items-center">
-              <span className="mr-2 text-sm text-gray-700">
+            <div className="flex items-center space-x-4">
+              {/* Language Switcher */}
+              <button
+                onClick={() => {
+                  const newLang = language === "en" ? "vi" : "en"
+                  setLanguage(newLang)
+                  localStorage.setItem("language", newLang)
+                  // Dispatch custom event for language change
+                  window.dispatchEvent(new CustomEvent("languageChange", { detail: newLang }))
+                }}
+                className="flex items-center space-x-1 rounded-md bg-gray-100 px-3 py-1 text-gray-700 hover:bg-gray-200"
+              >
+                <span className="text-sm font-medium">{language.toUpperCase()}</span>
+              </button>
+
+              <span className="text-sm text-gray-700">
                 {user.fullName || user.name} ({isAdmin ? t.dashboard.adminRole : t.dashboard.userRole})
               </span>
               <div className="relative">

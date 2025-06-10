@@ -11,6 +11,7 @@ import { Award, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { useGetUserProfileQuery, useUpdateUserProfileMutation, useChangeUserPasswordMutation, User } from "@/redux/api/userApi"
 import { toast } from "sonner"
 import { Toaster } from "sonner"
+import { getTranslation } from "@/utils/translations"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ import {
 
 export default function ProfilePage() {
   const { user, login } = useAuth()
+  const [language, setLanguage] = useState<"en" | "vi">("en")
   const [activeTab, setActiveTab] = useState("profile")
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showPasswordSuccessDialog, setShowPasswordSuccessDialog] = useState(false)
@@ -81,24 +83,55 @@ export default function ProfilePage() {
     confirmPassword: "",
   })
 
+  // Listen for language changes
+  useEffect(() => {
+    // Get initial language
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+
+    // Listen for storage changes (from other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "language" && (e.newValue === "en" || e.newValue === "vi")) {
+        setLanguage(e.newValue)
+      }
+    }
+
+    // Listen for custom language change event (from same tab)
+    const handleLanguageChange = (e: CustomEvent<"en" | "vi">) => {
+      setLanguage(e.detail)
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("languageChange", handleLanguageChange as EventListener)
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("languageChange", handleLanguageChange as EventListener)
+    }
+  }, [])
+
+  const t = getTranslation(language)
+
   const validateField = (name: string, value: string) => {
     switch (name) {
       case 'fullName':
-        if (!value) return "Full name is required"
-        if (value.length < 3 || value.length > 50) return "Full name must be 3-50 characters long"
-        if (!/^[a-zA-Z\s]+$/.test(value)) return "Full name must contain only letters"
+        if (!value) return t.profile.validation.fullNameRequired
+        if (value.length < 3 || value.length > 50) return t.profile.validation.fullNameLength
+        if (!/^[a-zA-Z\s]+$/.test(value)) return t.profile.validation.fullNameLetters
         return ""
       case 'email':
-        if (!value) return "Email is required"
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email format"
+        if (!value) return t.profile.validation.emailRequired
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t.profile.validation.emailInvalid
         return ""
       case 'phone':
-        if (!value) return "Phone number is required"
-        if (!/^\d{10}$/.test(value)) return "Phone number must be exactly 10 digits"
+        if (!value) return t.profile.validation.phoneRequired
+        if (!/^\d{10}$/.test(value)) return t.profile.validation.phoneLength
         return ""
       case 'address':
-        if (!value) return "Address is required"
-        if (value.length < 3 || value.length > 100) return "Address must be 3-100 characters long"
+        if (!value) return t.profile.validation.addressRequired
+        if (value.length < 3 || value.length > 100) return t.profile.validation.addressLength
         return ""
       default:
         return ""
@@ -188,19 +221,19 @@ export default function ProfilePage() {
 
   const validatePassword = (password: string) => {
     if (password.length < 8) {
-      return "Password must be at least 8 characters long"
+      return t.profile.validation.passwordLength
     }
     if (!/[A-Z]/.test(password)) {
-      return "Include at least one uppercase letter (A-Z)"
+      return t.profile.validation.passwordUppercase
     }
     if (!/[a-z]/.test(password)) {
-      return "Include at least one lowercase letter (a-z)"
+      return t.profile.validation.passwordLowercase
     }
     if (!/[0-9]/.test(password)) {
-      return "Include at least one number (0-9)"
+      return t.profile.validation.passwordNumber
     }
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      return "Include at least one special character (!@#$%^&*(),.?\":{}|<>)"
+      return t.profile.validation.passwordSpecial
     }
     return ""
   }
@@ -210,9 +243,9 @@ export default function ProfilePage() {
     
     // Validate passwords
     const errors = {
-      currentPassword: !passwordData.currentPassword ? "Please enter your current password" : "",
+      currentPassword: !passwordData.currentPassword ? t.profile.validation.currentPasswordRequired : "",
       newPassword: validatePassword(passwordData.newPassword),
-      confirmPassword: passwordData.newPassword !== passwordData.confirmPassword ? "New passwords do not match" : ""
+      confirmPassword: passwordData.newPassword !== passwordData.confirmPassword ? t.profile.validation.passwordMatch : ""
     }
     
     setValidationErrors(errors)
@@ -263,14 +296,14 @@ export default function ProfilePage() {
           if (errorMessages.length > 0) {
             toast.error(errorMessages[0])
           } else {
-            toast.error("Invalid password format. Please check the requirements.")
+            toast.error(t.profile.validation.passwordInvalid)
           }
         } else {
-          toast.error("Invalid password format. Please check the requirements.")
+          toast.error(t.profile.validation.passwordInvalid)
         }
       } else if (error.status === 401) {
         // Show the specific error message from the server
-        const errorMessage = error.data?.message || "Current password is incorrect"
+        const errorMessage = error.data?.message || t.profile.validation.currentPasswordIncorrect
         toast.error(errorMessage, {
           duration: 5000,
           position: "top-right",
@@ -281,18 +314,18 @@ export default function ProfilePage() {
           currentPassword: ""
         }))
       } else if (error.status === 403) {
-        toast.error("You don't have permission to change the password", {
+        toast.error(t.profile.validation.passwordPermission, {
           duration: 5000,
           position: "top-right",
         })
       } else if (error.status === 500) {
-        toast.error("Server error. Please try again later", {
+        toast.error(t.profile.validation.passwordServer, {
           duration: 5000,
           position: "top-right",
         })
       } else {
         // Handle any other error cases
-        const errorMessage = error.data?.message || error.message || "Failed to update password. Please try again."
+        const errorMessage = error.data?.message || error.message || t.profile.validation.passwordFailed
         toast.error(errorMessage, {
           duration: 5000,
           position: "top-right",
@@ -306,7 +339,7 @@ export default function ProfilePage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
+          <p className="mt-4 text-gray-600">{t.profile.loading}</p>
         </div>
       </div>
     )
@@ -321,103 +354,96 @@ export default function ProfilePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Profile</h2>
-          <p className="text-gray-600 mb-4">There was a problem loading your profile information.</p>
-          <Button onClick={() => refetch()}>Try Again</Button>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{t.profile.errorTitle}</h2>
+          <p className="text-gray-600 mb-4">{t.profile.errorMessage}</p>
+          <Button onClick={() => refetch()}>{t.profile.errorButton}</Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <Toaster position="top-right" richColors />
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Profile Settings</h1>
-        <p className="text-gray-500">Manage your account settings and preferences</p>
+    <div className="container mx-auto px-4 py-8">
+      <Toaster />
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">{t.profile.title}</h1>
+        <p className="mt-2 text-gray-600">{t.profile.description}</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
+          <TabsTrigger value="profile">{t.profile.tabs.profile}</TabsTrigger>
+          <TabsTrigger value="password">{t.profile.tabs.password}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
           <Card>
             <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your profile information</CardDescription>
+              <CardTitle>{t.profile.sections.profileInfo}</CardTitle>
+              <CardDescription>{t.profile.sections.profileInfoDesc}</CardDescription>
             </CardHeader>
             <form onSubmit={handleProfileSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName">{t.profile.fields.fullName}</Label>
                   <Input
                     id="fullName"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    required
-                    className={validationErrors.fullName ? "border-red-500" : ""}
+                    placeholder={t.profile.placeholders.fullName}
                   />
                   {validationErrors.fullName && (
-                    <p className="text-sm text-red-500 mt-1">{validationErrors.fullName}</p>
+                    <p className="text-sm text-red-500">{validationErrors.fullName}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t.profile.fields.email}</Label>
                   <Input
                     id="email"
                     name="email"
                     type="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    required
-                    className={validationErrors.email ? "border-red-500" : ""}
+                    placeholder={t.profile.placeholders.email}
                   />
                   {validationErrors.email && (
-                    <p className="text-sm text-red-500 mt-1">{validationErrors.email}</p>
+                    <p className="text-sm text-red-500">{validationErrors.email}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone">{t.profile.fields.phone}</Label>
                   <Input
                     id="phone"
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    required
-                    className={validationErrors.phone ? "border-red-500" : ""}
+                    placeholder={t.profile.placeholders.phone}
                   />
                   {validationErrors.phone && (
-                    <p className="text-sm text-red-500 mt-1">{validationErrors.phone}</p>
+                    <p className="text-sm text-red-500">{validationErrors.phone}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="address">{t.profile.fields.address}</Label>
                   <Input
                     id="address"
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    required
-                    className={validationErrors.address ? "border-red-500" : ""}
+                    placeholder={t.profile.placeholders.address}
                   />
                   {validationErrors.address && (
-                    <p className="text-sm text-red-500 mt-1">{validationErrors.address}</p>
+                    <p className="text-sm text-red-500">{validationErrors.address}</p>
                   )}
                 </div>
               </CardContent>
               <CardFooter>
-                <Button 
-                  type="submit" 
-                  disabled={isUpdating || Object.values(validationErrors).some(error => error)}
-                >
-                  {isUpdating ? "Saving..." : "Save Changes"}
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating ? t.profile.buttons.updating : t.profile.buttons.updateProfile}
                 </Button>
               </CardFooter>
             </form>
@@ -427,108 +453,83 @@ export default function ProfilePage() {
         <TabsContent value="password">
           <Card>
             <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>Update your password</CardDescription>
+              <CardTitle>{t.profile.sections.changePassword}</CardTitle>
+              <CardDescription>{t.profile.sections.changePasswordDesc}</CardDescription>
             </CardHeader>
             <form onSubmit={handlePasswordSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Label htmlFor="currentPassword">{t.profile.fields.currentPassword}</Label>
                   <div className="relative">
                     <Input
                       id="currentPassword"
                       type={showCurrentPassword ? "text" : "password"}
                       value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                      required
-                      className={validationErrors.currentPassword ? "border-red-500" : ""}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      placeholder={t.profile.placeholders.currentPassword}
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     >
-                      {showCurrentPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   {validationErrors.currentPassword && (
-                    <p className="text-sm text-red-500 mt-1">{validationErrors.currentPassword}</p>
+                    <p className="text-sm text-red-500">{validationErrors.currentPassword}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
+                  <Label htmlFor="newPassword">{t.profile.fields.newPassword}</Label>
                   <div className="relative">
                     <Input
                       id="newPassword"
                       type={showNewPassword ? "text" : "password"}
                       value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                      required
-                      className={validationErrors.newPassword ? "border-red-500" : ""}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      placeholder={t.profile.placeholders.newPassword}
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   {validationErrors.newPassword && (
-                    <p className="text-sm text-red-500 mt-1">{validationErrors.newPassword}</p>
+                    <p className="text-sm text-red-500">{validationErrors.newPassword}</p>
                   )}
-                  <p className="text-sm text-gray-500 mt-1">
-                    Your password must include:
-                  </p>
-                  <ul className="list-disc list-inside mt-1 ml-2 text-sm text-gray-500">
-                    <li>At least 8 characters</li>
-                    <li>One uppercase letter (A-Z)</li>
-                    <li>One lowercase letter (a-z)</li>
-                    <li>One number (0-9)</li>
-                    <li>One special character (!@#$%^&*(),.?":{}|&lt;&gt;)</li>
-                  </ul>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Label htmlFor="confirmPassword">{t.profile.fields.confirmPassword}</Label>
                   <div className="relative">
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                      required
-                      className={validationErrors.confirmPassword ? "border-red-500" : ""}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      placeholder={t.profile.placeholders.confirmPassword}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   {validationErrors.confirmPassword && (
-                    <p className="text-sm text-red-500 mt-1">{validationErrors.confirmPassword}</p>
+                    <p className="text-sm text-red-500">{validationErrors.confirmPassword}</p>
                   )}
                 </div>
               </CardContent>
               <CardFooter>
                 <Button type="submit" disabled={isChangingPassword}>
-                  {isChangingPassword ? "Updating..." : "Update Password"}
+                  {isChangingPassword ? t.profile.buttons.changing : t.profile.buttons.changePassword}
                 </Button>
               </CardFooter>
             </form>
@@ -538,75 +539,53 @@ export default function ProfilePage() {
 
       {/* Success Dialog */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent className="sm:max-w-[425px]">
-          <div className="flex flex-col items-center justify-center py-6">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-center text-xl font-semibold">
-                Profile Updated Successfully!
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-center text-gray-500 mt-2">
-                Your profile information has been updated successfully.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-6">
-              <AlertDialogAction
-                onClick={() => setShowSuccessDialog(false)}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                Continue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Password Change Success Dialog */}
-      <AlertDialog open={showPasswordSuccessDialog} onOpenChange={setShowPasswordSuccessDialog}>
-        <AlertDialogContent className="sm:max-w-[425px]">
-          <div className="flex flex-col items-center justify-center py-6">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-center text-xl font-semibold">
-                Password Updated Successfully!
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-center text-gray-500 mt-2">
-                Your password has been changed successfully. Please use your new password the next time you log in.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-6">
-              <AlertDialogAction
-                onClick={() => setShowPasswordSuccessDialog(false)}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                Continue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Password Change Confirmation Dialog */}
-      <AlertDialog open={showPasswordConfirmDialog} onOpenChange={setShowPasswordConfirmDialog}>
-        <AlertDialogContent className="sm:max-w-[425px]">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Password Change</AlertDialogTitle>
+            <AlertDialogTitle>{t.profile.dialogs.successTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to change your password? You will need to use your new password the next time you log in.
+              {t.profile.dialogs.profileUpdateSuccess}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+              {t.profile.dialogs.ok}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Password Success Dialog */}
+      <AlertDialog open={showPasswordSuccessDialog} onOpenChange={setShowPasswordSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.profile.dialogs.successTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.profile.dialogs.passwordUpdateSuccess}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowPasswordSuccessDialog(false)}>
+              {t.profile.dialogs.ok}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Password Confirm Dialog */}
+      <AlertDialog open={showPasswordConfirmDialog} onOpenChange={setShowPasswordConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.profile.dialogs.confirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.profile.dialogs.passwordConfirmMessage}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowPasswordConfirmDialog(false)}>
-              Cancel
+              {t.profile.dialogs.cancel}
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowPasswordConfirmDialog(false)
-                handlePasswordConfirm()
-              }}
-              className="bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              Confirm Change
+            <AlertDialogAction onClick={handlePasswordConfirm}>
+              {t.profile.dialogs.confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

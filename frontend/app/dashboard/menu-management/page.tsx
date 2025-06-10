@@ -19,6 +19,7 @@ import {
 } from "@/redux/api/menuItems"
 import { useGetCategoriesQuery } from "@/redux/api/categoryApi"
 import type { Category } from "@/redux/api/categoryApi"
+import { getTranslation } from "@/utils/translations"
 
 // Định nghĩa kiểu dữ liệu cho MenuItem
 interface MenuItem {
@@ -53,6 +54,7 @@ export default function MenuManagement() {
   const [currentItem, setCurrentItem] = useState<Partial<MenuItem> | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null)
+  const [language, setLanguage] = useState<"en" | "vi">("en")
 
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState("")
@@ -66,6 +68,36 @@ export default function MenuManagement() {
   const [updateMenuItemStatus] = useUpdateMenuItemStatusMutation()
 
   const [formErrors, setFormErrors] = useState<MenuItemFormErrors>({})
+
+  useEffect(() => {
+    // Get initial language
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null;
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage);
+    }
+
+    // Listen for storage changes (from other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "language" && (e.newValue === "en" || e.newValue === "vi")) {
+        setLanguage(e.newValue);
+      }
+    }
+
+    // Listen for custom language change event (from same tab)
+    const handleLanguageChange = (e: CustomEvent<"en" | "vi">) => {
+      setLanguage(e.detail);
+    }
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("languageChange", handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("languageChange", handleLanguageChange as EventListener);
+    }
+  }, []);
+
+  const t = getTranslation(language)
 
   // Filter menu items
   const filteredMenuItems = menuItems.filter((item: MenuItem) => {
@@ -127,33 +159,33 @@ export default function MenuManagement() {
 
     // Validate title
     if (!data.title?.trim()) {
-      errors.title = "Vui lòng nhập tên món ăn";
+      errors.title = t.menuManagement.validation.titleRequired;
     } else if (data.title.length < 3) {
-      errors.title = "Tên món ăn phải có ít nhất 3 ký tự";
+      errors.title = t.menuManagement.validation.titleLength;
     } else if (data.title.length > 100) {
-      errors.title = "Tên món ăn không được vượt quá 100 ký tự";
+      errors.title = t.menuManagement.validation.titleMaxLength;
     }
 
     // Validate category
     if (!data.categoryId) {
-      errors.categoryId = "Vui lòng chọn danh mục";
+      errors.categoryId = t.menuManagement.validation.categoryRequired;
     }
 
     // Validate price
     if (!data.price || data.price <= 0) {
-      errors.price = "Vui lòng nhập giá hợp lệ";
-    } else if (data.price > 10000000) { // 10 triệu VNĐ
-      errors.price = "Giá không được vượt quá 10,000,000 VNĐ";
+      errors.price = t.menuManagement.validation.priceRequired;
+    } else if (data.price > 10000000) {
+      errors.price = t.menuManagement.validation.priceMax;
     }
 
     // Validate discount
     if (data.discountPercentage && (data.discountPercentage < 0 || data.discountPercentage > 100)) {
-      errors.discountPercentage = "Giảm giá phải từ 0% đến 100%";
+      errors.discountPercentage = t.menuManagement.validation.discountRange;
     }
 
     // Validate thumbnail for new items
     if (!data._id && !imageFile) {
-      errors.thumbnail = "Vui lòng chọn hình ảnh cho món ăn";
+      errors.thumbnail = t.menuManagement.validation.thumbnailRequired;
     }
 
     setFormErrors(errors);
@@ -166,8 +198,8 @@ export default function MenuManagement() {
     
     if (!allowedTypes.includes(file.type)) {
       toast({
-        title: "Lỗi",
-        description: "Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WebP",
+        title: t.menuManagement.messages.saveError,
+        description: t.menuManagement.validation.imageType,
         variant: "destructive",
       });
       return false;
@@ -175,8 +207,8 @@ export default function MenuManagement() {
     
     if (file.size > maxSize) {
       toast({
-        title: "Lỗi",
-        description: "Kích thước ảnh không được vượt quá 5MB",
+        title: t.menuManagement.messages.saveError,
+        description: t.menuManagement.validation.imageSize,
         variant: "destructive",
       });
       return false;
@@ -423,57 +455,52 @@ export default function MenuManagement() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Quản Lý Menu</h1>
-        <Button onClick={handleAddItem} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-          <PlusCircle size={20} />
-          <span>Thêm Món Mới</span>
+    <div className="p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">{t.menuManagement.title}</h2>
+        <Button onClick={handleAddItem}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          {t.menuManagement.addNewItem}
         </Button>
       </div>
 
-      {/* Thanh tìm kiếm và lọc */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex items-center gap-4">
         <div className="relative flex-1">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            type="text"
-            placeholder="Tìm kiếm món ăn..."
+            placeholder={t.menuManagement.searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-8"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
         </div>
-
         <div className="relative">
           <Button
             variant="outline"
             onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-            className="flex items-center gap-2 w-full md:w-auto justify-between"
+            className="w-[200px] justify-between"
           >
-            <Filter size={20} />
-            <span>Danh mục: {selectedCategory === "all" ? "Tất cả" : getCategoryName(selectedCategory)}</span>
-            <ChevronDown size={16} />
+            <span>{selectedCategory === "all" ? t.menuManagement.fields.category : getCategoryName(selectedCategory)}</span>
+            <ChevronDown className="h-4 w-4" />
           </Button>
-
           {showCategoryDropdown && (
-            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+            <div className="absolute top-full left-0 mt-1 w-[200px] bg-white border rounded-md shadow-lg z-10">
               <div
                 className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                 onClick={() => {
-                  setSelectedCategory("all")
-                  setShowCategoryDropdown(false)
+                  setSelectedCategory("all");
+                  setShowCategoryDropdown(false);
                 }}
               >
-                Tất cả
+                {t.menuManagement.fields.category}
               </div>
               {categoriesData?.categories.map((category) => (
                 <div
                   key={category._id}
                   className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                   onClick={() => {
-                    setSelectedCategory(category._id)
-                    setShowCategoryDropdown(false)
+                    setSelectedCategory(category._id);
+                    setShowCategoryDropdown(false);
                   }}
                 >
                   {category.name}

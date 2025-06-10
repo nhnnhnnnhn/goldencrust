@@ -25,6 +25,8 @@ import {
   useUpdateTableStatusMutation,
   useDeleteTableMutation,
 } from '@/redux/api/tableApi'
+import { getTranslation } from "@/utils/translations"
+import { Label } from "@/components/ui/label"
 
 interface Restaurant {
   _id: string
@@ -83,6 +85,7 @@ const RESTAURANT_PREFIX_MAP: { [key: string]: string } = {
 
 export default function TableManagement() {
   const { toast } = useToast()
+  const [language, setLanguage] = useState<"en" | "vi">("en")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("All")
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
@@ -91,6 +94,7 @@ export default function TableManagement() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("")
   const [tableNumberError, setTableNumberError] = useState<string>("")
   const [tableNumberSuffix, setTableNumberSuffix] = useState("")
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   // API Hooks
   const { data: restaurants = [], isLoading: isLoadingRestaurants } = useGetRestaurantsQuery()
@@ -101,6 +105,43 @@ export default function TableManagement() {
   const [updateTable] = useUpdateTableMutation()
   const [updateTableStatus] = useUpdateTableStatusMutation()
   const [deleteTable] = useDeleteTableMutation()
+
+  // Listen for language changes
+  useEffect(() => {
+    // Get initial language
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+
+    // Listen for storage changes (from other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "language" && (e.newValue === "en" || e.newValue === "vi")) {
+        setLanguage(e.newValue)
+      }
+    }
+
+    // Listen for custom language change event (from same tab)
+    const handleLanguageChange = (e: CustomEvent<"en" | "vi">) => {
+      setLanguage(e.detail)
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("languageChange", handleLanguageChange as EventListener)
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("languageChange", handleLanguageChange as EventListener)
+    }
+  }, [])
+
+  const t = getTranslation(language)
+
+  const statusLabels = {
+    available: t.tableManagement.status.available,
+    occupied: t.tableManagement.status.occupied,
+    reserved: t.tableManagement.status.reserved,
+  }
 
   // Add console logs for debugging
   useEffect(() => {
@@ -195,24 +236,20 @@ export default function TableManagement() {
   const handleAddTable = () => {
     if (!selectedRestaurantId) {
       toast({
-        title: "Error",
-        description: "Please select a restaurant first",
+        title: t.tableManagement.messages.errorTitle,
+        description: t.tableManagement.messages.selectRestaurantFirst,
         variant: "destructive",
       })
       return
     }
-
-    const prefix = getCurrentRestaurantPrefix()
-    setTableNumberSuffix("")
-    
-    const newTable: Partial<Table> = {
+    setCurrentTable({
       restaurantId: selectedRestaurantId,
-      tableNumber: prefix,
-      capacity: 4,
-      status: "available" // Mặc định là available
-    }
-    
-    setCurrentTable(newTable)
+      tableNumber: "",
+      capacity: 0,
+      status: "available",
+    })
+    setTableNumberSuffix("")
+    setTableNumberError("")
     setShowAddEditModal(true)
   }
 
@@ -224,42 +261,51 @@ export default function TableManagement() {
 
   // Xử lý xóa bàn
   const handleDeleteClick = async (table: Table) => {
-    if (!table._id) return;
-    
-    if (confirm("Are you sure you want to delete this table?")) {
-      try {
-        await deleteTable(table._id).unwrap()
-        toast({
-          title: "Success",
-          description: `Table ${table.tableNumber} has been deleted.`,
-        })
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete table",
-          variant: "destructive",
-        })
-      }
+    setCurrentTable(table)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!currentTable?._id) return
+
+    try {
+      await deleteTable(currentTable._id).unwrap()
+      toast({
+        title: t.tableManagement.messages.deleteSuccess,
+      })
+      setShowDeleteModal(false)
+      refetch()
+    } catch (error) {
+      toast({
+        title: t.tableManagement.messages.deleteError,
+        variant: "destructive",
+      })
     }
   }
 
   // Xử lý lưu bàn (thêm mới hoặc cập nhật)
   const handleSaveTable = async () => {
-    if (!currentTable || !currentTable.restaurantId || !currentTable.tableNumber || !currentTable.capacity) {
+    if (!currentTable) return
+
+    // Validate required fields
+    if (!currentTable.tableNumber) {
+      setTableNumberError(t.tableManagement.validation.tableNumberRequired)
+      return
+    }
+
+    if (!currentTable.capacity) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        title: t.tableManagement.messages.errorTitle,
+        description: t.tableManagement.validation.capacityRequired,
         variant: "destructive",
       })
       return
     }
 
-    // Kiểm tra trùng số bàn trước khi lưu
-    if (checkDuplicateTableNumber(currentTable.tableNumber, currentTable._id)) {
-      const restaurantName = restaurants.find(r => r._id === currentTable.restaurantId)?.name
+    if (!currentTable.restaurantId) {
       toast({
-        title: "Error",
-        description: `Table ${currentTable.tableNumber} already exists in ${restaurantName}`,
+        title: t.tableManagement.messages.errorTitle,
+        description: t.tableManagement.validation.restaurantRequired,
         variant: "destructive",
       })
       return
@@ -269,77 +315,31 @@ export default function TableManagement() {
       if (currentTable._id) {
         // Update existing table
         const { _id, ...updateData } = currentTable
-        // Ensure status is included in the update
-        const dataToUpdate = {
-          ...updateData,
-          status: updateData.status || 'available'
-        }
         await updateTable({
           id: _id,
-          data: dataToUpdate
+          data: updateData
         }).unwrap()
-        
-        // Also update the table status if it has changed
-        if (dataToUpdate.status) {
-          await updateTableStatus({
-            id: _id,
-            data: { status: dataToUpdate.status }
-          }).unwrap()
-        }
-        
         toast({
-          title: "Success",
-          description: `Table ${currentTable.tableNumber} has been updated.`,
+          title: t.tableManagement.messages.saveSuccess,
         })
       } else {
-        // Create new table - only send required fields
+        // Create new table
         const newTableData = {
           restaurantId: currentTable.restaurantId,
           tableNumber: currentTable.tableNumber,
-          capacity: Number(currentTable.capacity),
+          capacity: currentTable.capacity,
           status: currentTable.status || 'available'
         }
-        console.log('Creating table with data:', newTableData)
-        try {
-          const result = await createTable(newTableData).unwrap()
-          console.log('Table created successfully:', result)
-          toast({
-            title: "Success",
-            description: `Table ${currentTable.tableNumber} has been created.`,
-          })
-        } catch (error) {
-          const err = error as { 
-            status?: number;
-            data?: { message?: string; error?: string };
-            error?: string;
-          }
-          console.error('Error saving table:', {
-            status: err?.status,
-            message: err?.data?.message || err?.data?.error,
-            error: err?.error,
-            fullError: JSON.stringify(err, null, 2)
-          })
-          throw error // Re-throw to be caught by outer catch
-        }
+        await createTable(newTableData).unwrap()
+        toast({
+          title: t.tableManagement.messages.saveSuccess,
+        })
       }
       setShowAddEditModal(false)
-      // Force refetch tables after update
       refetch()
     } catch (error) {
-      const err = error as { 
-        status?: number;
-        data?: { message?: string; error?: string };
-        error?: string;
-      }
-      console.error('Error saving table:', {
-        status: err?.status,
-        message: err?.data?.message || err?.data?.error,
-        error: err?.error,
-        fullError: JSON.stringify(err, null, 2)
-      })
       toast({
-        title: "Error",
-        description: err?.data?.message || err?.data?.error || err?.error || "Failed to save table. Please check the console for details.",
+        title: t.tableManagement.messages.saveError,
         variant: "destructive",
       })
     }
@@ -347,32 +347,20 @@ export default function TableManagement() {
 
   // Xử lý cập nhật trạng thái bàn
   const handleUpdateStatus = async (id: string | undefined, newStatus: "available" | "occupied" | "reserved") => {
-    if (!id) {
-      toast({
-        title: "Error",
-        description: "Table ID is required",
-        variant: "destructive",
-      })
-      return
-    }
+    if (!id) return
 
     try {
       await updateTableStatus({
         id,
         data: { status: newStatus }
       }).unwrap()
-
       toast({
-        title: "Success",
-        description: `Table status has been updated to ${statusLabels[newStatus]}.`,
+        title: t.tableManagement.messages.saveSuccess,
       })
-      
-      // Force refetch tables after status update
       refetch()
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update table status",
+        title: t.tableManagement.messages.saveError,
         variant: "destructive",
       })
     }
@@ -406,16 +394,31 @@ export default function TableManagement() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Restaurant Selection */}
-      <div className="flex items-center space-x-4">
-        <Select
-          value={selectedRestaurantId}
-          onValueChange={setSelectedRestaurantId}
-          disabled={isLoadingRestaurants}
-        >
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{t.tableManagement.title}</h1>
+          <p className="text-gray-600">{t.tableManagement.description}</p>
+        </div>
+        <Button onClick={handleAddTable}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          {t.tableManagement.addTable}
+        </Button>
+      </div>
+
+      <div className="flex gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder={t.tableManagement.searchPlaceholder}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={selectedRestaurantId} onValueChange={handleRestaurantChange}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Select Restaurant" />
+            <SelectValue placeholder={t.tableManagement.placeholders.selectRestaurant} />
           </SelectTrigger>
           <SelectContent>
             {restaurants.map((restaurant) => (
@@ -425,55 +428,147 @@ export default function TableManagement() {
             ))}
           </SelectContent>
         </Select>
-        <Button onClick={handleAddTable} disabled={!selectedRestaurantId}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Add Table
-        </Button>
-      </div>
-
-      {/* Selected Restaurant Info */}
-      {selectedRestaurantId && (
-        <div className="bg-white p-4 rounded-lg shadow">
-          {restaurants.find(r => r._id === selectedRestaurantId) && (
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Building className="h-5 w-5 text-gray-500" />
-                <span className="font-medium">
-                  {restaurants.find(r => r._id === selectedRestaurantId)?.name}
-                </span>
+        <div className="relative">
+          <Button
+            variant="outline"
+            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+            className="w-[150px]"
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            {selectedStatus === "All" ? t.tableManagement.status.all : statusLabels[selectedStatus as keyof typeof statusLabels]}
+            <ChevronDown className="ml-2 h-4 w-4" />
+          </Button>
+          {showStatusDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-[150px] bg-white border rounded-md shadow-lg z-10">
+              <div
+                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                onClick={() => {
+                  setSelectedStatus("All")
+                  setShowStatusDropdown(false)
+                }}
+              >
+                {t.tableManagement.status.all}
               </div>
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-5 w-5 text-gray-500" />
-                <span>
-                  {restaurants.find(r => r._id === selectedRestaurantId)?.address}
-                </span>
-              </div>
+              {statuses.filter(s => s !== "All").map((status) => (
+                <div
+                  key={status}
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => {
+                    setSelectedStatus(status)
+                    setShowStatusDropdown(false)
+                  }}
+                >
+                  {statusLabels[status as keyof typeof statusLabels]}
+                </div>
+              ))}
             </div>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Table Modal */}
-      {showAddEditModal && currentTable && (
+      {/* Table List */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t.tableManagement.fields.tableNumber}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t.tableManagement.fields.capacity}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t.tableManagement.fields.status}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t.tableManagement.fields.restaurant}
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t.tableManagement.actions.edit}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredTables.map((table) => (
+                <tr key={table._id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{table.tableNumber}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{table.capacity}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[table.status]}`}>
+                      {statusLabels[table.status]}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {restaurants.find(r => r._id === table.restaurantId)?.name}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleEditTable(table)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                    >
+                      {t.tableManagement.actions.edit}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleDeleteClick(table)}
+                      className="text-red-600 hover:text-red-900 ml-2"
+                    >
+                      {t.tableManagement.actions.delete}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add/Edit Modal */}
+      {showAddEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{currentTable._id ? "Edit Table" : "Add New Table"}</h2>
-              <button onClick={() => setShowAddEditModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X size={24} />
-              </button>
-            </div>
-
+            <h2 className="text-xl font-bold mb-4">
+              {currentTable?._id ? t.tableManagement.editTable : t.tableManagement.addTable}
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant</label>
+                <Label htmlFor="tableNumber">{t.tableManagement.fields.tableNumber}</Label>
+                <Input
+                  id="tableNumber"
+                  value={tableNumberSuffix}
+                  onChange={(e) => handleTableNumberChange(e.target.value)}
+                  placeholder={t.tableManagement.placeholders.tableNumber}
+                />
+                {tableNumberError && (
+                  <p className="text-red-500 text-sm mt-1">{tableNumberError}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="capacity">{t.tableManagement.fields.capacity}</Label>
+                <Input
+                  id="capacity"
+                  type="number"
+                  value={currentTable?.capacity || ""}
+                  onChange={(e) => setCurrentTable({ ...currentTable, capacity: parseInt(e.target.value) })}
+                  placeholder={t.tableManagement.placeholders.capacity}
+                />
+              </div>
+              <div>
+                <Label htmlFor="restaurant">{t.tableManagement.fields.restaurant}</Label>
                 <Select
-                  value={currentTable.restaurantId}
-                  onValueChange={handleRestaurantChange}
-                  disabled={!!currentTable._id}
+                  value={currentTable?.restaurantId || ""}
+                  onValueChange={(value) => setCurrentTable({ ...currentTable, restaurantId: value })}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a restaurant" />
+                  <SelectTrigger>
+                    <SelectValue placeholder={t.tableManagement.placeholders.selectRestaurant} />
                   </SelectTrigger>
                   <SelectContent>
                     {restaurants.map((restaurant) => (
@@ -484,186 +579,36 @@ export default function TableManagement() {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Table Number
-                </label>
-                {currentTable._id ? (
-                  // Khi edit: hiển thị tên bàn đầy đủ
-                  <Input
-                    type="text"
-                    value={currentTable.tableNumber || ""}
-                    className="w-full bg-gray-100"
-                    disabled={true}
-                  />
-                ) : (
-                  // Khi thêm mới: hiển thị prefix và cho phép nhập phần sau
-                  <div className="flex">
-                    <div className="flex items-center justify-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md min-w-[40px]">
-                      {getCurrentRestaurantPrefix()}
-                    </div>
-                    <Input
-                      type="text"
-                      value={tableNumberSuffix}
-                      onChange={(e) => handleTableNumberChange(getCurrentRestaurantPrefix() + e.target.value)}
-                      className={`rounded-l-none ${
-                        tableNumberError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                      }`}
-                      placeholder="Enter table number"
-                    />
-                  </div>
-                )}
-                {tableNumberError && (
-                  <p className="mt-1 text-sm text-red-500 font-medium">{tableNumberError}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                <Input
-                  type="number"
-                  value={currentTable.capacity || 0}
-                  onChange={(e) => setCurrentTable({ ...currentTable, capacity: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min={1}
-                />
-              </div>
-
-              {/* Chỉ hiển thị status khi edit bàn */}
-              {currentTable._id && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <Select
-                    value={currentTable.status}
-                    onValueChange={(value: "available" | "reserved" | "occupied") => {
-                      setCurrentTable({ ...currentTable, status: value })
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statuses
-                        .filter((status) => status !== "All")
-                        .map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {statusLabels[status as keyof typeof statusLabels]}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
-
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="outline" onClick={() => setShowAddEditModal(false)}>
-                Cancel
+                {t.tableManagement.actions.cancel}
               </Button>
-              <Button 
-                onClick={handleSaveTable} 
-                className="bg-[#003087] hover:bg-[#002266] text-white"
-                disabled={!!tableNumberError || !currentTable.tableNumber || !currentTable.capacity}
-              >
-                Save
+              <Button onClick={handleSaveTable}>
+                {t.tableManagement.actions.save}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Thanh tìm kiếm và lọc */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search by table number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
-          >
-            <Filter size={20} />
-            <span>Status: {selectedStatus}</span>
-            <ChevronDown size={16} />
-          </button>
-
-          {showStatusDropdown && (
-            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-              {statuses.map((status) => (
-                <div
-                  key={status}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
-                  onClick={() => {
-                    setSelectedStatus(status)
-                    setShowStatusDropdown(false)
-                  }}
-                >
-                  {status !== "All" && statusIcons[status as keyof typeof statusIcons]}
-                  {status}
-                </div>
-              ))}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">{t.tableManagement.messages.confirmDelete}</h2>
+            <p className="text-gray-600 mb-6">{t.tableManagement.messages.confirmDeleteNote}</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+                {t.tableManagement.actions.cancel}
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteConfirm}>
+                {t.tableManagement.actions.delete}
+              </Button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-
-      {/* Hiển thị bàn dạng lưới */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {isLoadingTables ? (
-          <div className="col-span-full text-center py-8 bg-white rounded-lg shadow">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading tables...</p>
-          </div>
-        ) : tablesError ? (
-          <div className="col-span-full text-center py-8 bg-white rounded-lg shadow">
-            <XCircle size={48} className="mx-auto text-red-500 mb-2" />
-            <p className="text-red-500">Error loading tables</p>
-            <p className="text-sm text-gray-500 mt-1">{JSON.stringify(tablesError)}</p>
-          </div>
-        ) : filteredTables.length === 0 ? (
-          <div className="col-span-full text-center py-8 bg-white rounded-lg shadow">
-            <Users size={48} className="mx-auto text-gray-400 mb-2" />
-            <p className="text-gray-500">No tables found</p>
-            {selectedRestaurantId && (
-              <p className="text-sm text-gray-400 mt-1">Try adding some tables to this restaurant</p>
-            )}
-          </div>
-        ) : (
-          filteredTables.map((table) => (
-            <div
-              key={table._id}
-              className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => handleViewDetails(table)}
-            >
-              <div className="p-4 border-b">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium">Table {table.tableNumber}</h3>
-                  <span
-                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[table.status]}`}
-                  >
-                    {statusIcons[table.status]}
-                    <span className="ml-1">{statusLabels[table.status]}</span>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                  <Users size={16} />
-                  <span>Capacity: {table.capacity}</span>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      )}
     </div>
   )
 }

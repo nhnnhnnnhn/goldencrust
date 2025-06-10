@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getTranslation } from "@/utils/translations"
 
 interface DeliveryItem {
   menuItemId: string;
@@ -87,6 +88,46 @@ export default function DeliveryManagement() {
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [pendingUpdate, setPendingUpdate] = useState<{ id: string; status: Delivery['deliveryStatus'] } | null>(null)
+  const [language, setLanguage] = useState<"en" | "vi">("en")
+
+  // Listen for language changes
+  useEffect(() => {
+    // Get initial language
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+
+    // Listen for storage changes (from other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "language" && (e.newValue === "en" || e.newValue === "vi")) {
+        setLanguage(e.newValue)
+      }
+    }
+
+    // Listen for custom language change event (from same tab)
+    const handleLanguageChange = (e: CustomEvent<"en" | "vi">) => {
+      setLanguage(e.detail)
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("languageChange", handleLanguageChange as EventListener)
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("languageChange", handleLanguageChange as EventListener)
+    }
+  }, [])
+
+  const t = getTranslation(language)
+
+  // Update status labels with translations
+  const statusLabels: Record<Delivery['deliveryStatus'], string> = {
+    preparing: t.delivery.status.preparing,
+    "on the way": t.delivery.status.onTheWay,
+    delivered: t.delivery.status.delivered,
+    cancelled: t.delivery.status.cancelled,
+  }
 
   // Add error logging
   useEffect(() => {
@@ -489,12 +530,12 @@ export default function DeliveryManagement() {
       <div className="p-6">
         <div className="flex flex-col items-center justify-center h-64">
           <XCircle size={48} className="text-red-500 mb-4" />
-          <p className="text-red-500 mb-2">Error loading deliveries</p>
+          <p className="text-red-500 mb-2">{t.delivery.error}</p>
           <button
             onClick={() => refetch()}
             className="px-4 py-2 bg-[#003087] text-white rounded-md hover:bg-[#002266]"
           >
-            Try Again
+            {t.delivery.actions.tryAgain}
           </button>
         </div>
       </div>
@@ -504,14 +545,14 @@ export default function DeliveryManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Quản lý giao hàng</h2>
+        <h2 className="text-3xl font-bold tracking-tight">{t.delivery.title}</h2>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
               <input
                 type="text"
-                placeholder="Tìm kiếm..."
+                placeholder={t.delivery.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -564,14 +605,14 @@ export default function DeliveryManagement() {
               onValueChange={(value: DateFilter) => setDateFilter(value)}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Lọc theo ngày" />
+                <SelectValue placeholder={t.delivery.dateFilter.selectDate} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả đơn hàng</SelectItem>
-                <SelectItem value="today">Hôm nay</SelectItem>
-                <SelectItem value="yesterday">Hôm qua</SelectItem>
-                <SelectItem value="thisWeek">Tuần này</SelectItem>
-                <SelectItem value="thisMonth">Tháng này</SelectItem>
+                <SelectItem value="all">{t.delivery.dateFilter.all}</SelectItem>
+                <SelectItem value="today">{t.delivery.dateFilter.today}</SelectItem>
+                <SelectItem value="yesterday">{t.delivery.dateFilter.yesterday}</SelectItem>
+                <SelectItem value="thisWeek">{t.delivery.dateFilter.thisWeek}</SelectItem>
+                <SelectItem value="thisMonth">{t.delivery.dateFilter.thisMonth}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -627,7 +668,7 @@ export default function DeliveryManagement() {
         {filteredDeliveries.length === 0 && (
           <div className="col-span-full text-center py-8 bg-white rounded-lg shadow">
             <Package size={48} className="mx-auto text-gray-400 mb-2" />
-            <p className="text-gray-500">Không tìm thấy đơn giao hàng nào</p>
+            <p className="text-gray-500">{t.delivery.noDeliveries}</p>
           </div>
         )}
       </div>
@@ -637,7 +678,7 @@ export default function DeliveryManagement() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Chi Tiết Đơn Giao Hàng #{currentDelivery._id.slice(-6)}</h2>
+              <h2 className="text-xl font-bold">{t.delivery.details.title}</h2>
               <button onClick={() => setShowDeliveryDetails(false)} className="text-gray-500 hover:text-gray-700">
                 <XCircle size={24} />
               </button>
@@ -645,7 +686,7 @@ export default function DeliveryManagement() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Thông tin khách hàng</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">{t.delivery.details.customerInfo}</h3>
                 <p className="text-lg font-medium">{currentDelivery.customerName}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
                   <Phone size={16} />
@@ -658,7 +699,7 @@ export default function DeliveryManagement() {
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Thông tin đơn hàng</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">{t.delivery.details.orderInfo}</h3>
                 <div className="flex items-center gap-2 mb-1 text-sm">
                   <Clock size={16} className="text-red-600" />
                   <p>Đặt lúc: {new Date(currentDelivery.createdAt).toLocaleTimeString("vi-VN")}</p>
@@ -679,34 +720,15 @@ export default function DeliveryManagement() {
             </div>
 
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Các món đã đặt</h3>
-              <div className="bg-gray-50 rounded-md p-3">
-                {currentDelivery.items.map((item, index) => (
-                  <div key={index} className="flex justify-between py-2 border-b last:border-0">
-                    <div>
-                      <span className="font-medium">{item.quantity}x </span>
-                      <span>{item.menuItemName}</span>
-                    </div>
-                    <div>{formatPrice(item.total)}</div>
-                  </div>
-                ))}
-                <div className="flex justify-between pt-3 font-bold">
-                  <div>Tổng cộng</div>
-                  <div>{formatPrice(currentDelivery.totalAmount)}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Phương thức thanh toán</h3>
+              <h3 className="text-sm font-medium text-gray-500 mb-2">{t.delivery.details.paymentInfo}</h3>
               <p className="text-sm">
-                {currentDelivery.paymentMethod === "cash on delivery" ? "Tiền mặt khi nhận hàng" : "Thanh toán online"}
+                {t.delivery.paymentMethod[currentDelivery.paymentMethod]}
               </p>
             </div>
 
             {currentDelivery.notes && (
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Ghi chú</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">{t.delivery.details.notes}</h3>
                 <p className="text-sm bg-gray-50 p-3 rounded">{currentDelivery.notes}</p>
               </div>
             )}
@@ -717,7 +739,7 @@ export default function DeliveryManagement() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266]"
               >
                 <Printer size={18} />
-                <span>In hóa đơn</span>
+                <span>{t.delivery.actions.printReceipt}</span>
               </button>
             </div>
 
@@ -728,7 +750,7 @@ export default function DeliveryManagement() {
                   className="px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
-                  Bắt đầu giao hàng
+                  {t.delivery.actions.startDelivery}
                 </button>
               )}
 
@@ -738,7 +760,7 @@ export default function DeliveryManagement() {
                   className="px-4 py-2.5 bg-[#003087] text-white rounded-md hover:bg-[#002266] disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
-                  Xác nhận đã giao
+                  {t.delivery.actions.confirmDelivery}
                 </button>
               )}
 
@@ -748,7 +770,7 @@ export default function DeliveryManagement() {
                   className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
-                  Hủy đơn hàng
+                  {t.delivery.actions.cancelDelivery}
                 </button>
               )}
 
@@ -756,7 +778,7 @@ export default function DeliveryManagement() {
                 onClick={() => setShowDeliveryDetails(false)}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
               >
-                Đóng
+                {t.delivery.actions.close}
               </button>
             </div>
           </div>
@@ -769,7 +791,7 @@ export default function DeliveryManagement() {
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle size={24} className="text-yellow-500" />
-              <h3 className="text-lg font-semibold">Xác nhận</h3>
+              <h3 className="text-lg font-semibold">{t.delivery.confirm.title}</h3>
             </div>
             
             <p className="text-gray-600 mb-6">
@@ -784,13 +806,13 @@ export default function DeliveryManagement() {
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
               >
-                Hủy
+                {t.delivery.actions.cancel}
               </button>
               <button
                 onClick={handleConfirmedUpdate}
                 className="px-4 py-2 bg-[#003087] text-white rounded-md hover:bg-[#002266]"
               >
-                Xác nhận
+                {t.delivery.actions.confirm}
               </button>
             </div>
           </div>

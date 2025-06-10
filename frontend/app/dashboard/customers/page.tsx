@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,9 +26,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { getTranslation } from "@/utils/translations"
 
 export default function CustomersPage() {
   const { user } = useAuth()
+  const [language, setLanguage] = useState<"en" | "vi">("en")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCustomer, setSelectedCustomer] = useState<User | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -73,25 +75,56 @@ export default function CustomersPage() {
     (customer: User) => customer.role === 'user'
   )
 
+  // Listen for language changes
+  useEffect(() => {
+    // Get initial language
+    const savedLanguage = localStorage.getItem("language") as "en" | "vi" | null
+    if (savedLanguage === "en" || savedLanguage === "vi") {
+      setLanguage(savedLanguage)
+    }
+
+    // Listen for storage changes (from other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "language" && (e.newValue === "en" || e.newValue === "vi")) {
+        setLanguage(e.newValue)
+      }
+    }
+
+    // Listen for custom language change event (from same tab)
+    const handleLanguageChange = (e: CustomEvent<"en" | "vi">) => {
+      setLanguage(e.detail)
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("languageChange", handleLanguageChange as EventListener)
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("languageChange", handleLanguageChange as EventListener)
+    }
+  }, [])
+
+  const t = getTranslation(language)
+
   const validateField = (name: string, value: string) => {
     switch (name) {
       case 'fullName':
-        if (!value) return 'Full name is required'
-        if (value.length < 3 || value.length > 50) return 'Full name must be 3-50 characters long'
-        if (!/^[a-zA-Z\s]+$/.test(value)) return 'Full name must contain only letters'
+        if (!value) return t.customers.validation.fullNameRequired
+        if (value.length < 3 || value.length > 50) return t.customers.validation.fullNameLength
+        if (!/^[a-zA-Z\s]+$/.test(value)) return t.customers.validation.fullNameLetters
         return ''
       case 'email':
-        if (!value) return 'Email is required'
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Invalid email format'
+        if (!value) return t.customers.validation.emailRequired
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t.customers.validation.emailInvalid
         return ''
       case 'phone':
-        if (!value) return 'Phone number is required'
-        if (!/^[0-9]+$/.test(value)) return 'Phone number must contain only digits'
-        if (value.length !== 10) return 'Phone number must be 10 digits'
+        if (!value) return t.customers.validation.phoneRequired
+        if (!/^[0-9]+$/.test(value)) return t.customers.validation.phoneDigits
+        if (value.length !== 10) return t.customers.validation.phoneLength
         return ''
       case 'address':
-        if (!value) return 'Address is required'
-        if (value.length < 3 || value.length > 100) return 'Address must be 3-100 characters long'
+        if (!value) return t.customers.validation.addressRequired
+        if (value.length < 3 || value.length > 100) return t.customers.validation.addressLength
         return ''
       default:
         return ''
@@ -237,8 +270,8 @@ export default function CustomersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
-          <p className="text-gray-500">Manage and view customer information</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{t.customers.title}</h1>
+          <p className="text-gray-500">{t.customers.description}</p>
         </div>
       </div>
 
@@ -285,13 +318,13 @@ export default function CustomersPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Customer List</CardTitle>
-              <CardDescription>View and manage all customers</CardDescription>
+              <CardTitle>{t.customers.customerList}</CardTitle>
+              <CardDescription>{t.customers.customerListDescription}</CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
               <Input
-                placeholder="Search customers..."
+                placeholder={t.customers.searchPlaceholder}
                 className="pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,11 +336,11 @@ export default function CustomersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Join Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t.customers.fields.fullName}</TableHead>
+                <TableHead>{t.customers.fields.email}</TableHead>
+                <TableHead>{t.customers.fields.phone}</TableHead>
+                <TableHead>{t.customers.fields.joinDate}</TableHead>
+                <TableHead className="text-right">{t.customers.actions.title}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -391,14 +424,14 @@ export default function CustomersPage() {
                 <p className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                   selectedCustomer.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
                 }`}>
-                  {selectedCustomer.isActive ? 'Active' : 'Inactive'}
+                  {selectedCustomer.isActive ? t.customers.status.active : t.customers.status.inactive}
                 </p>
               </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-              Close
+              {t.customers.actions.close}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -408,21 +441,21 @@ export default function CustomersPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogTitle>{t.customers.edit.title}</DialogTitle>
             <DialogDescription>
-              Make changes to customer information here. Click save when you're done.
+              {t.customers.edit.description}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">{t.customers.fields.fullName}</Label>
                 <Input
                   id="fullName"
                   name="fullName"
                   value={editForm.fullName}
                   onChange={handleInputChange}
-                  placeholder="Enter full name"
+                  placeholder={t.customers.placeholders.fullName}
                   className={validationErrors.fullName ? "border-red-500" : ""}
                 />
                 {validationErrors.fullName && (
@@ -430,14 +463,14 @@ export default function CustomersPage() {
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t.customers.fields.email}</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   value={editForm.email}
                   onChange={handleInputChange}
-                  placeholder="Enter email"
+                  placeholder={t.customers.placeholders.email}
                   className={validationErrors.email ? "border-red-500" : ""}
                 />
                 {validationErrors.email && (
@@ -445,13 +478,13 @@ export default function CustomersPage() {
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">{t.customers.fields.phone}</Label>
                 <Input
                   id="phone"
                   name="phone"
                   value={editForm.phone}
                   onChange={handleInputChange}
-                  placeholder="Enter phone number"
+                  placeholder={t.customers.placeholders.phone}
                   className={validationErrors.phone ? "border-red-500" : ""}
                 />
                 {validationErrors.phone && (
@@ -459,13 +492,13 @@ export default function CustomersPage() {
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">{t.customers.fields.address}</Label>
                 <Input
                   id="address"
                   name="address"
                   value={editForm.address}
                   onChange={handleInputChange}
-                  placeholder="Enter address"
+                  placeholder={t.customers.placeholders.address}
                   className={validationErrors.address ? "border-red-500" : ""}
                 />
                 {validationErrors.address && (
@@ -475,14 +508,14 @@ export default function CustomersPage() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Cancel
+                {t.customers.actions.cancel}
               </Button>
               <Button 
                 type="submit" 
                 className="bg-blue-900 hover:bg-blue-800"
                 disabled={Object.values(validationErrors).some(error => error)}
               >
-                Save Changes
+                {t.customers.actions.saveChanges}
               </Button>
             </DialogFooter>
           </form>
@@ -493,27 +526,27 @@ export default function CustomersPage() {
       <Dialog open={isConfirmSaveDialogOpen} onOpenChange={setIsConfirmSaveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Changes</DialogTitle>
+            <DialogTitle>{t.customers.confirm.title}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to save these changes to the customer's information?
+              {t.customers.confirm.description}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Full Name</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t.customers.fields.fullName}</h4>
                 <p>{editForm.fullName}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Email</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t.customers.fields.email}</h4>
                 <p>{editForm.email}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Phone</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t.customers.fields.phone}</h4>
                 <p>{editForm.phone}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Address</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t.customers.fields.address}</h4>
                 <p>{editForm.address}</p>
               </div>
             </div>
@@ -524,14 +557,14 @@ export default function CustomersPage() {
               variant="outline" 
               onClick={() => setIsConfirmSaveDialogOpen(false)}
             >
-              Cancel
+              {t.customers.actions.cancel}
             </Button>
             <Button 
               type="button" 
               className="bg-blue-900 hover:bg-blue-800"
               onClick={handleConfirmSave}
             >
-              Confirm Changes
+              {t.customers.actions.confirmChanges}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -541,20 +574,20 @@ export default function CustomersPage() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogTitle>{t.customers.delete.title}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this customer? This action cannot be undone.
+              {t.customers.delete.description}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
+              {t.customers.actions.cancel}
             </Button>
             <Button 
               variant="destructive" 
               onClick={() => selectedCustomer && handleDeleteCustomer(selectedCustomer)}
             >
-              Delete
+              {t.customers.actions.delete}
             </Button>
           </DialogFooter>
         </DialogContent>

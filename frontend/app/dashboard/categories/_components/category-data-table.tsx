@@ -78,7 +78,7 @@ export function CategoryDataTable({ data, language }: CategoryDataTableProps) {
       header: t.dashboard.categoryStatus,
       cell: ({ row }) => (
         <Badge variant={row.original.status === "active" ? 'default' : 'secondary'}>
-          {row.original.status === "active" ? 'Active' : 'Inactive'}
+          {row.original.status === "active" ? t.dashboard.status.active : t.dashboard.status.inactive}
         </Badge>
       ),
     },
