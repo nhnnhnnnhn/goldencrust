@@ -296,14 +296,10 @@ export function ReservationForm({
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
             <Input
               type="number"
-              min="1"
               value={formData.numberOfGuests || ''}
-              onChange={(e) => {
-                const value = e.target.value === '' ? 1 : Math.max(1, parseInt(e.target.value) || 1);
-                setFormData({ ...formData, numberOfGuests: value });
-              }}
-              className="w-full pl-10"
-              required
+              className="w-full pl-10 bg-gray-100 cursor-not-allowed"
+              disabled
+              readOnly
             />
           </div>
         </div>

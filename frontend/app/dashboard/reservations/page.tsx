@@ -118,9 +118,9 @@ const ReservationStatusBadge = ({ status }: { status: string }) => (
 
 interface PopulatedUser {
   _id: string;
-  name: string;
+  fullName: string;
   email: string;
-  nickname: string;
+  phone?: string;
 }
 
 export default function ReservationsManagement() {
@@ -281,11 +281,13 @@ export default function ReservationsManagement() {
   }
 
   const handleEditReservation = (reservation: Reservation) => {
-    // Prevent editing cancelled reservations
-    if (reservation.status === "cancelled") {
+    // Prevent editing confirmed or cancelled reservations
+    if (reservation.status === "cancelled" || reservation.status === "confirmed") {
       toast({
         title: "Không thể chỉnh sửa",
-        description: "Không thể chỉnh sửa đơn đặt bàn đã hủy",
+        description: reservation.status === "cancelled" 
+          ? "Không thể chỉnh sửa đơn đặt bàn đã hủy"
+          : "Không thể chỉnh sửa đơn đặt bàn đã xác nhận",
         variant: "destructive",
       })
       return
@@ -645,7 +647,14 @@ export default function ReservationsManagement() {
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Người tạo</h3>
                 <div className="flex items-center gap-2 text-gray-600">
                   <UserIcon size={16} />
-                  <p className="text-sm">{creatorData?.fullName || "N/A"}</p>
+                  <div>
+                    <p className="text-sm font-medium">
+                      {typeof selectedReservation?.createdBy === 'object' ? (selectedReservation.createdBy as PopulatedUser).fullName : "N/A"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {typeof selectedReservation?.createdBy === 'object' ? (selectedReservation.createdBy as PopulatedUser).email : "N/A"}
+                    </p>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.createdAt).toLocaleString()}</p>
               </div>
@@ -654,7 +663,11 @@ export default function ReservationsManagement() {
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Cập nhật cuối</h3>
                 <div className="flex items-center gap-2 text-gray-600">
                   <UserIcon size={16} />
-                  <p className="text-sm">{updaterData?.fullName || "N/A"}</p>
+                  <div>
+                    <p className="text-sm font-medium">{updaterData?.fullName || "N/A"}</p>
+                    <p className="text-xs text-gray-500">{updaterData?.email || "N/A"}</p>
+                    <p className="text-xs text-gray-500">{updaterData?.phone || "N/A"}</p>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{new Date(selectedReservation.updatedAt).toLocaleString()}</p>
               </div>
@@ -700,25 +713,27 @@ export default function ReservationsManagement() {
                   </Button>
 
                   {selectedReservation.status === "pending" && (
-                    <Button
-                      onClick={async () => {
-                        await handleUpdateStatus(selectedReservation._id, "confirmed")
-                        setSelectedReservation(null)
-                      }}
-                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <CheckCircle size={16} />
-                      <span>Xác nhận</span>
-                    </Button>
-                  )}
+                    <>
+                      <Button
+                        onClick={async () => {
+                          await handleUpdateStatus(selectedReservation._id, "confirmed")
+                          setSelectedReservation(null)
+                        }}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <CheckCircle size={16} />
+                        <span>Xác nhận</span>
+                      </Button>
 
-                  <Button
-                    onClick={() => handleEditReservation(selectedReservation)}
-                    className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
-                  >
-                    <Edit size={16} />
-                    <span>Chỉnh sửa</span>
-                  </Button>
+                      <Button
+                        onClick={() => handleEditReservation(selectedReservation)}
+                        className="flex items-center gap-2 bg-[#003087] hover:bg-[#002266] text-white"
+                      >
+                        <Edit size={16} />
+                        <span>Chỉnh sửa</span>
+                      </Button>
+                    </>
+                  )}
 
                   <Button
                     onClick={() => {
