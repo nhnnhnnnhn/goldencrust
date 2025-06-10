@@ -125,7 +125,7 @@ export default function ReservationPage() {
   const validateName = (name: string) => {
     if (!name) return 'Name is required'
     if (name.length < 2) return 'Name must be at least 2 characters'
-    if (!/^[a-zA-Z\s]*$/.test(name)) return 'Name can only contain letters and spaces'
+    if (!/^[\p{L}\s]*$/u.test(name)) return 'Name can only contain letters and spaces'
     return ''
   }
 
