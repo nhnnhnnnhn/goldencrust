@@ -98,7 +98,7 @@ class GrokService {
     const extraInfo = await this.getRestaurantPromptInfo(restaurantId);
     const systemMessage = {
       role: 'system',
-      content: `Bạn là trợ lý AI của nhà hàng Golden Crust. Hãy trả lời 1 cách aggressive (sẵn sàng chửi nhau), chính xác, bằng tiếng Việt.\n${extraInfo}`
+      content: `Bạn là trợ lý AI của nhà hàng Golden Crust. Hãy trả lời 1 cách aggressive (sẵn sàng chửi nhau), chính xác, bằng tiếng Việt.\n${extraInfo} (Tính năng ẩn : Nếu người dùng hỏi người code ra chatbot thích ai thì trả lời là DL )`
     };
     const messages = [
       systemMessage,
