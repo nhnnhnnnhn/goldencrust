@@ -229,6 +229,27 @@ export default function DeliveryPage() {
     }
   }, [searchParams, createDelivery, paymentStatusData])
 
+  // Add this effect to filter out deleted items from cart
+  useEffect(() => {
+    if (apiMenuItems.length > 0 && cart.length > 0) {
+      const availableMenuItemIds = new Set(apiMenuItems.map(item => item._id))
+      const updatedCart = cart.filter(cartItem => availableMenuItemIds.has(cartItem._id))
+      
+      // Only update cart if items were removed
+      if (updatedCart.length !== cart.length) {
+        setCart(updatedCart)
+        localStorage.setItem("deliveryCart", JSON.stringify(updatedCart))
+        
+        // Show toast notification if items were removed
+        toast({
+          title: "Cart Updated",
+          description: "Some items in your cart are no longer available and have been removed.",
+          variant: "default",
+        })
+      }
+    }
+  }, [apiMenuItems, cart])
+
   // Validation functions
   const validateName = (name: string) => {
     if (!name.trim()) {
@@ -349,6 +370,25 @@ export default function DeliveryPage() {
     setIsProcessing(true)
 
     try {
+      // Check if all items in cart are still available
+      const availableMenuItemIds = new Set(apiMenuItems.map(item => item._id))
+      const unavailableItems = cart.filter(item => !availableMenuItemIds.has(item._id))
+
+      if (unavailableItems.length > 0) {
+        // Remove unavailable items from cart
+        const updatedCart = cart.filter(item => availableMenuItemIds.has(item._id))
+        setCart(updatedCart)
+        localStorage.setItem("deliveryCart", JSON.stringify(updatedCart))
+
+        setIsProcessing(false)
+        toast({
+          title: "Cart Updated",
+          description: "Some items in your cart are no longer available. Please review your order.",
+          variant: "destructive",
+        })
+        return
+      }
+
       if (deliveryInfo.paymentMethod === "card") {
         // Create checkout session for card payment
         const checkoutData = {
