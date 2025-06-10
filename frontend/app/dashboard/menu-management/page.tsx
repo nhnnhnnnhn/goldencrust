@@ -518,28 +518,28 @@ export default function MenuManagement() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hình ảnh
+                  {t.menuManagement.table.image}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tên món
+                  {t.menuManagement.table.name}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mô tả
+                  {t.menuManagement.table.description}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Danh mục
+                  {t.menuManagement.table.category}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Giá
+                  {t.menuManagement.table.price}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Giảm giá
+                  {t.menuManagement.table.discount}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
+                  {t.menuManagement.table.status}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
+                  {t.menuManagement.table.actions}
                 </th>
               </tr>
             </thead>
@@ -639,7 +639,7 @@ export default function MenuManagement() {
           <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {currentItem._id ? "Chỉnh Sửa Món Ăn" : "Thêm Món Ăn Mới"}
+                {currentItem._id ? t.menuManagement.modal.editTitle : t.menuManagement.modal.addTitle}
               </DialogTitle>
             </DialogHeader>
 
@@ -803,10 +803,10 @@ export default function MenuManagement() {
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowAddEditModal(false)}>
-                Hủy
+                {t.menuManagement.modal.cancel}
               </Button>
               <Button onClick={handleSaveItem}>
-                {currentItem._id ? "Cập nhật" : "Thêm món"}
+                {t.menuManagement.modal.save}
               </Button>
             </DialogFooter>
           </DialogContent>

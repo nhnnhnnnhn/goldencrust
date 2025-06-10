@@ -8,7 +8,7 @@ import { ChevronLeft, ShoppingCart, Plus, Minus, X, CreditCard } from "lucide-re
 import { useAppSelector } from "@/redux/hooks"
 import { useCreateCheckoutSessionMutation, useCheckPaymentStatusQuery } from "@/redux/api/stripeApi"
 import { useGetMenuItemsQuery } from "@/redux/api/menuItems"
-import { useGetCategoriesQuery } from "@/redux/api/categoryApi"
+import { useGetActiveCategoriesQuery } from "@/redux/api/categoryApi"
 import { useGetUserProfileQuery } from "@/redux/api/userApi"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
@@ -69,7 +69,7 @@ export default function DeliveryPage() {
 
   // Redux API hooks
   const { data: apiMenuItems = [], isLoading: menuLoading } = useGetMenuItemsQuery()
-  const { data: categoriesResponse, isLoading: categoriesLoading } = useGetCategoriesQuery()
+  const { data: categoriesResponse, isLoading: categoriesLoading } = useGetActiveCategoriesQuery()
   const [createCheckoutSession] = useCreateCheckoutSessionMutation()
   const sessionId = searchParams.get("session_id")
   const { data: paymentStatusData } = useCheckPaymentStatusQuery(sessionId || '', { 

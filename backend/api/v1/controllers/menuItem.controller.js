@@ -42,6 +42,20 @@ module.exports.createMenuItem = controllerHandler(async (req, res) => {
             });
         }
 
+        // Check for duplicate menu item
+        const existingMenuItem = await MenuItem.findOne({
+            title: { $regex: new RegExp(`^${title}$`, 'i') }, // Case-insensitive match
+            categoryId,
+            deleted: false
+        });
+
+        if (existingMenuItem) {
+            return res.status(400).json({
+                success: false,
+                message: 'A menu item with this title already exists in this category'
+            });
+        }
+
         // Create menu item
         const menuItem = await MenuItem.create({
             title,

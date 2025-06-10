@@ -20,7 +20,7 @@ interface CategoryResponse {
 export const categoryApi = createApi({
   reducerPath: 'categoryApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:5000/api/v1/categories',
+    baseUrl: 'http://localhost:5000/api/v1',
     prepareHeaders: (headers, { getState }) => {
       // Get token from localStorage
       const token = localStorage.getItem('token');
@@ -34,18 +34,16 @@ export const categoryApi = createApi({
   }),
   tagTypes: ['Category'],
   endpoints: (builder) => ({
-    // Get all categories
+    // Get all categories (for admin)
     getCategories: builder.query<CategoryResponse, void>({
-      query: () => '',
+      query: () => '/categories',
       providesTags: ['Category'],
-      // Add error handling
       async onQueryStarted(_, { queryFulfilled }) {
         try {
           await queryFulfilled;
         } catch (error: any) {
           console.error('Error fetching categories:', error);
           if (error.error?.status === 401) {
-            // Handle unauthorized error
             localStorage.removeItem('token');
             window.location.href = '/login';
           }
@@ -53,22 +51,28 @@ export const categoryApi = createApi({
       },
     }),
 
+    // Get active categories (for delivery page)
+    getActiveCategories: builder.query<CategoryResponse, void>({
+      query: () => '/categories/active',
+      providesTags: ['Category'],
+    }),
+
     // Get category by ID
     getCategoryById: builder.query<CategoryResponse, string>({
-      query: (id) => `/${id}`,
+      query: (id) => `/categories/${id}`,
       providesTags: ['Category'],
     }),
 
     // Get category by slug
     getCategoryBySlug: builder.query<CategoryResponse, string>({
-      query: (slug) => `/${slug}`,
+      query: (slug) => `/categories/${slug}`,
       providesTags: ['Category'],
     }),
 
     // Create new category
     createCategory: builder.mutation<CategoryResponse, Partial<Category>>({
       query: (body) => ({
-        url: '',
+        url: '/categories',
         method: 'POST',
         body,
         headers: {
@@ -81,7 +85,7 @@ export const categoryApi = createApi({
     // Update category
     updateCategory: builder.mutation<CategoryResponse, { id: string; body: Partial<Category> }>({
       query: ({ id, body }) => ({
-        url: `/${id}`,
+        url: `/categories/${id}`,
         method: 'PUT',
         body,
         headers: {
@@ -94,7 +98,7 @@ export const categoryApi = createApi({
     // Delete category
     deleteCategory: builder.mutation<CategoryResponse, string>({
       query: (id) => ({
-        url: `/${id}`,
+        url: `/categories/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Category'],
@@ -103,7 +107,7 @@ export const categoryApi = createApi({
     // Update category status
     updateCategoryStatus: builder.mutation<CategoryResponse, { id: string; status: string }>({
       query: ({ id, status }) => ({
-        url: `/${id}/status`,
+        url: `/categories/${id}/status`,
         method: 'PATCH',
         body: { status },
         headers: {
@@ -115,7 +119,7 @@ export const categoryApi = createApi({
 
     // Search categories
     searchCategories: builder.query<CategoryResponse, string>({
-      query: (query) => `/search?query=${query}`,
+      query: (query) => `/categories/search?query=${query}`,
       providesTags: ['Category'],
     }),
 
@@ -125,7 +129,7 @@ export const categoryApi = createApi({
       activeCategories: number;
       inactiveCategories: number;
     }, void>({
-      query: () => '/stats',
+      query: () => '/categories/stats',
       providesTags: ['Category'],
     }),
   }),
@@ -133,6 +137,7 @@ export const categoryApi = createApi({
 
 export const {
   useGetCategoriesQuery,
+  useGetActiveCategoriesQuery,
   useGetCategoryByIdQuery,
   useGetCategoryBySlugQuery,
   useCreateCategoryMutation,

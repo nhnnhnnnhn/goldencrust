@@ -417,6 +417,25 @@ type TranslationKeys = {
       confirmDelete: string
       confirmDeleteNote: string
     }
+    table: {
+      image: string
+      name: string
+      description: string
+      category: string
+      price: string
+      discount: string
+      status: string
+      actions: string
+    }
+    modal: {
+      addTitle: string
+      editTitle: string
+      save: string
+      cancel: string
+      uploadImage: string
+      dragDrop: string
+      imageRequirements: string
+    }
   }
   delivery: {
     title: string
@@ -902,6 +921,25 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
         saveError: "Unable to save item. Please try again later.",
         confirmDelete: "Are you sure you want to delete this item?",
         confirmDeleteNote: "This action cannot be undone."
+      },
+      table: {
+        image: "Image",
+        name: "Name",
+        description: "Description",
+        category: "Category",
+        price: "Price",
+        discount: "Discount",
+        status: "Status",
+        actions: "Actions"
+      },
+      modal: {
+        addTitle: "Add New Item",
+        editTitle: "Edit Item",
+        save: "Save Changes",
+        cancel: "Cancel",
+        uploadImage: "Upload Image",
+        dragDrop: "Drag and drop an image here, or click to select",
+        imageRequirements: "Image requirements: JPG, PNG or WebP, max 5MB"
       }
     },
     delivery: {
@@ -1262,15 +1300,15 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
       form: {
         title: "Chi Tiết Đặt Bàn",
         customerName: "Tên Khách Hàng",
-        customerNamePlaceholder: "Nhập tên khách hàng",
-        restaurant: "Nhà Hàng",
-        restaurantPlaceholder: "Chọn nhà hàng",
-        date: "Ngày",
-        time: "Giờ",
-        guests: "Số Lượng Khách",
-        guestsPlaceholder: "Nhập số lượng khách",
-        notes: "Ghi Chú",
-        notesPlaceholder: "Nhập ghi chú bổ sung"
+        customerNamePlaceholder: "Enter customer name",
+        restaurant: "Restaurant",
+        restaurantPlaceholder: "Select restaurant",
+        date: "Date",
+        time: "Time",
+        guests: "Number of Guests",
+        guestsPlaceholder: "Enter number of guests",
+        notes: "Notes",
+        notesPlaceholder: "Enter any additional notes"
       }
     },
     customers: {
@@ -1386,6 +1424,25 @@ export const translations: Record<"en" | "vi", TranslationKeys> = {
         saveError: "Không thể lưu món ăn. Vui lòng thử lại sau.",
         confirmDelete: "Bạn có chắc chắn muốn xóa món này?",
         confirmDeleteNote: "Hành động này không thể hoàn tác."
+      },
+      table: {
+        image: "Hình ảnh",
+        name: "Tên món",
+        description: "Mô tả",
+        category: "Danh mục",
+        price: "Giá",
+        discount: "Giảm giá",
+        status: "Trạng thái",
+        actions: "Thao tác"
+      },
+      modal: {
+        addTitle: "Thêm Món Ăn Mới",
+        editTitle: "Chỉnh Sửa Món Ăn",
+        save: "Lưu Thay Đổi",
+        cancel: "Hủy",
+        uploadImage: "Tải Lên Hình Ảnh",
+        dragDrop: "Kéo và thả hình ảnh vào đây, hoặc nhấp để chọn",
+        imageRequirements: "Yêu cầu hình ảnh: JPG, PNG hoặc WebP, tối đa 5MB"
       }
     },
     delivery: {

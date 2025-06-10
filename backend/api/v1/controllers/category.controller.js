@@ -6,6 +6,11 @@ module.exports.getCategories = controllerHandler(async (req, res) => {
     res.status(200).json({ categories });
 });
 
+module.exports.getActiveCategories = controllerHandler(async (req, res) => {
+    const categories = await Category.find({ deleted: false, status: 'active' });
+    res.status(200).json({ categories });
+});
+
 module.exports.getCategoryById = controllerHandler(async (req, res) => {
     const { id } = req.params;
     const category = await Category.findById(id);
