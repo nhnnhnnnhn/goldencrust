@@ -49,6 +49,8 @@ export default function ReservationPage() {
     phone: '',
     email: ''
   })
+  const [showCustomGuestInput, setShowCustomGuestInput] = useState(false)
+  const [tempGuestCount, setTempGuestCount] = useState("")
 
   // Remove selectedRestaurant state and use formData.location instead
   const { data: currentRestaurantTables = [] } = useGetTablesByRestaurantQuery(
@@ -167,6 +169,18 @@ export default function ReservationPage() {
       })
       return
     }
+
+    // Ensure guests is a valid number
+    const guestCount = parseInt(formData.guests)
+    if (isNaN(guestCount) || guestCount <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid number of guests",
+        variant: "destructive",
+      })
+      return
+    }
+
     setStep(2)
   }
 
@@ -497,8 +511,18 @@ export default function ReservationPage() {
                     <div className={styles.formGroup}>
                       <label className={styles.formLabel}>Number of Guests</label>
                       <Select 
-                        value={formData.guests} 
-                        onValueChange={(value) => handleInputChange("guests", value)}
+                        value={showCustomGuestInput ? "more" : formData.guests} 
+                        onValueChange={(value) => {
+                          if (value === "more") {
+                            setShowCustomGuestInput(true)
+                            setTempGuestCount("")
+                            handleInputChange("guests", "")
+                          } else {
+                            setShowCustomGuestInput(false)
+                            setTempGuestCount("")
+                            handleInputChange("guests", value)
+                          }
+                        }}
                       >
                         <SelectTrigger className={styles.selectTrigger}>
                           <SelectValue placeholder="Select number of guests">
@@ -515,17 +539,39 @@ export default function ReservationPage() {
                             </SelectItem>
                           ))}
                           <SelectItem value="more" className={styles.selectItem}>
-                            More than 10 (specify in notes)
+                            More than 10
                           </SelectItem>
                         </SelectContent>
                       </Select>
+                      {showCustomGuestInput && (
+                        <div className={`${styles.formGroup} mt-2`}>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="Enter number of guests"
+                            value={tempGuestCount}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || parseInt(value) > 0) {
+                                setTempGuestCount(value);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (tempGuestCount && parseInt(tempGuestCount) > 0) {
+                                handleInputChange("guests", tempGuestCount);
+                              }
+                            }}
+                            className={styles.input}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className={styles.formActions}>
                       <Button
                         type="submit"
                         className={styles.continueButton}
-                        disabled={!formData.location || !formData.date || !formData.time || !formData.guests}
+                        disabled={!formData.location || !formData.date || !formData.time || !formData.guests || parseInt(formData.guests) <= 0}
                       >
                         Continue
                       </Button>
