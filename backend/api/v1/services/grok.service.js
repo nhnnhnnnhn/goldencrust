@@ -60,10 +60,10 @@ class GrokService {
       const tableQuery = { deleted: false, status: 'available' };
       if (restaurant) tableQuery.restaurantId = restaurant._id.toString();
       const availableTables = await Table.find(tableQuery);
-      // Menu dùng chung - chỉ lấy 10 món mới nhất
+      // Menu dùng chung - chỉ lấy 15 món mới nhất
       const menuItems = await MenuItem.find({ deleted: false, status: 'active' })
         .sort({ createdAt: -1 })
-        .limit(10);
+        .limit(15);
 
       let info = '';
       if (restaurant) {
