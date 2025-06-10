@@ -25,6 +25,7 @@ import userReducer from '../slices/userSlice';
 import validateTokenApi from '../api/validateTokenApi';
 import { categoryApi } from '../api/categoryApi';
 import { menuItemApi } from '../api/menuItems';
+import { statsApi } from '../api/statsApi';
 
 const persistConfig = {
   key: 'root',
@@ -49,6 +50,7 @@ const rootReducer = combineReducers({
   [categoryApi.reducerPath]: categoryApi.reducer,
   [chatApi.reducerPath]: chatApi.reducer,
   [menuItemApi.reducerPath]: menuItemApi.reducer,
+  [statsApi.reducerPath]: statsApi.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -75,6 +77,7 @@ export const store = configureStore({
       categoryApi.middleware,
       chatApi.middleware,
       menuItemApi.middleware,
+      statsApi.middleware,
     ),
   devTools: process.env.NODE_ENV !== 'production',
 });
