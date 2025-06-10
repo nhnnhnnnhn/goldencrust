@@ -60,7 +60,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     // Khởi tạo kết nối Socket.IO khi có sessionId
     if (isOpen && sessionId && !socketRef.current) {
       // Khởi tạo kết nối với server
-      const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+      const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000', {
         withCredentials: true
       })
       
@@ -181,7 +181,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   // Đảm bảo socket được kết nối lại nếu cần
   useEffect(() => {
     if (isOpen && sessionId && !socketRef.current) {
-      const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+      const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000', {
         withCredentials: true
       })
       socketRef.current = socket
