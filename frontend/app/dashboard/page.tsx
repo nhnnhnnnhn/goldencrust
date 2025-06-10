@@ -40,39 +40,40 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
 
-// Dữ liệu mẫu cho thống kê
-const revenueData = [
-  { name: "Jan", revenue: 12500000 },
-  { name: "Feb", revenue: 14200000 },
-  { name: "Mar", revenue: 15800000 },
-  { name: "Apr", revenue: 16900000 },
-  { name: "May", revenue: 18500000 },
-  { name: "Jun", revenue: 19200000 },
-  { name: "Jul", revenue: 21000000 },
-  { name: "Aug", revenue: 22500000 },
-  { name: "Sep", revenue: 24000000 },
-  { name: "Oct", revenue: 25500000 },
-  { name: "Nov", revenue: 27000000 },
-  { name: "Dec", revenue: 29500000 },
-]
+// Định nghĩa giao diện dữ liệu
+interface MonthlyRevenueItem {
+  name: string;
+  revenue: number;
+}
 
-const dailyRevenueData = [
-  { name: "Mon", revenue: 3200000 },
-  { name: "Tue", revenue: 2800000 },
-  { name: "Wed", revenue: 3500000 },
-  { name: "Thu", revenue: 4200000 },
-  { name: "Fri", revenue: 5100000 },
-  { name: "Sat", revenue: 6500000 },
-  { name: "Sun", revenue: 5800000 },
-]
+interface CategoryRevenueItem {
+  name: string;
+  revenue: number;
+  percentage: number;
+}
 
-const categoryData = [
-  { name: "Pizza", value: 45 },
-  { name: "Pasta", value: 20 },
-  { name: "Salad", value: 15 },
-  { name: "Dessert", value: 10 },
-  { name: "Beverage", value: 10 },
-]
+interface DailyItemData {
+  name: string;
+  quantity: number;
+  revenue: number;
+}
+
+interface PaymentMethodData {
+  name: string;
+  value: number;
+}
+
+interface OrderTypeStats {
+  _id: string;
+  type: string;
+  count: number;
+}
+
+interface TimeSlotStats {
+  _id?: string;
+  timeSlot: string;
+  count: number;
+}
 
 // Bảng màu chuyên nghiệp hơn cho các biểu đồ
 const COLORS = [
@@ -93,64 +94,401 @@ const GRADIENT_COLORS = [
   { start: "#00c6fb", end: "#005bea" }
 ]
 
-const orderTypeData = [
-  { type: "Dine In", count: 124 },
-  { type: "Takeaway", count: 87 },
-  { type: "Delivery", count: 96 },
-]
+// Hàm tính toán thống kê theo loại đơn hàng từ dữ liệu API thực
+const calculateOrderTypeStats = (orders: any[]) => {
+  console.log('Calculating order type stats from orders:', orders);
+  
+  if (!orders || orders.length === 0) {
+    console.log('No orders data available for order type stats');
+    return [
+      { type: "Dine In", count: 0 },
+      { type: "Takeaway", count: 0 },
+      { type: "Delivery", count: 0 },
+    ];
+  }
 
-const timeSlotData = [
-  { hour: "11:00", customerCount: 23 },
-  { hour: "12:00", customerCount: 45 },
-  { hour: "13:00", customerCount: 58 },
-  { hour: "14:00", customerCount: 32 },
-  { hour: "15:00", customerCount: 21 },
-  { hour: "16:00", customerCount: 15 },
-  { hour: "17:00", customerCount: 24 },
-  { hour: "18:00", customerCount: 47 },
-  { hour: "19:00", customerCount: 62 },
-  { hour: "20:00", customerCount: 53 },
-  { hour: "21:00", customerCount: 31 },
-  { hour: "22:00", customerCount: 18 },
-]
+  const stats = {
+    "Dine In": 0,
+    "Takeaway": 0,
+    "Delivery": 0
+  };
 
-// Dữ liệu mẫu cho thống kê theo giờ trong ngày
-const hourlyData = [
-  { hour: "06:00", revenue: 250000, orders: 5 },
-  { hour: "07:00", revenue: 420000, orders: 8 },
-  { hour: "08:00", revenue: 680000, orders: 12 },
-  { hour: "09:00", revenue: 850000, orders: 15 },
-  { hour: "10:00", revenue: 1200000, orders: 22 },
-  { hour: "11:00", revenue: 1850000, orders: 35 },
-  { hour: "12:00", revenue: 2500000, orders: 48 },
-  { hour: "13:00", revenue: 2200000, orders: 42 },
-  { hour: "14:00", revenue: 1500000, orders: 28 },
-  { hour: "15:00", revenue: 980000, orders: 18 },
-  { hour: "16:00", revenue: 1100000, orders: 20 },
-  { hour: "17:00", revenue: 1650000, orders: 30 },
-  { hour: "18:00", revenue: 2300000, orders: 45 },
-  { hour: "19:00", revenue: 2800000, orders: 52 },
-  { hour: "20:00", revenue: 2600000, orders: 50 },
-  { hour: "21:00", revenue: 2100000, orders: 40 },
-  { hour: "22:00", revenue: 1400000, orders: 25 },
-  { hour: "23:00", revenue: 750000, orders: 15 },
-]
+  orders.forEach(order => {
+    console.log('Processing order:', order.orderType);
+    // Kiểm tra trước khi truy cập thuộc tính để tránh lỗi undefined
+    const orderType = order.orderType?.toLowerCase() || '';
+    
+    if (orderType.includes('dine')) {
+      stats["Dine In"] += 1;
+    } else if (orderType.includes('takeaway')) {
+      stats["Takeaway"] += 1;
+    } else if (orderType.includes('delivery')) {
+      stats["Delivery"] += 1;
+    } else {
+      // Nếu không có loại cụ thể, phân loại dựa vào các thuộc tính khác
+      if (order.deliveryInfo) {
+        stats["Delivery"] += 1;
+      } else {
+        stats["Takeaway"] += 1; // Mặc định nếu không có loại cụ thể
+      }
+    }
+  });
 
-// Dữ liệu mẫu cho thống kê theo món ăn trong ngày
-const dailyItemsData = [
-  { name: "Pizza Margherita", quantity: 42, revenue: 4200000 },
-  { name: "Pizza Pepperoni", quantity: 38, revenue: 4180000 },
-  { name: "Pasta Carbonara", quantity: 25, revenue: 2250000 },
-  { name: "Tiramisu", quantity: 20, revenue: 1400000 },
-  { name: "Coca Cola", quantity: 55, revenue: 1100000 },
-]
+  const result = Object.keys(stats).map(type => ({
+    type,
+    count: stats[type as keyof typeof stats]
+  }));
+  
+  console.log('Final order type stats:', result);
+  return result;
+};
 
-// Dữ liệu mẫu cho phương thức thanh toán trong ngày
-const paymentMethodData = [
-  { name: "Cash", value: 35 },
-  { name: "Credit Card", value: 40 },
-  { name: "Mobile Payment", value: 25 },
-]
+// Hàm tính toán thống kê phân bố khách hàng theo giờ từ dữ liệu thực
+const calculateTimeSlotStats = (orders: any[]) => {
+  console.log('Calculating time slot stats from orders:', orders);
+  
+  // Khởi tạo mảng các khung giờ từ 11h sáng đến 22h tối
+  const timeSlots = Array.from({ length: 12 }, (_, i) => ({
+    timeSlot: `${i + 11}:00`,
+    customerCount: 0
+  }));
+  
+  if (!orders || orders.length === 0) {
+    console.log('No orders data available for time slot stats');
+    return timeSlots;
+  }
+  
+  const uniqueCustomers = new Map();
+  let processedOrders = 0;
+  
+  orders.forEach((order, index) => {
+    // Lấy ngày đặt hàng từ order.orderDate hoặc order.createdAt
+    const orderDateStr = order.orderDate || order.createdAt;
+    
+    if (!orderDateStr) {
+      console.log(`Order ${index} missing date information`);
+      return;
+    }
+    
+    const date = new Date(orderDateStr);
+    
+    // Kiểm tra ngày hợp lệ
+    if (isNaN(date.getTime())) {
+      console.log(`Order ${index} has invalid date: ${orderDateStr}`);
+      return;
+    }
+    
+    const orderHour = date.getHours();
+    
+    // Kiểm tra nếu giờ nằm trong khoảng hoạt động
+    if (orderHour >= 11 && orderHour <= 22) {
+      const slotIndex = orderHour - 11;
+      
+      // Kiểm tra chỉ số hợp lệ trước khi truy cập vào mảng
+      if (slotIndex >= 0 && slotIndex < timeSlots.length) {
+        // Lấy ID khách hàng hoặc sử dụng một giá trị ngẫu nhiên nếu không có
+        const customerId = order.userId || order.user?.id || `anonymous_${index}`;
+        const timeSlotKey = `${orderHour}_${customerId}`;
+        
+        console.log(`Processing order ${index} at hour ${orderHour} for customer ${customerId}`);
+        
+        // Đảm bảo mỗi khách hàng chỉ được tính một lần trong mỗi khung giờ
+        if (!uniqueCustomers.has(timeSlotKey)) {
+          uniqueCustomers.set(timeSlotKey, true);
+          timeSlots[slotIndex].customerCount += 1;
+          console.log(`Added customer to time slot ${timeSlots[slotIndex].timeSlot}, count now: ${timeSlots[slotIndex].customerCount}`);
+        } else {
+          console.log(`Customer ${customerId} already counted at hour ${orderHour}`);
+        }
+      } else {
+        console.log(`Time slot index out of range: ${slotIndex} for hour ${orderHour}`);
+      }
+      
+      processedOrders++;
+    } else {
+      console.log(`Order hour ${orderHour} outside operating hours (11-22)`);
+    }
+  });
+  
+  console.log(`Processed ${processedOrders} orders for time slot stats`);
+  console.log('Unique customer count by time slot:', uniqueCustomers.size);
+  console.log('Final time slot stats:', timeSlots);
+  
+  return timeSlots;
+}
+
+// Hàm chuyển đổi dữ liệu đơn hàng theo giờ trong ngày
+const calculateHourlyData = (orders: any[]) => {
+  console.log('Calculating hourly revenue data from orders:', orders);
+  
+  // Khởi tạo mảng kết quả với các giờ từ 6h sáng đến 23h đêm
+  const hours = Array.from({ length: 18 }, (_, index) => {
+    const hour = index + 6;
+    return {
+      hour: `${hour.toString().padStart(2, '0')}:00`,
+      revenue: 0,
+      orders: 0
+    };
+  });
+  
+  if (!orders || orders.length === 0) {
+    console.log('No orders data available for hourly revenue calculation');
+    return hours;
+  }
+  
+  let processedOrders = 0;
+  
+  // Nhóm dữ liệu theo giờ
+  orders.forEach((order, index) => {
+    // Lấy ngày đặt hàng từ order.orderDate hoặc order.createdAt
+    const orderDateStr = order.orderDate || order.createdAt;
+    
+    if (!orderDateStr) {
+      console.log(`Order ${index} missing date information`);
+      return;
+    }
+    
+    const date = new Date(orderDateStr);
+    
+    // Kiểm tra ngày hợp lệ
+    if (isNaN(date.getTime())) {
+      console.log(`Order ${index} has invalid date: ${orderDateStr}`);
+      return;
+    }
+    
+    const orderHour = date.getHours();
+    
+    // Kiểm tra phạm vi giờ hợp lệ
+    if (orderHour >= 6 && orderHour <= 23) {
+      // Tính chỉ số trong mảng hours (ví dụ: 6 giờ ở vị trí 0, 7 giờ ở vị trí 1, v.v.)
+      const index = orderHour - 6;
+      
+      // Kiểm tra chỉ số hợp lệ trước khi truy cập vào mảng
+      if (index >= 0 && index < hours.length) {
+        // Kiểm tra totalAmount có tồn tại và hợp lệ không
+        const amount = typeof order.totalAmount === 'number' ? order.totalAmount : 0;
+        
+        console.log(`Adding order at hour ${orderHour}: revenue=${amount}`);
+        
+        hours[index].revenue += amount;
+        hours[index].orders += 1;
+        processedOrders++;
+      } else {
+        console.log(`Hour index out of range: ${index} for hour ${orderHour}`);
+      }
+    } else {
+      console.log(`Order hour ${orderHour} outside operating hours (6-23)`);
+    }
+  });
+  
+  console.log(`Processed ${processedOrders} orders for hourly revenue data`);
+  console.log('Final hourly revenue data:', hours);
+  
+  return hours;
+}
+
+// Hàm tính toán thống kê theo món ăn từ dữ liệu đơn hàng thực
+interface DailyItemData {
+  name: string;
+  quantity: number;
+  revenue: number;
+}
+
+const calculateDailyItemsData = (orders: any[]): DailyItemData[] => {
+  console.log('Calculating daily items data from orders:', orders);
+  
+  if (!orders || orders.length === 0) {
+    console.log('No orders data available for daily items');
+    return [];
+  }
+  
+  const itemStats: Record<string, { quantity: number, revenue: number }> = {};
+  let processedItemCount = 0;
+  
+  // Tổng hợp dữ liệu theo món ăn
+  orders.forEach((order: any, orderIndex: number) => {
+    console.log(`Processing order ${orderIndex}:`, order);
+    
+    // Kiểm tra cấu trúc dữ liệu đơn hàng
+    const orderItems = Array.isArray(order.items) ? order.items : 
+                      Array.isArray(order.orderItems) ? order.orderItems : [];
+    
+    if (orderItems.length === 0) {
+      console.log(`Order ${orderIndex} has no valid items array`);
+    }
+    
+    orderItems.forEach((item: any, itemIndex: number) => {
+      console.log(`Processing item ${itemIndex} in order ${orderIndex}:`, item);
+      
+      // Lấy tên sản phẩm từ cấu trúc dữ liệu
+      let itemName = 'Sản phẩm khác';
+      if (item.product && item.product.name) {
+        itemName = item.product.name;
+      } else if (item.name) {
+        itemName = item.name;
+      } else if (item.productId && typeof item.productId === 'object' && item.productId.name) {
+        itemName = item.productId.name;
+      }
+      
+      // Kiểm tra và xử lý số lượng và giá
+      const quantity = parseInt(item.quantity) || 0;
+      const price = parseFloat(item.price) || 0;
+      const revenue = price * quantity;
+      
+      console.log(`Item ${itemName}: quantity=${quantity}, price=${price}, revenue=${revenue}`);
+      
+      if (!itemStats[itemName]) {
+        itemStats[itemName] = { quantity: 0, revenue: 0 };
+      }
+      
+      itemStats[itemName].quantity += quantity;
+      itemStats[itemName].revenue += revenue;
+      processedItemCount++;
+    });
+  });
+  
+  console.log(`Processed ${processedItemCount} items into ${Object.keys(itemStats).length} unique products`);
+  console.log('Item stats before conversion:', itemStats);
+  
+  // Nếu không có dữ liệu sản phẩm, trả về mảng rỗng
+  if (Object.keys(itemStats).length === 0) {
+    console.log('No product data found');
+    return [];
+  }
+  
+  // Chuyển đổi và sắp xếp theo doanh thu giảm dần
+  const result = Object.keys(itemStats)
+    .map(name => ({
+      name,
+      quantity: itemStats[name].quantity,
+      revenue: itemStats[name].revenue
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5); // Chỉ lấy 5 món doanh thu cao nhất
+  
+  console.log('Final daily items data:', result);
+  return result;
+}
+
+// Hàm tính toán thống kê theo phương thức thanh toán từ dữ liệu thực
+interface PaymentMethodData {
+  name: string;
+  value: number;
+}
+
+const calculatePaymentMethodData = (orders: any[]): PaymentMethodData[] => {
+  console.log('Calculating payment method stats from orders:', orders);
+  
+  if (!orders || orders.length === 0) {
+    console.log('No orders data available for payment method stats');
+    return [
+      { name: "Tiền mặt", value: 0 },
+      { name: "Thẻ", value: 0 },
+      { name: "Ví điện tử", value: 0 },
+    ];
+  }
+  
+  const paymentStats: Record<string, number> = {
+    "Tiền mặt": 0,
+    "Thẻ": 0,
+    "Ví điện tử": 0
+  };
+  
+  let totalProcessed = 0;
+  
+  orders.forEach((order, index) => {
+    console.log(`Processing order ${index}:`, order);
+    console.log(`Payment method:`, order.paymentMethod);
+    
+    // Kiểm tra thanh toán qua Stripe từ các trường liên quan
+    const hasStripeData = order.stripePaymentIntentId || 
+                         order.stripeCustomerId || 
+                         order.stripeChargeId || 
+                         order.stripePaymentMethodId ||
+                         (order.payment && (
+                           order.payment.stripePaymentIntentId ||
+                           order.payment.stripeCustomerId ||
+                           order.payment.stripeChargeId ||
+                           order.payment.stripePaymentMethodId
+                         ));
+    
+    if (hasStripeData) {
+      console.log(`Order ${index} has Stripe payment data, categorizing as card payment`);
+      paymentStats["Thẻ"] += 1;
+      totalProcessed++;
+      return;
+    }
+    
+    // Kiểm tra trường hợp không có phương thức thanh toán
+    const paymentMethod = order.paymentMethod || "";
+    
+    if (typeof paymentMethod !== 'string') {
+      console.log(`Order ${index} has invalid payment method type:`, typeof paymentMethod);
+      // Mặc định nếu paymentMethod không phải là chuỗi
+      paymentStats["Tiền mặt"] += 1;
+      totalProcessed++;
+      return;
+    }
+    
+    const paymentLower = paymentMethod.toLowerCase();
+    
+    // Nhận diện Stripe từ chuỗi phương thức thanh toán
+    if (paymentLower.includes('stripe')) {
+      console.log(`Order ${index} identified as Stripe payment from method name`);
+      paymentStats["Thẻ"] += 1;
+    } else if (paymentLower.includes('cash') || paymentLower.includes('tiền mặt')) {
+      console.log(`Order ${index} counted as Cash payment`);
+      paymentStats["Tiền mặt"] += 1;
+    } else if (paymentLower.includes('card') || paymentLower.includes('thẻ') || 
+               paymentLower.includes('credit') || paymentLower.includes('debit')) {
+      console.log(`Order ${index} counted as Card payment`);
+      paymentStats["Thẻ"] += 1;
+    } else if (paymentLower.includes('wallet') || paymentLower.includes('momo') || 
+               paymentLower.includes('zalopay') || paymentLower.includes('ví') || 
+               paymentLower.includes('electronic') || paymentLower.includes('online')) {
+      console.log(`Order ${index} counted as E-Wallet payment`);
+      paymentStats["Ví điện tử"] += 1;
+    } else {
+      console.log(`Order ${index} has unrecognized payment method: "${paymentMethod}", checking payment details`);
+      
+      // Kiểm tra chi tiết thanh toán nếu có
+      const paymentDetails = order.paymentDetails || order.payment || {};
+      if (paymentDetails.method && typeof paymentDetails.method === 'string') {
+        const detailMethodLower = paymentDetails.method.toLowerCase();
+        
+        if (detailMethodLower.includes('stripe') || detailMethodLower.includes('card')) {
+          console.log(`Found Stripe/Card reference in payment details`);
+          paymentStats["Thẻ"] += 1;
+        } else if (detailMethodLower.includes('cash')) {
+          console.log(`Found Cash reference in payment details`);
+          paymentStats["Tiền mặt"] += 1;
+        } else if (detailMethodLower.includes('wallet') || detailMethodLower.includes('momo')) {
+          console.log(`Found E-Wallet reference in payment details`);
+          paymentStats["Ví điện tử"] += 1;
+        } else {
+          console.log(`No recognizable payment method in details, defaulting to Cash`);
+          paymentStats["Tiền mặt"] += 1;
+        }
+      } else {
+        console.log(`No payment details found, defaulting to Cash`);
+        paymentStats["Tiền mặt"] += 1;
+      }
+    }
+    
+    totalProcessed++;
+  });
+  
+  console.log(`Processed ${totalProcessed} orders for payment methods`);
+  console.log('Payment method stats:', paymentStats);
+  
+  const result = Object.keys(paymentStats).map(name => ({
+    name,
+    value: paymentStats[name]
+  }));
+  
+  console.log('Final payment method data:', result);
+  return result;
+}
 
 // Hàm để tạo dữ liệu cho bảng thống kê theo ngày
 const getDailyStats = (date: Date) => {
@@ -242,14 +580,157 @@ export default function Dashboard() {
   // Lấy tất cả giao hàng
   const { data: deliveriesData, isLoading: isLoadingDeliveries } = useGetAllDeliveriesQuery()
   
-  // Dữ liệu mẫu cho thống kê doanh thu theo tháng và danh mục sẵn có
-  // Tránh xung đột với biến mẫu toàn cục ở đầu file
-  const sampleMonthlyRevenueData = revenueData
-  const sampleCategoryRevenueData = categoryData.map(item => ({
-    name: item.name,
-    revenue: item.value * 100000,
-    percentage: item.value
-  }))
+  // Tính toán dữ liệu doanh thu theo tháng từ dữ liệu đơn hàng
+  interface MonthlyRevenueItem {
+    name: string;
+    revenue: number;
+  }
+
+  // Định nghĩa hàm tính doanh thu theo tháng từ dữ liệu đơn hàng
+  const calculateMonthlyRevenueData = () => {
+    console.log('Calculating monthly revenue from orders data:', ordersData);
+    
+    // Nếu không có dữ liệu đơn hàng, trả về mảng rỗng
+    if (!ordersData || ordersData.length === 0) {
+      console.log('No orders data available for monthly revenue');
+      return [] as MonthlyRevenueItem[];
+    }
+    
+    // Lấy năm hiện tại
+    const currentYear = new Date().getFullYear();
+    console.log('Current year for revenue calculation:', currentYear);
+    
+    // Khởi tạo mảng các tháng với doanh thu ban đầu là 0
+    const months = Array.from({ length: 12 }, (_, i) => ({
+      name: new Date(currentYear, i, 1).toLocaleString('vi-VN', { month: 'short' }),
+      revenue: 0
+    }));
+    
+    // Tính toán doanh thu cho từng tháng dựa trên các đơn hàng
+    ordersData.forEach(order => {
+      // Lấy ngày đặt hàng từ order.orderDate hoặc order.createdAt
+      const orderDateStr = order.orderDate || order.createdAt;
+      
+      if (!orderDateStr) {
+        console.log('Order missing date:', order);
+        return;
+      }
+        
+      const orderDate = new Date(orderDateStr);
+      
+      // Kiểm tra ngày hợp lệ
+      if (isNaN(orderDate.getTime())) {
+        console.log('Invalid date for order:', order);
+        return;
+      }
+      
+      // Chỉ tính các đơn hàng trong năm hiện tại
+      if (orderDate.getFullYear() === currentYear) {
+        const monthIndex = orderDate.getMonth();
+        
+        // Kiểm tra totalAmount có tồn tại và hợp lệ không
+        const amount = typeof order.totalAmount === 'number' ? order.totalAmount : 0;
+        months[monthIndex].revenue += amount;
+        
+        console.log(`Added ${amount} to month ${monthIndex + 1}`);
+      }
+    });
+    
+    console.log('Final monthly revenue data:', months);
+    return months;
+  };
+  
+  // Hàm tính toán doanh thu theo danh mục
+  const calculateCategoryRevenueData = () => {
+    console.log('Calculating category revenue from orders data:', ordersData);
+    
+    // Nếu không có dữ liệu đơn hàng, trả về mảng rỗng
+    if (!ordersData || ordersData.length === 0) {
+      console.log('No orders data available for category revenue');
+      return [] as CategoryRevenueItem[];
+    }
+    
+    const categoryStats: Record<string, number> = {};
+    let totalRevenue = 0;
+
+    // Tính tổng doanh thu theo danh mục
+    ordersData.forEach((order: any, index: number) => {
+      console.log(`Processing order ${index}:`, order);
+      
+      // Kiểm tra xem order.items có tồn tại và là mảng không
+      if (!Array.isArray(order.items) || order.items.length === 0) {
+        console.log(`Order ${index} has no items array:`, order);
+        return;
+      }
+      
+      order.items.forEach((item: any, itemIndex: number) => {
+        console.log(`Processing item ${itemIndex} in order ${index}:`, item);
+        
+        // Xử lý trường hợp không có thông tin sản phẩm
+        if (!item.product) {
+          console.log(`Item ${itemIndex} has no product information`); 
+          return;
+        }
+
+        // Lấy category từ sản phẩm hoặc sử dụng 'Khác' nếu không có
+        const category = item.product.category || 'Khác';
+        
+        // Tính doanh thu cho mục này
+        const price = parseFloat(item.price) || 0;
+        const quantity = parseInt(item.quantity) || 0;
+        const itemRevenue = price * quantity;
+        
+        console.log(`Item revenue for ${category}: ${itemRevenue} (${price} x ${quantity})`);
+        
+        if (!categoryStats[category]) {
+          categoryStats[category] = 0;
+        }
+        
+        categoryStats[category] += itemRevenue;
+        totalRevenue += itemRevenue;
+      });
+    });
+    
+    console.log('Category stats before conversion:', categoryStats);
+    console.log('Total revenue:', totalRevenue);
+    
+    // Nếu không có dữ liệu danh mục, tạo dữ liệu mặc định
+    if (Object.keys(categoryStats).length === 0) {
+      console.log('No category data found, creating default data');
+      return [];
+    }
+    
+    // Chuyển đổi thành mảng và tính phần trăm
+    const result = Object.keys(categoryStats).map(name => ({
+      name,
+      revenue: categoryStats[name],
+      percentage: totalRevenue > 0 ? Math.round((categoryStats[name] / totalRevenue) * 100) : 0
+    }));
+    
+    console.log('Final category revenue data:', result);
+    return result;
+  };
+  
+  console.log('OrdersData from API:', ordersData); // Ghi log dữ liệu API để kiểm tra
+  
+  // Kiểm tra dữ liệu API trả về
+  console.log('[DASHBOARD DEBUG] Orders API:', ordersData);
+  console.log('[DASHBOARD DEBUG] User Stats API:', userStatsData);
+  console.log('[DASHBOARD DEBUG] Reservations API:', reservationsData);
+  console.log('[DASHBOARD DEBUG] Deliveries API:', deliveriesData);
+  
+  // Dữ liệu thống kê được tính toán trực tiếp từ dữ liệu thực
+  const finalMonthlyRevenueData = calculateMonthlyRevenueData();
+  console.log('[DASHBOARD DEBUG] Monthly Revenue Data:', finalMonthlyRevenueData);
+  
+  const finalCategoryRevenueData = calculateCategoryRevenueData();
+  console.log('[DASHBOARD DEBUG] Category Revenue Data:', finalCategoryRevenueData);
+  
+  const topProductsData = calculateDailyItemsData(ordersData || []);
+  console.log('[DASHBOARD DEBUG] Top Products Data:', topProductsData);
+  
+  const paymentMethodData = calculatePaymentMethodData(ordersData || []);
+  console.log('[DASHBOARD DEBUG] Payment Method Data:', paymentMethodData);
   
   // Tổng hợp trạng thái loading từ tất cả các API
   const isLoading = isLoadingOrders || isLoadingReservations || isLoadingDeliveries || isLoadingUserStats || isLoadingAllReservations
@@ -409,11 +890,9 @@ export default function Dashboard() {
     };
   });
   
-  // Sử dụng dữ liệu đã tính toán từ các API hiện có
-  const finalRevenueData = sampleMonthlyRevenueData || [] // Vẫn giữ lại dữ liệu mẫu cho biểu đồ doanh thu theo tháng
-  const finalCategoryData = sampleCategoryRevenueData || [] // Vẫn giữ lại dữ liệu mẫu cho biểu đồ doanh thu theo danh mục
-  const finalOrderTypeData = orderTypeStats || orderTypeData || []
-  const finalTimeSlotData = timeSlotStats || timeSlotData || []
+  // Tất cả các dữ liệu biểu đồ bây giờ được tính toán trực tiếp từ dữ liệu API thực tế
+  const finalOrderTypeData = calculateOrderTypeStats(ordersData || []);
+  const finalTimeSlotData = calculateTimeSlotStats(ordersData || []);
   
   // Sử dụng dữ liệu thực từ API cho các thống kê tổng quan
   // Sử dụng todayRevenue đã tính trước đó từ ordersData
@@ -424,9 +903,9 @@ export default function Dashboard() {
   // Sử dụng giá trị mặc định cho thống kê trước đó
   const previousTotalOrders = Math.round(totalOrders * 0.9) // Ước tính số đơn hàng tháng trước thấp hơn 10%
   
-  // Số khách hàng trung bình mỗi ngày - sử dụng avgCustomersPerDay đã tính trước đó dựa trên userStats
+  // Số khách hàng trung bình mỗi ngày - sử dụng avgCustomersPerDay đã tính trước đó dựa trên userStats 
   const averageCustomersPerDay = avgCustomersPerDay || 
-    (finalTimeSlotData?.reduce((sum: number, item: any) => sum + (item.count || 0), 0) / (finalTimeSlotData?.length || 1)) || 0
+    (finalTimeSlotData?.reduce((sum: number, item: any) => sum + (item.customerCount || 0), 0) / (finalTimeSlotData?.length || 1)) || 0
   
   // Ước tính số khách hàng trung bình tháng trước dựa trên số hiện tại
   const previousAverageCustomersPerDay = Math.round(averageCustomersPerDay * 0.85) // Giả sử tháng trước thấp hơn 15%
@@ -550,174 +1029,8 @@ export default function Dashboard() {
       {/* Thống kê */}
       <div className="grid gap-6 mb-8">
         <Tabs defaultValue="overview" className="w-full">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold">Statistics</h1>
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="daily">Daily</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{format(date, "dd/MM/yyyy")}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={date}
-                    onSelect={(newDate) => {
-                      setDate(newDate || new Date())
-                      setIsCalendarOpen(false)
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <div className="relative">
-                <button
-                  onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white"
-                >
-                  <Filter size={20} />
-                  <span>Time Range: {timeRange}</span>
-                  <ChevronDown size={16} />
-                </button>
-
-                {showTimeRangeDropdown && (
-                  <div className="absolute z-10 mt-1 right-0 w-48 bg-white border border-gray-300 rounded-md shadow-lg">
-                    {["Today", "Yesterday", "This Week", "This Month", "This Year", "All Time"].map((range) => (
-                      <div
-                        key={range}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => {
-                          setTimeRange(range)
-                          setShowTimeRangeDropdown(false)
-                        }}
-                      >
-                        {range}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
 
           <TabsContent value="overview">
-            {/* Thẻ thống kê tổng quan */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Tổng doanh thu</p>
-                      {isLoading ? (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">---</p>
-                          <p className="mt-2 text-xs text-gray-400">Đang tải dữ liệu...</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">{formatPrice(todayRevenue)}</p>
-                          <p className="mt-2 text-xs text-gray-400">Tăng {revenueGrowthPercentage.toFixed(1)}% so với tháng trước</p>
-                        </>
-                      )}
-                    </div>
-                    <div className="rounded-full bg-blue-100 p-3 text-blue-600">
-                      <DollarSign className="h-5 w-5" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Tổng đơn hàng</p>
-                      {isLoading ? (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">---</p>
-                          <p className="mt-2 text-xs text-gray-400">Đang tải dữ liệu...</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">{totalOrders}</p>
-                          <p className="mt-2 text-xs text-gray-400">{previousTotalOrders > 0 ? (
-                            `Tăng ${((totalOrders - previousTotalOrders) / previousTotalOrders * 100).toFixed(1)}% so với tháng trước`
-                          ) : `Tăng ${customerGrowthPercentage.toFixed(1)}% so với tháng trước`}</p>
-                        </>
-                      )}
-                    </div>
-                    <div className="rounded-full bg-orange-100 p-3 text-orange-600">
-                      <ShoppingBag className="h-5 w-5" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Khách hàng/Ngày</p>
-                      {isLoading ? (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">---</p>
-                          <p className="mt-2 text-xs text-gray-400">Đang tải dữ liệu...</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">{Math.round(averageCustomersPerDay)}</p>
-                          <p className="mt-2 text-xs text-gray-400">Tăng {previousAverageCustomersPerDay > 0 ? 
-                              ((averageCustomersPerDay - previousAverageCustomersPerDay) / previousAverageCustomersPerDay * 100).toFixed(1) : 
-                              customerGrowthPercentage.toFixed(1)}% so với tháng trước</p>
-                        </>
-                      )}
-                    </div>
-                    <div className="rounded-full bg-green-100 p-3 text-green-600">
-                      <Users className="h-5 w-5" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Tốc độ tăng trưởng</p>
-                      {isLoading ? (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">---</p>
-                          <p className="mt-2 text-xs text-gray-400">Đang tải dữ liệu...</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="mt-2 text-3xl font-semibold">+{revenueGrowthPercentage.toFixed(1)}%</p>
-                          <p className="mt-2 text-xs text-gray-400">So với tháng trước: {previousMonthRevenue > 0 ? 
-                            ((todayRevenue / previousMonthRevenue - 1) * 100).toFixed(1) : 
-                            0}%</p>
-                        </>
-                      )}
-                    </div>
-                    <div className="rounded-full bg-purple-100 p-3 text-purple-600">
-                      <TrendingUp className="h-5 w-5" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-
-
             {/* 4 biểu đồ theo yêu cầu */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="overflow-hidden">
@@ -1019,7 +1332,7 @@ export default function Dashboard() {
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
-                        data={hourlyData}
+                        data={calculateHourlyData(filterOrdersByDate(ordersData || [], date))}
                         margin={{
                           top: 20,
                           right: 30,
