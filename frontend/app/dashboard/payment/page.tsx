@@ -1,8 +1,18 @@
 "use client"
 
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "react-hot-toast";
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { format } from "date-fns"
+import { 
+  useGetPaymentsQuery, 
+  useLazyGetInvoiceUrlQuery, 
+  useCreateRefundMutation,
+  useLazyGetCustomerDetailsQuery 
+} from "@/redux/api/stripeApi";
+import { Provider } from "react-redux"
+import { store } from "@/redux/store"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -46,14 +56,14 @@ interface User {
 interface Order {
   _id: string
   totalAmount: number
-  status: "pending" | "completed" | "cancelled"
+  status: string // Đổi từ union type sang string để tương thích với API
 }
 
 interface Payment {
   _id: string
   amount: number
   userId: string
-  paymentMethod: "credit_card" | "debit_card" | "paypal" | "cash" | "stripe"
+  paymentMethod: string // Đổi từ union type sang string để tương thích với API
   transactionId?: string
   orderId: string
   stripePaymentIntentId?: string
@@ -61,7 +71,7 @@ interface Payment {
   stripeChargeId?: string
   stripePaymentMethodId?: string
   currency: string
-  status: "pending" | "completed" | "failed"
+  status: string // Đổi từ union type sang string để tương thích với API
   createdBy?: string
   updatedBy?: string
   deleted: boolean
@@ -71,6 +81,8 @@ interface Payment {
   // Thông tin bổ sung từ các bảng liên quan
   user?: User
   order?: Order
+  // Thông tin khách hàng nhập khi thanh toán
+  customerName?: string
 }
 
 // Dữ liệu mẫu cho người dùng
@@ -165,21 +177,24 @@ const initialTransactions: Payment[] = [
 ]
 
 // Danh sách trạng thái
-const statuses = ["all", "completed", "pending", "failed"]
+const statuses = ["all", "completed", "pending", "failed", "refunded"]
 const statusLabels = {
   completed: "Completed",
   pending: "Pending",
   failed: "Failed",
+  refunded: "Refunded",
 }
 const statusColors = {
   completed: "bg-green-100 text-green-800",
   pending: "bg-yellow-100 text-yellow-800",
   failed: "bg-red-100 text-red-800",
+  refunded: "bg-blue-100 text-blue-800",
 }
 const statusIcons = {
   completed: <CheckCircle size={16} className="text-green-600" />,
   pending: <AlertCircle size={16} className="text-yellow-600" />,
   failed: <XCircle size={16} className="text-red-600" />,
+  refunded: <RefreshCw size={16} className="text-blue-600" />,
 }
 
 // Danh sách phương thức thanh toán
@@ -198,11 +213,100 @@ const paymentMethodIcons = {
   stripe: <CreditCard size={16} className="text-purple-600" />,
 }
 
-export default function PaymentManagement() {
-  const [transactions, setTransactions] = useState<Payment[]>(initialTransactions)
+const PaymentContent = () => {
+  // Khởi tạo các biến trạng thái cơ bản
+  const [transactions, setTransactions] = useState<Payment[]>([])
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all")
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
+  
+  // Hàm định dạng giá tiền
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND"
+    }).format(price);
+  };
+
+  // Khởi tạo các lazy query hook
+  const [getInvoiceUrl] = useLazyGetInvoiceUrlQuery();
+  const [getCustomerDetails] = useLazyGetCustomerDetailsQuery();
+  const [createRefund, { isLoading: isRefunding }] = useCreateRefundMutation();
+  
+  // Lấy dữ liệu thanh toán từ API
+  const { data: paymentData, isLoading, isFetching, error } = useGetPaymentsQuery({
+    page,
+    limit,
+    status: selectedStatus === 'all' ? undefined : selectedStatus,
+    search: searchTerm || undefined,
+    paymentMethod: selectedPaymentMethod === 'all' ? undefined : selectedPaymentMethod,
+    startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
+    endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined
+  })
+  
+  // State để lưu tạm thời các khách hàng đã lấy thành công
+  const [loadedCustomers, setLoadedCustomers] = useState<Record<string, string>>({});
+  
+  // Cập nhật danh sách giao dịch khi dữ liệu từ API thay đổi
+  useEffect(() => {
+    if (paymentData?.payments) {
+      // Lấy danh sách giao dịch và cập nhật state
+      setTransactions(paymentData.payments);
+    }
+  }, [paymentData]);
+  
+  // Tích hợp lấy thông tin khách hàng bằng RTK Query
+  useEffect(() => {
+    const fetchCustomerDetails = async () => {
+      // Chỉ lấy các giao dịch chưa có tên khách hàng và chưa được lấy trước đó
+      const transactionsNeedCustomerInfo = transactions.filter(transaction => 
+        transaction.stripePaymentIntentId && 
+        !transaction.customerName && 
+        !loadedCustomers[transaction.stripePaymentIntentId]
+      );
+      
+      if (transactionsNeedCustomerInfo.length === 0) return;
+      
+      // Log số lượng cần xử lý
+      console.log(`Fetching customer details for ${transactionsNeedCustomerInfo.length} transactions`);
+      
+      // Lấy thông tin khách hàng cho mỗi giao dịch
+      for (const transaction of transactionsNeedCustomerInfo) {
+        try {
+          // Thêm timestamp để tránh cache
+          const timestamp = Date.now();
+          const { data } = await getCustomerDetails(`${transaction.stripePaymentIntentId}?_t=${timestamp}`);
+          
+          if (data?.success && data?.customerName) {
+            console.log(`Got customer name: ${data.customerName} for payment ${transaction._id}`);
+            
+            // Cập nhật giao dịch với tên khách hàng
+            setTransactions(current => 
+              current.map(t => t._id === transaction._id ? 
+                { ...t, customerName: data.customerName } : t)
+            );
+            
+            // Cập nhật danh sách khách hàng đã xử lý
+            setLoadedCustomers(prev => ({
+              ...prev, 
+              [transaction.stripePaymentIntentId as string]: data.customerName
+            }));
+          }
+        } catch (error) {
+          console.error(`Error fetching customer details for ${transaction._id}:`, error);
+        }
+      }
+    };
+    
+    // Chỉ gọi khi transactions thay đổi
+    if (transactions.length > 0) {
+      fetchCustomerDetails();
+    }
+  }, [transactions, getCustomerDetails, loadedCustomers]);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showPaymentMethodDropdown, setShowPaymentMethodDropdown] = useState(false)
   const [activeTab, setActiveTab] = useState("transactions")
@@ -254,235 +358,122 @@ export default function PaymentManagement() {
     setIsRefundDialogOpen(true)
   }
 
-  // Xử lý hoàn tiền
-  const handleRefund = () => {
-    if (!selectedTransaction) return
+  // Xử lý hoàn tiền thông qua API Stripe
+  const handleRefund = async () => {
+    if (!selectedTransaction || !selectedTransaction.stripePaymentIntentId) return
 
     // Kiểm tra số tiền hoàn
     if (refundAmount <= 0 || refundAmount > selectedTransaction.amount) {
-      alert("Invalid refund amount")
+      toast.error("Số tiền hoàn không hợp lệ")
       return
     }
 
-    // Tạo giao dịch hoàn tiền mới
-    const now = new Date()
-    const refundTransaction: Payment = {
-      _id: `pay_refund_${Math.floor(Math.random() * 1000)}`,
-      amount: -refundAmount, // Số tiền âm để thể hiện hoàn tiền
-      userId: selectedTransaction.userId,
-      paymentMethod: selectedTransaction.paymentMethod,
-      transactionId: `refund_${Math.floor(Math.random() * 1000)}`,
-      orderId: selectedTransaction.orderId,
-      currency: selectedTransaction.currency,
-      status: "completed",
-      createdBy: "admin", // Giả định admin thực hiện hoàn tiền
-      deleted: false,
-      createdAt: now,
-      updatedAt: now,
-      user: selectedTransaction.user,
-      order: selectedTransaction.order,
-    }
-
-    // Thêm giao dịch hoàn tiền vào danh sách
-    setTransactions([refundTransaction, ...transactions])
-
-    // Đóng dialog
-    setIsRefundDialogOpen(false)
-    setIsTransactionDetailsDialogOpen(false)
-
-    // Thông báo thành công
-    alert(`Refund of ${formatPrice(refundAmount)} has been processed successfully`)
-  }
-
-  // Xử lý in hóa đơn
-  const handlePrintReceipt = (transaction: Payment) => {
-    // Tạo cửa sổ mới để in
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) return
-
-    // Tạo nội dung hóa đơn
-    const receiptContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Payment Receipt - Golden Crust</title>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          .receipt {
-            border: 1px solid #ddd;
-            padding: 20px;
-            border-radius: 5px;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-          }
-          .logo {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-          .info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-          }
-          .info-section {
-            flex: 1;
-          }
-          .info-section h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 16px;
-            color: #555;
-          }
-          .info-section p {
-            margin: 5px 0;
-          }
-          .details {
-            margin-bottom: 20px;
-          }
-          .details table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          .details th, .details td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-          }
-          .details th {
-            background-color: #f9f9f9;
-          }
-          .total {
-            text-align: right;
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 20px;
-          }
-          .footer {
-            text-align: center;
-            font-size: 12px;
-            color: #777;
-            margin-top: 30px;
-          }
-          @media print {
-            body {
-              width: 100%;
-            }
-            .no-print {
-              display: none;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="receipt">
-          <div class="header">
-            <div class="logo">Golden Crust</div>
-            <div>123 Nguyễn Huệ, Quận 1, TP.HCM</div>
-            <div>SĐT: 028-1234-5678</div>
-          </div>
-          
-          <div class="info">
-            <div class="info-section">
-              <h3>Payment Information</h3>
-              <p><strong>Transaction ID:</strong> ${transaction._id}</p>
-              <p><strong>Order ID:</strong> ${transaction.orderId}</p>
-              <p><strong>Date:</strong> ${new Date(transaction.createdAt).toLocaleDateString()}</p>
-              <p><strong>Time:</strong> ${new Date(transaction.createdAt).toLocaleTimeString()}</p>
-              <p><strong>Payment Method:</strong> ${paymentMethodLabels[transaction.paymentMethod as keyof typeof paymentMethodLabels]}</p>
-              <p><strong>Status:</strong> ${statusLabels[transaction.status as keyof typeof statusLabels]}</p>
-            </div>
-            
-            <div class="info-section">
-              <h3>Customer Information</h3>
-              <p><strong>Name:</strong> ${transaction.user?.name || "N/A"}</p>
-              <p><strong>Email:</strong> ${transaction.user?.email || "N/A"}</p>
-              <p><strong>Phone:</strong> ${transaction.user?.phone || "N/A"}</p>
-            </div>
-          </div>
-          
-          <div class="details">
-            <h3>Payment Details</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Description</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Order #${transaction.orderId}</td>
-                  <td>${formatPrice(transaction.amount)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          
-          <div class="total">
-            <div>Total: ${formatPrice(transaction.amount)}</div>
-          </div>
-          
-          <div class="footer">
-            <p>Thank you for your business!</p>
-            <p>This is an official receipt for your payment.</p>
-            <p>www.goldencrust.com</p>
-          </div>
-        </div>
+    try {
+      // Hiển thị trạng thái đang xử lý
+      toast.loading("\u0110ang xử lý hoàn tiền...")
+      
+      // Gọi API Stripe để thực hiện hoàn tiền
+      const response = await createRefund({
+        paymentId: selectedTransaction.stripePaymentIntentId,
+        amount: refundAmount,
+        reason: refundReason
+      }).unwrap()
+      
+      if (response.success) {
+        // Cập nhật giao dịch hiện tại thành refunded và amount = 0
+        const now = new Date()
         
-        <div class="no-print" style="text-align: center; margin-top: 20px;">
-          <button onclick="window.print();" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Print Receipt
-          </button>
-          <button onclick="window.close();" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
-            Close
-          </button>
-        </div>
-      </body>
-      </html>
-    `
+        // Tạo bản sao của transactions với giao dịch được cập nhật
+        const updatedTransactions = transactions.map(transaction => {
+          if (transaction._id === selectedTransaction._id) {
+            return {
+              ...transaction,
+              status: "refunded",
+              amount: 0,
+              updatedAt: now
+            }
+          }
+          return transaction
+        })
 
-    // Ghi nội dung vào cửa sổ mới
-    printWindow.document.open()
-    printWindow.document.write(receiptContent)
-    printWindow.document.close()
+        // Cập nhật danh sách giao dịch
+        setTransactions(updatedTransactions)
 
-    // Tự động in sau khi tải xong
-    printWindow.onload = () => {
-      // Chờ một chút để đảm bảo CSS được áp dụng
-      setTimeout(() => {
-        printWindow.focus()
-        // Không tự động in để người dùng có thể xem trước
-        // printWindow.print()
-      }, 500)
+        // Đóng dialog
+        setIsRefundDialogOpen(false)
+        setIsTransactionDetailsDialogOpen(false)
+
+        // Thông báo thành công
+        toast.dismiss()
+        toast.success(`Đã hoàn ${formatPrice(refundAmount)} thành công`)
+      } else {
+        toast.dismiss()
+        toast.error("Có lỗi xảy ra khi hoàn tiền")
+      }
+    } catch (error) {
+      toast.dismiss()
+      toast.error(`Lỗi: ${error instanceof Error ? error.message : "Không thể hoàn tiền"}`)
+      console.error("Refund error:", error)
     }
   }
 
-  // Format giá tiền
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price)
+  // Xử lý xem hóa đơn PDF từ Stripe
+
+  // Xử lý xem hóa đơn PDF từ Stripe
+  const handlePrintReceipt = async (transaction: Payment) => {
+    try {
+      // Hiển thị trạng thái đang tải
+      toast.loading('Đang lấy hóa đơn từ Stripe...');
+      
+      // Kiểm tra có ID thanh toán không
+      if (!transaction.stripePaymentIntentId) {
+        toast.dismiss();
+        toast.error('Không tìm thấy thông tin thanh toán Stripe');
+        return;
+      }
+      
+      // Gọi API lấy URL hóa đơn từ Stripe sử dụng lazy query
+      const response = await getInvoiceUrl(transaction.stripePaymentIntentId);
+      
+      if (response.error || !response.data?.invoiceUrl) {
+        toast.dismiss();
+        toast.error('Không tìm thấy hóa đơn cho giao dịch này');
+        return;
+      }
+      
+      // Mở URL trong tab mới
+      window.open(response.data.invoiceUrl, '_blank');
+      toast.dismiss();
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Lỗi khi lấy hóa đơn: ' + (error instanceof Error ? error.message : 'Lỗi không xác định'));
+      console.error('Error getting invoice:', error);
+    }
   }
 
   // Format ngày giờ
-  const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
+  const formatDateTime = (date: Date | string | null | undefined) => {
+    if (!date) return 'N/A';
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Kiểm tra xem dateObj có phải là Date hợp lệ không
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid date';
+      }
+      
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(dateObj);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   }
 
   // Tính tổng doanh thu
@@ -701,101 +692,123 @@ export default function PaymentManagement() {
               <CardDescription>View and manage all payment transactions</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction._id}>
-                      <TableCell className="font-medium">{transaction._id}</TableCell>
-                      <TableCell>{formatDateTime(transaction.createdAt)}</TableCell>
-                      <TableCell>{transaction.user?.name || "Unknown"}</TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs">{transaction.orderId}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {paymentMethodIcons[transaction.paymentMethod as keyof typeof paymentMethodIcons]}
-                          <span>
-                            {paymentMethodLabels[transaction.paymentMethod as keyof typeof paymentMethodLabels]}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className={transaction.amount < 0 ? "text-red-600" : ""}>
-                        {formatPrice(transaction.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            statusColors[transaction.status as keyof typeof statusColors]
-                          }`}
-                        >
-                          {statusIcons[transaction.status as keyof typeof statusIcons]}
-                          <span className="ml-1">{statusLabels[transaction.status as keyof typeof statusLabels]}</span>
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewTransaction(transaction)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <span className="sr-only">View details</span>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handlePrintReceipt(transaction)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <span className="sr-only">Print receipt</span>
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          {transaction.status === "completed" && transaction.amount > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenRefundDialog(transaction)}
-                              className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800"
-                            >
-                              <span className="sr-only">Refund</span>
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {filteredTransactions.length === 0 && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
-                        No transactions found.
-                      </TableCell>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-10">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                            <p>Loading transactions...</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : error ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-10">
+                          <div className="flex flex-col items-center justify-center gap-2 text-red-600">
+                            <AlertCircle className="h-8 w-8" />
+                            <p>Error loading transactions. Please try again.</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredTransactions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-10">
+                          <p className="text-muted-foreground">No transactions found matching your filters.</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredTransactions.map((transaction) => (
+                        <TableRow key={transaction._id}>
+                          <TableCell className="font-medium">{transaction._id}</TableCell>
+                          <TableCell>{formatDateTime(transaction.createdAt)}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{transaction.customerName || transaction.user?.name || "Unknown"}</div>
+                          </TableCell>
+                          <TableCell className={transaction.amount < 0 ? "text-red-600" : ""}>
+                            {formatPrice(transaction.amount)}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                statusColors[transaction.status as keyof typeof statusColors]
+                              }`}
+                            >
+                              {statusIcons[transaction.status as keyof typeof statusIcons]}
+                              <span className="ml-1">{statusLabels[transaction.status as keyof typeof statusLabels]}</span>
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleViewTransaction(transaction)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <span className="sr-only">View details</span>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handlePrintReceipt(transaction)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <span className="sr-only">Print receipt</span>
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              {transaction.status === "completed" && transaction.amount > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenRefundDialog(transaction)}
+                                  className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800"
+                                >
+                                  <span className="sr-only">Refund</span>
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                    {isFetching && !isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="border-t">
+                          <div className="flex items-center justify-center py-2">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                            <span className="ml-2 text-xs">Updating...</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
       {/* Modal chi tiết giao dịch */}
-      <Dialog open={isTransactionDetailsDialogOpen} onOpenChange={setIsTransactionDetailsDialogOpen}>
+      <Dialog
+        open={isTransactionDetailsDialogOpen}
+        onOpenChange={(open) => setIsTransactionDetailsDialogOpen(open)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Transaction Details</DialogTitle>
@@ -909,7 +922,10 @@ export default function PaymentManagement() {
       </Dialog>
 
       {/* Modal hoàn tiền */}
-      <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
+      <Dialog
+        open={isRefundDialogOpen}
+        onOpenChange={(open) => setIsRefundDialogOpen(open)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Process Refund</DialogTitle>
@@ -976,7 +992,7 @@ export default function PaymentManagement() {
                 !refundAmount ||
                 !refundReason ||
                 refundAmount <= 0 ||
-                (selectedTransaction && refundAmount > selectedTransaction.amount)
+                (!!selectedTransaction && refundAmount > selectedTransaction.amount)
               }
             >
               Process Refund
@@ -985,5 +1001,13 @@ export default function PaymentManagement() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function PaymentManagement() {
+  return (
+    <Provider store={store}>
+      <PaymentContent />
+    </Provider>
   )
 }
