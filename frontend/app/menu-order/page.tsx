@@ -522,15 +522,28 @@ const MenuOrderPage = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <Button size="icon" variant="ghost" onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)} className="h-8 w-8 hover:bg-gray-700">
-                      -
-                    </Button>
-                    <span className="mx-2 w-8 text-center">{item.quantity}</span>
-                    <Button size="icon" variant="ghost" onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)} className="h-8 w-8 hover:bg-gray-700">
-                      +
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleRemoveFromCart(item._id)} className="h-8 w-8 ml-2 hover:bg-gray-700 text-red-400">
+                  <div className="flex items-center space-x-3">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (!isNaN(value) && value >= 1) {
+                          handleUpdateQuantity(item._id, value);
+                        }
+                      }}
+                      className="w-20 h-8 text-center bg-white/10 border-gray-600"
+                      disabled={item.confirmed}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 rounded-full text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                      onClick={() => handleRemoveFromCart(item._id)}
+                      disabled={item.confirmed}
+                      title={item.confirmed ? t('cannotRemoveConfirmedItem') : ''}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -693,20 +706,30 @@ const MenuOrderPage = () => {
         </>
       )}
 
-      {/* Cart Summary / Floating Cart Button */}
-      {!isOrderTypeModalOpen && orderStep === 'confirmed' && totalCartItems > 0 && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <Button 
-            onClick={() => setIsCartModalOpen(true)} 
-            className="bg-primary hover:bg-primary/90 text-white rounded-full p-4 shadow-lg flex items-center text-lg"
-            size="lg"
-          >
-            <ShoppingCart className="h-6 w-6 mr-3" />
-            {t('viewCart')} ({totalCartItems})
-            <span className="ml-3 font-semibold">{formatCurrency(cartTotal)}</span>
-          </Button>
-        </div>
-      )}
+      {/* Calculate total cart items and total */}
+      {(() => {
+        const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+        const cartTotal = cartItems.reduce((total, item) => total + (item.price * (1 - item.discountPercentage / 100) * item.quantity), 0);
+        
+        return (
+          <>
+            {/* Cart Summary / Floating Cart Button */}
+            {!isOrderTypeModalOpen && orderStep === 'confirmed' && totalCartItems > 0 && (
+              <div className="fixed bottom-6 right-6 z-50">
+                <Button 
+                  onClick={() => setIsCartModalOpen(true)} 
+                  className="bg-primary hover:bg-primary/90 text-white rounded-full p-4 shadow-lg flex items-center text-lg"
+                  size="lg"
+                >
+                  <ShoppingCart className="h-6 w-6 mr-3" />
+                  {t('viewCart')} ({totalCartItems})
+                  <span className="ml-3 font-semibold">{formatCurrency(cartTotal)}</span>
+                </Button>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Order Confirmed Banner */}
       {isOrderConfirmed && (
@@ -747,25 +770,19 @@ const MenuOrderPage = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-8 w-8 rounded-full border-gray-600"
-                        onClick={() => handleUpdateQuantity(item._id, Math.max(1, item.quantity - 1))}
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value) && value >= 1) {
+                            handleUpdateQuantity(item._id, value);
+                          }
+                        }}
+                        className="w-20 h-8 text-center bg-white/10 border-gray-600"
                         disabled={item.confirmed}
-                      >
-                        -
-                      </Button>
-                      <span className="w-6 text-center">{item.quantity}</span>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-8 w-8 rounded-full border-gray-600"
-                        onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
-                        disabled={item.confirmed}
-                      >
-                        +
-                      </Button>
+                      />
                       <Button 
                         variant="ghost" 
                         size="icon" 
